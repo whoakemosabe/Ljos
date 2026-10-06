@@ -86,6 +86,14 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.graphics.BlurEffect
+import androidx.compose.ui.graphics.GraphicsLayerScope
+import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.platform.LocalView
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.snapshotFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import androidx.compose.ui.geometry.isSpecified
 import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.ui.unit.Velocity
@@ -130,7 +138,7 @@ fun LjosApp() {
     var home by remember { mutableStateOf(prefs.home) }
     var detecting by remember { mutableStateOf(false) }
     val scroll = rememberScrollState()
-    var heroPos by remember { mutableStateOf(Offset.Unspecified) }
+    var heroBase by remember { mutableStateOf(Offset.Unspecified) }
     var heroSize by remember { mutableStateOf(IntSize.Zero) }
     var pillTarget by remember { mutableStateOf(Offset.Unspecified) }
 
@@ -213,28 +221,52 @@ fun LjosApp() {
 
     BoxWithConstraints(Modifier.fillMaxSize().background(NightBg)) {
         val screenH = maxHeight
-        val openness = 1f - sheet.value
         val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-        // Scroll-linked, not toggled, so the header morph tracks your finger exactly.
-        val placeMorph = with(density) { (scroll.value / 110.dp.toPx()).coerceIn(0f, 1f) }
-        // Score flight: starts as the big number nears the header, lands in the pill ~150dp later.
+        val view = LocalView.current
+
+        // Everything scroll- or drag-linked below is read inside layout/draw lambdas, never during
+        // composition, so scrolling and dragging the sheet don't rebuild the screen every frame.
+        val placeRange = with(density) { 110.dp.toPx() }
+        val flightRange = with(density) { 170.dp.toPx() }
         val headerOrigin = with(density) { Offset(20.dp.toPx(), statusTop.toPx() + 12.dp.toPx()) }
-        val scoreMorph = with(density) {
-            if (!heroPos.isSpecified || !pillTarget.isSpecified) 0f
+        val placeMorph: () -> Float = { (scroll.value / placeRange).coerceIn(0f, 1f) }
+        val scoreMorph: () -> Float = {
+            if (!heroBase.isSpecified || !pillTarget.isSpecified) 0f
             else {
-                val heroCenterY = heroPos.y + heroSize.height / 2f
+                val heroCenterY = heroBase.y - scroll.value + heroSize.height / 2f
                 val landY = headerOrigin.y + pillTarget.y
-                val startY = landY + 170.dp.toPx()
+                val startY = landY + flightRange
                 ((startY - heroCenterY) / (startY - landY)).coerceIn(0f, 1f)
             }
         }
-        val barH = HeaderExpanded + (HeaderCollapsed - HeaderExpanded) * placeMorph
-        val headerH = statusTop + barH + HeaderFade
+        val headerHeightPx: () -> Float = {
+            with(density) {
+                val bar = HeaderExpanded + (HeaderCollapsed - HeaderExpanded) * placeMorph()
+                (statusTop + bar + HeaderFade).toPx()
+            }
+        }
+        val openness: () -> Float = { 1f - sheet.value }
+        val sheetVisible by remember { derivedStateOf { sheet.value < 0.999f } }
+
+        // A soft bump when the score lands in the header.
+        LaunchedEffect(Unit) {
+            snapshotFlow { scoreMorph() >= 0.98f }.distinctUntilChanged().drop(1).collect { landed ->
+                if (landed) Haptics.settle(view)
+            }
+        }
 
         Box(
             Modifier
                 .fillMaxSize()
-                .then(if (openness > 0.01f) Modifier.blur((28 * openness).dp) else Modifier)
+                .graphicsLayer {
+                    val o = openness()
+                    if (Build.VERSION.SDK_INT >= 31 && o > 0.01f) {
+                        val r = (28 * o).dp.toPx()
+                        renderEffect = BlurEffect(r, r, TileMode.Clamp)
+                    } else {
+                        renderEffect = null
+                    }
+                }
         ) {
             Box(Modifier.fillMaxSize().backdropSource(pageLayer)) {
                 AuroraBackground(intensity, Modifier.fillMaxSize())
@@ -249,8 +281,9 @@ fun LjosApp() {
                 ) {
                     Hero(
                         night, inp, loading,
-                        hideScore = scoreMorph > 0f,
-                        onScorePlaced = { pos, size -> heroPos = pos; heroSize = size },
+                        scoreAlpha = { if (scoreMorph() > 0f) 0f else 1f },
+                        // Store the position as if unscrolled: identical every frame, so no recomposition.
+                        onScorePlaced = { pos, size -> heroBase = pos + Offset(0f, scroll.value.toFloat()); heroSize = size },
                     )
                     if (nowState != null && nowState.isDark) NowCard(nowState)
                     if (night != null && night.hours.isNotEmpty()) {
@@ -272,7 +305,7 @@ fun LjosApp() {
                 }
             }
 
-            ProgressiveBlurHeader(pageLayer, headerH)
+            ProgressiveBlurHeader(pageLayer, height = statusTop + HeaderExpanded + HeaderFade, heightPx = headerHeightPx)
             Header(
                 placeName = home.name,
                 score = night?.peak?.score,
@@ -284,41 +317,48 @@ fun LjosApp() {
                 onPillTarget = { pillTarget = it },
             )
 
-            // The big number itself, flying from the hero into the header pill.
+            // The big number itself, flying from the hero into the header pill. Always composed;
+            // position, size, colour and visibility are all applied on the GPU per frame.
             val peakScore = night?.peak?.score
-            if (peakScore != null && scoreMorph > 0f && heroPos.isSpecified && pillTarget.isSpecified) {
-                val e = FastOutSlowInEasing.transform(scoreMorph)
+            if (peakScore != null) {
                 val endScale = with(density) { 15.sp.toPx() / 120.sp.toPx() } * 1.25f
-                val s = 1f + (endScale - 1f) * e
-                val target = headerOrigin + pillTarget
+                val flight: GraphicsLayerScope.(Boolean) -> Unit = { coloured ->
+                    val m = scoreMorph()
+                    if (m <= 0f || !heroBase.isSpecified || !pillTarget.isSpecified) {
+                        alpha = 0f
+                    } else {
+                        val e = FastOutSlowInEasing.transform(m)
+                        val sc = 1f + (endScale - 1f) * e
+                        val target = headerOrigin + pillTarget
+                        transformOrigin = TransformOrigin(0f, 0f)
+                        scaleX = sc
+                        scaleY = sc
+                        val cx = (heroBase.x + heroSize.width / 2f) * (1f - e) + target.x * e
+                        val cy = (heroBase.y - scroll.value + heroSize.height / 2f) * (1f - e) + target.y * e
+                        translationX = cx - heroSize.width * sc / 2f
+                        translationY = cy - heroSize.height * sc / 2f
+                        val fadeOut = 1f - ((m - 0.86f) / 0.14f).coerceIn(0f, 1f)
+                        // White copy fades as the score-coloured copy fades in: a colour shift with no recomposition.
+                        alpha = fadeOut * if (coloured) e else 1f - e
+                    }
+                }
                 Text(
-                    peakScore.toString(),
-                    style = HeroScoreStyle.copy(
-                        color = androidx.compose.ui.graphics.lerp(Color.White, scoreColor(peakScore), e),
-                        fontWeight = if (e > 0.6f) FontWeight.Light else FontWeight.ExtraLight,
-                    ),
-                    maxLines = 1,
-                    modifier = Modifier
-                        .wrapContentSize(Alignment.TopStart, unbounded = true)
-                        .graphicsLayer {
-                            transformOrigin = TransformOrigin(0f, 0f)
-                            scaleX = s
-                            scaleY = s
-                            val cx = (heroPos.x + heroSize.width / 2f) * (1f - e) + target.x * e
-                            val cy = (heroPos.y + heroSize.height / 2f) * (1f - e) + target.y * e
-                            translationX = cx - heroSize.width * s / 2f
-                            translationY = cy - heroSize.height * s / 2f
-                            alpha = 1f - ((scoreMorph - 0.86f) / 0.14f).coerceIn(0f, 1f)
-                        },
+                    peakScore.toString(), style = HeroScoreStyle, maxLines = 1,
+                    modifier = Modifier.wrapContentSize(Alignment.TopStart, unbounded = true).graphicsLayer { flight(false) },
+                )
+                Text(
+                    peakScore.toString(), style = HeroScoreStyle.copy(color = scoreColor(peakScore), shadow = null), maxLines = 1,
+                    modifier = Modifier.wrapContentSize(Alignment.TopStart, unbounded = true).graphicsLayer { flight(true) },
                 )
             }
         }
 
-        if (sheet.value < 0.999f) {
+        if (sheetVisible) {
             Box(
                 Modifier
                     .fillMaxSize()
-                    .background(Color.Black.copy(alpha = 0.3f * openness))
+                    .graphicsLayer { alpha = openness() }
+                    .background(Color.Black.copy(alpha = 0.3f))
                     .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { closeSheet() }
             )
             SettingsSheet(
@@ -326,6 +366,7 @@ fun LjosApp() {
                 maxHeight = screenH * 0.9f,
                 onClose = { closeSheet() },
                 onSettle = { velocity ->
+                    Haptics.settle(view)
                     scope.launch {
                         if (sheet.value > 0.3f || velocity > 1400f) sheet.animateTo(1f, tween(240, easing = FastOutSlowInEasing))
                         else sheet.animateTo(0f, spring(dampingRatio = 0.86f, stiffness = 420f))
@@ -356,8 +397,8 @@ fun LjosApp() {
 private fun Header(
     placeName: String,
     score: Int?,
-    placeMorph: Float,
-    scoreMorph: Float,
+    placeMorph: () -> Float,
+    scoreMorph: () -> Float,
     loading: Boolean,
     onRefresh: () -> Unit,
     onSettings: () -> Unit,
@@ -398,11 +439,13 @@ private fun Header(
         }
 
         // Place chip: own line when expanded, glides into the title line when collapsed.
-        val chipX = (titleW + gap) * placeMorph
-        val chipY = line2Y * (1f - placeMorph) + ((rowH - chipH) / 2f) * placeMorph
         Row(
             Modifier
-                .graphicsLayer { translationX = chipX; translationY = chipY }
+                .graphicsLayer {
+                    val p = placeMorph()
+                    translationX = (titleW + gap) * p
+                    translationY = line2Y * (1f - p) + ((rowH - chipH) / 2f) * p
+                }
                 .onSizeChanged { chipW = it.width; chipH = it.height }
                 .clip(RoundedCornerShape(10.dp))
                 .clickable(onClick = onSettings)
@@ -411,18 +454,16 @@ private fun Header(
         ) {
             PinIcon(Modifier.size(width = 10.dp, height = 13.dp))
             Spacer(Modifier.width(6.dp))
-            // Room left between the title and the score pill when collapsed; plenty when expanded.
+            // Width that fits between the title and the score pill once collapsed.
             val nameMax = with(density) {
-                val collapsedRoom = fullW - buttonsW - pillW - titleW - gap * 2 - 24.dp.toPx()
-                (collapsedRoom + (fullW - collapsedRoom) * (1f - placeMorph)).coerceAtLeast(40.dp.toPx()).toDp()
+                (fullW - buttonsW - pillW - titleW - gap * 2 - 24.dp.toPx()).coerceAtLeast(40.dp.toPx()).toDp()
             }
             Text(
-                placeName, maxLines = 1, fontSize = 13.sp,
+                placeName, maxLines = 1, fontSize = 13.sp, color = Ink.copy(alpha = 0.78f),
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 modifier = Modifier.widthIn(max = nameMax),
-                color = androidx.compose.ui.graphics.lerp(Muted, Ink.copy(alpha = 0.8f), placeMorph),
             )
-            Text("  ›", color = Faint.copy(alpha = Faint.alpha * (1f - placeMorph)), fontSize = 13.sp)
+            Text("  ›", color = Faint, fontSize = 13.sp, modifier = Modifier.graphicsLayer { alpha = 1f - placeMorph() })
         }
 
         // Compact score pill, right-aligned against the buttons once the hero has scrolled away.
@@ -432,11 +473,11 @@ private fun Header(
             LaunchedEffect(pillX, pillW, pillH) {
                 if (pillW > 0) onPillTarget(Offset(pillX + pillW / 2f, rowH / 2f))
             }
-            val landed = ((scoreMorph - 0.8f) / 0.2f).coerceIn(0f, 1f)
             Box(
                 Modifier
                     .onSizeChanged { pillW = it.width; pillH = it.height }
                     .graphicsLayer {
+                        val landed = ((scoreMorph() - 0.8f) / 0.2f).coerceIn(0f, 1f)
                         translationX = pillX
                         translationY = (rowH - pillH) / 2f
                         alpha = landed
@@ -459,6 +500,7 @@ private fun RoundButton(onClick: () -> Unit, enabled: Boolean = true, content: @
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(if (pressed) 0.9f else 1f, spring(dampingRatio = 0.5f, stiffness = 600f), label = "press")
+    val view = LocalView.current
     Box(
         Modifier
             // requiredSize: never squeezed by a crowded row, so it stays a true circle
@@ -467,7 +509,7 @@ private fun RoundButton(onClick: () -> Unit, enabled: Boolean = true, content: @
             .clip(CircleShape)
             .background(Color(0x1FFFFFFF))
             .border(1.dp, Color(0x14FFFFFF), CircleShape)
-            .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick),
+            .clickable(interactionSource = interaction, indication = null, enabled = enabled) { Haptics.tap(view); onClick() },
         contentAlignment = Alignment.Center,
     ) { content() }
 }

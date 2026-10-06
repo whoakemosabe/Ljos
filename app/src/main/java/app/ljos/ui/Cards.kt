@@ -13,7 +13,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.clickable
 import androidx.compose.material3.Text
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -53,7 +56,7 @@ internal fun Hero(
     night: Night?,
     inp: Inputs?,
     loading: Boolean,
-    hideScore: Boolean = false,
+    scoreAlpha: () -> Float = { 1f },
     onScorePlaced: (Offset, IntSize) -> Unit = { _, _ -> },
 ) {
     val peak = night?.peak
@@ -65,7 +68,7 @@ internal fun Hero(
             style = HeroScoreStyle,
             modifier = Modifier
                 .onGloballyPositioned { onScorePlaced(it.positionInRoot(), it.size) }
-                .graphicsLayer { alpha = if (hideScore && peak != null) 0f else 1f },
+                .graphicsLayer { alpha = if (peak != null) scoreAlpha() else 1f },
         )
         val headline = when {
             peak != null -> Model.label(peak.score)
@@ -188,12 +191,30 @@ internal fun FactorRow(name: String, value: String, f: Double, last: Boolean = f
 
 @Composable
 internal fun WhereCard(spots: List<SpotScore>, sel: HourScore) {
+    val context = LocalContext.current
+    val view = LocalView.current
     Column(Modifier.glass()) {
-        CardTitle(L.t("Where to go at ", "Hvert á að fara kl. ") + Fmt.hhmm(sel.time), L.t("Town lights cost home a few points", "Bæjarljós kosta nokkur stig"))
-        Spacer(Modifier.height(10.dp))
+        CardTitle(
+            L.t("Where to go at ", "Hvert á að fara kl. ") + Fmt.hhmm(sel.time),
+            L.t("Tap a place for directions", "Ýttu á stað til að fá leiðsögn"),
+        )
+        Spacer(Modifier.height(6.dp))
         spots.forEachIndexed { i, s ->
             val best = i == 0 && s.score > 0
-            Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            val here = s.distanceKm < 1
+            Row(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(RoundedCornerShape(14.dp))
+                    .then(
+                        if (here) Modifier else Modifier.clickable {
+                            Haptics.tap(view)
+                            openDirections(context, s.spot.lat, s.spot.lon, s.spot.name)
+                        }
+                    )
+                    .padding(vertical = 9.dp, horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Column(Modifier.weight(1f)) {
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Text(s.spot.name, color = Ink, fontSize = 15.sp)
@@ -209,12 +230,40 @@ internal fun WhereCard(spots: List<SpotScore>, sel: HourScore) {
                             )
                         }
                     }
-                    val dist = if (s.distanceKm < 1) L.t("you're here", "þú ert hér") else L.t("${Fmt.distance(s.distanceKm)} away", "${Fmt.distance(s.distanceKm)} í burtu")
-                    Text("$dist · ${Fmt.cloud(s.cloud)}", color = Faint, fontSize = 12.sp)
+                    val where = if (here) L.t("you're here", "þú ert hér")
+                    else L.t("≈ ${driveMinutes(s.distanceKm)} min drive · ", "≈ ${driveMinutes(s.distanceKm)} mín akstur · ") + Fmt.distance(s.distanceKm)
+                    Text("$where · ${Fmt.cloud(s.cloud)}", color = Faint, fontSize = 12.sp)
                 }
                 Text(s.score.toString(), color = scoreColor(s.score).copy(alpha = 0.95f), fontSize = 22.sp, fontWeight = FontWeight.Light)
+                if (!here) Text("  ›", color = Faint, fontSize = 18.sp)
             }
         }
+    }
+}
+
+/**
+ * Rough door-to-door estimate from straight-line distance: roads wander (~1.35×) and town
+ * stretches are slow. Shown with "≈" because it's a guess, not routing.
+ */
+internal fun driveMinutes(km: Double): Int {
+    val road = km * 1.35
+    val speed = if (road < 6) 40.0 else 70.0
+    return (road / speed * 60 + 2).roundToInt().coerceAtLeast(2)
+}
+
+private fun openDirections(context: android.content.Context, lat: Double, lon: Double, name: String) {
+    val uri = android.net.Uri.parse(
+        "https://www.google.com/maps/dir/?api=1&destination=$lat,$lon&travelmode=driving"
+    )
+    val intent = android.content.Intent(android.content.Intent.ACTION_VIEW, uri)
+        .addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)
+    try {
+        context.startActivity(intent.setPackage("com.google.android.apps.maps"))
+    } catch (e: Exception) {
+        // No Google Maps: let any map app or the browser take it.
+        try {
+            context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, uri).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+        } catch (e2: Exception) { }
     }
 }
 

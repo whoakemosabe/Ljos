@@ -6,7 +6,10 @@ import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
@@ -36,6 +39,15 @@ fun HourStrip(
     val measurer = rememberTextMeasurer()
     val labelStyle = remember { TextStyle(color = Muted, fontSize = 11.sp) }
     val n = hours.size
+    val view = LocalView.current
+    val current by rememberUpdatedState(selected)
+    val pick: (Float, Float) -> Unit = { x, width ->
+        if (n > 0 && onSelect != null) {
+            val t = hours[(x / width * n).toInt().coerceIn(0, n - 1)].time
+            if (t != current) Haptics.scrub(view)
+            onSelect(t)
+        }
+    }
 
     Canvas(
         modifier
@@ -44,14 +56,10 @@ fun HourStrip(
             .then(
                 if (onSelect == null) Modifier else Modifier
                     .pointerInput(hours) {
-                        detectTapGestures { o ->
-                            if (n > 0) onSelect(hours[(o.x / size.width * n).toInt().coerceIn(0, n - 1)].time)
-                        }
+                        detectTapGestures { o -> pick(o.x, size.width.toFloat()) }
                     }
                     .pointerInput(hours) {
-                        detectHorizontalDragGestures { change, _ ->
-                            if (n > 0) onSelect(hours[(change.position.x / size.width * n).toInt().coerceIn(0, n - 1)].time)
-                        }
+                        detectHorizontalDragGestures { change, _ -> pick(change.position.x, size.width.toFloat()) }
                     }
             )
     ) {

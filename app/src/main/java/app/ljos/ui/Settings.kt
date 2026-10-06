@@ -62,6 +62,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -442,7 +443,8 @@ private fun UpdateSettings() {
 }
 
 @Composable
-private fun Pill(text: String, primary: Boolean, busy: Boolean = false, icon: Boolean = false, onClick: () -> Unit) {
+internal fun Pill(text: String, primary: Boolean, busy: Boolean = false, icon: Boolean = false, onClick: () -> Unit) {
+    val view = LocalView.current
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(if (pressed) 0.94f else 1f, spring(dampingRatio = 0.55f, stiffness = 600f), label = "press")
@@ -451,7 +453,7 @@ private fun Pill(text: String, primary: Boolean, busy: Boolean = false, icon: Bo
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(RoundedCornerShape(14.dp))
             .background(if (primary) Green else Color(0x1AFFFFFF))
-            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+            .clickable(interactionSource = interaction, indication = null) { Haptics.tap(view); onClick() }
             .padding(horizontal = 14.dp, vertical = 9.dp)
             .animateContentSize(spring(dampingRatio = 0.8f, stiffness = 500f)),
         verticalAlignment = Alignment.CenterVertically,
@@ -481,11 +483,14 @@ private fun SectionLabel(text: String) {
 
 @Composable
 private fun ToggleRow(title: String, sub: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    val view = LocalView.current
     Row(
         Modifier
             .fillMaxWidth()
             .clip(RoundedCornerShape(12.dp))
-            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onChange(!checked) }
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                Haptics.toggle(view, !checked); onChange(!checked)
+            }
             .padding(vertical = 8.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -500,6 +505,7 @@ private fun ToggleRow(title: String, sub: String, checked: Boolean, onChange: (B
 /** A springy switch: the knob glides and squishes a little, the track glows green when on. */
 @Composable
 private fun SoftSwitch(checked: Boolean, onChange: (Boolean) -> Unit) {
+    val view = LocalView.current
     val pos by animateFloatAsState(if (checked) 1f else 0f, spring(dampingRatio = 0.62f, stiffness = 380f), label = "knob")
     val track by animateColorAsState(if (checked) Green else Color(0x24FFFFFF), tween(320), label = "track")
     val knob by animateColorAsState(if (checked) Color(0xFF03130B) else Color(0xFFCFD8E6), tween(320), label = "knobColor")
@@ -509,7 +515,7 @@ private fun SoftSwitch(checked: Boolean, onChange: (Boolean) -> Unit) {
     Canvas(
         Modifier
             .size(width = 46.dp, height = 28.dp)
-            .clickable(interactionSource = interaction, indication = null) { onChange(!checked) }
+            .clickable(interactionSource = interaction, indication = null) { Haptics.toggle(view, !checked); onChange(!checked) }
     ) {
         val h = size.height
         drawRoundRect(track, cornerRadius = CornerRadius(h / 2f))
@@ -568,7 +574,8 @@ private fun SegmentRow(title: String, options: List<String>, selected: Int, onSe
 
 /** Glass track with a green pill that glides to the chosen option. */
 @Composable
-private fun SlidingSegments(options: List<String>, selected: Int, modifier: Modifier, onSelect: (Int) -> Unit) {
+internal fun SlidingSegments(options: List<String>, selected: Int, modifier: Modifier, onSelect: (Int) -> Unit) {
+    val view = LocalView.current
     val pos by animateFloatAsState(selected.toFloat(), spring(dampingRatio = 0.72f, stiffness = 340f), label = "segment")
     BoxWithConstraints(
         modifier
@@ -594,7 +601,10 @@ private fun SlidingSegments(options: List<String>, selected: Int, modifier: Modi
                     Modifier
                         .weight(1f)
                         .fillMaxHeight()
-                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onSelect(i) },
+                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                            if (i != selected) Haptics.segment(view)
+                            onSelect(i)
+                        },
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(

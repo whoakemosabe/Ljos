@@ -95,4 +95,9 @@ class Prefs(context: Context) {
         if (!quietOn || quietFrom == quietTo) return false
         return if (quietFrom < quietTo) hour in quietFrom until quietTo else hour >= quietFrom || hour < quietTo
     }
+
+    /** Set once the first-run welcome has been completed. */
+    var onboarded: Boolean
+        get() = p.getBoolean("onboarded", false)
+        set(v) = p.edit().putBoolean("onboarded", v).apply()
 }

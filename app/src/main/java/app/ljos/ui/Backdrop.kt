@@ -17,6 +17,7 @@ import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import kotlin.math.pow
@@ -45,6 +46,8 @@ fun ProgressiveBlurHeader(
     layer: GraphicsLayer,
     height: Dp,
     modifier: Modifier = Modifier,
+    /** Optional live height in px (e.g. shrinking with scroll); read at layout time only. */
+    heightPx: (() -> Float)? = null,
     maxRadius: Dp = 36.dp,
     tint: Color = Color(0xB3050812),
     bands: Int = 5,
@@ -58,7 +61,7 @@ fun ProgressiveBlurHeader(
             Box(
                 modifier
                     .fillMaxWidth()
-                    .height(height)
+                    .liveHeight(height, heightPx)
                     .clipToBounds()
                     .graphicsLayer {
                         val r = radius.toPx()
@@ -79,7 +82,7 @@ fun ProgressiveBlurHeader(
     Box(
         modifier
             .fillMaxWidth()
-            .height(height)
+            .liveHeight(height, heightPx)
             .drawWithContent {
                 drawRect(
                     Brush.verticalGradient(
@@ -93,3 +96,12 @@ fun ProgressiveBlurHeader(
             }
     )
 }
+
+/** Fixed height, or a height re-read during layout so scroll changes skip recomposition. */
+private fun Modifier.liveHeight(height: Dp, heightPx: (() -> Float)?): Modifier =
+    if (heightPx == null) this.height(height)
+    else this.layout { measurable, constraints ->
+        val h = heightPx().toInt().coerceAtLeast(0)
+        val p = measurable.measure(constraints.copy(minHeight = h, maxHeight = h))
+        layout(p.width, h) { p.place(0, 0) }
+    }
