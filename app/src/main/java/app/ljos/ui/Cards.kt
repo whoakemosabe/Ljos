@@ -2,6 +2,7 @@ package app.ljos.ui
 
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -91,14 +92,29 @@ internal fun Hero(
                         if (scrubbed == null) L.t("TONIGHT", "Í KVÖLD") else L.t("AT ", "KL. ") + Fmt.hhmm(scrubbed.time),
                         color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Medium, letterSpacing = 3.sp,
                     )
-                    val value = scrubbed?.score ?: shown
-                    Text(
-                        value.toString(),
-                        style = HeroScoreStyle.copy(color = if (scrubbed == null) Color.White else scoreColor(value)),
-                        modifier = Modifier
-                            .onGloballyPositioned { onScorePlaced(it.positionInRoot(), it.size) }
-                            .graphicsLayer { alpha = if (scrubbed == null) scoreAlpha() else 1f },
-                    )
+                    // Keyed on the hour (not the number), so the load-in count-up stays a plain
+                    // count while scrubbing between hours rolls each new number in.
+                    androidx.compose.animation.AnimatedContent(
+                        targetState = scrubbed?.time ?: -1L,
+                        transitionSpec = {
+                            val later = targetState > initialState
+                            (androidx.compose.animation.slideInVertically(tween(220)) { if (later) it / 3 else -it / 3 } +
+                                androidx.compose.animation.fadeIn(tween(220))) togetherWith
+                                (androidx.compose.animation.slideOutVertically(tween(170)) { if (later) -it / 3 else it / 3 } +
+                                    androidx.compose.animation.fadeOut(tween(170)))
+                        },
+                        label = "dialScore",
+                    ) { key ->
+                        val hour = night.hours.firstOrNull { it.time == key }
+                        val v = hour?.score ?: shown
+                        Text(
+                            v.toString(),
+                            style = HeroScoreStyle.copy(color = if (hour == null) Color.White else scoreColor(v)),
+                            modifier = Modifier
+                                .onGloballyPositioned { if (hour == null) onScorePlaced(it.positionInRoot(), it.size) }
+                                .graphicsLayer { alpha = if (hour == null) scoreAlpha() else 1f },
+                        )
+                    }
                     Text(
                         Model.label(scrubbed?.score ?: peak.score),
                         style = TextStyle(color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Light, shadow = Glow),
@@ -217,6 +233,9 @@ internal fun WhyCard(h: HourScore) {
 
 @Composable
 internal fun FactorRow(name: String, value: String, f: Double, last: Boolean = false) {
+    val shownF by androidx.compose.animation.core.animateFloatAsState(
+        f.toFloat().coerceIn(0.02f, 1f), spring(dampingRatio = 0.85f, stiffness = 220f), label = "factor",
+    )
     Column(Modifier.padding(bottom = if (last) 0.dp else 12.dp)) {
         Row {
             Text(name, color = Ink, fontSize = 14.sp)
@@ -233,7 +252,7 @@ internal fun FactorRow(name: String, value: String, f: Double, last: Boolean = f
         ) {
             Box(
                 Modifier
-                    .fillMaxWidth(f.toFloat().coerceIn(0.02f, 1f))
+                    .fillMaxWidth(shownF)
                     .fillMaxHeight()
                     .clip(RoundedCornerShape(3.dp))
                     .background(Brush.horizontalGradient(listOf(Teal, Green)))

@@ -34,6 +34,8 @@ fun HourStrip(
     selected: Long?,
     now: Long,
     onSelect: ((Long) -> Unit)?,
+    /** Tapping the bar that's already selected (e.g. to go back to the default hour). */
+    onTapSelected: () -> Unit = {},
     modifier: Modifier = Modifier,
 ) {
     val measurer = rememberTextMeasurer()
@@ -41,11 +43,13 @@ fun HourStrip(
     val n = hours.size
     val view = LocalView.current
     val current by rememberUpdatedState(selected)
-    val pick: (Float, Float) -> Unit = { x, width ->
+    val pick: (Float, Float, Boolean) -> Unit = { x, width, tap ->
         if (n > 0 && onSelect != null) {
             val t = hours[(x / width * n).toInt().coerceIn(0, n - 1)].time
-            if (t != current) Haptics.scrub(view)
-            onSelect(t)
+            when {
+                t != current -> { Haptics.scrub(view); onSelect(t) }
+                tap -> { Haptics.tap(view); onTapSelected() }
+            }
         }
     }
 
@@ -56,10 +60,10 @@ fun HourStrip(
             .then(
                 if (onSelect == null) Modifier else Modifier
                     .pointerInput(hours) {
-                        detectTapGestures { o -> pick(o.x, size.width.toFloat()) }
+                        detectTapGestures { o -> pick(o.x, size.width.toFloat(), true) }
                     }
                     .pointerInput(hours) {
-                        detectHorizontalDragGestures { change, _ -> pick(change.position.x, size.width.toFloat()) }
+                        detectHorizontalDragGestures { change, _ -> pick(change.position.x, size.width.toFloat(), false) }
                     }
             )
     ) {

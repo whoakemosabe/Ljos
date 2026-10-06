@@ -334,21 +334,25 @@ fun LjosApp() {
                         // Store the position as if unscrolled: identical every frame, so no recomposition.
                         onScorePlaced = { pos, size -> heroBase = pos + Offset(0f, scroll.value.toFloat()); heroSize = size },
                     )
-                    if (nowState != null && nowState.isDark) NowCard(nowState)
+                    SoftReveal(nowState != null && nowState.isDark) { nowState?.let { NowCard(it) } }
                     if (night != null && night.hours.isNotEmpty()) {
                         Column(Modifier.glass()) {
-                            CardTitle(L.t("Hour by hour", "Klukkustund fyrir klukkustund"), L.t("Tap or drag a bar", "Ýttu á eða dragðu súlu"))
+                            CardTitle(L.t("Hour by hour", "Klukkustund fyrir klukkustund"), L.t("Tap or drag a bar · tap it again to go back", "Ýttu á eða dragðu súlu · ýttu aftur til að fara til baka"))
                             Spacer(Modifier.height(12.dp))
-                            HourStrip(night.hours, sel?.time, now, onSelect = { t -> selected = t })
+                            HourStrip(
+                                night.hours, sel?.time, now,
+                                onSelect = { t -> selected = t },
+                                onTapSelected = { selected = null },
+                            )
                             if (moon != null) {
                                 Spacer(Modifier.height(10.dp))
                                 MoonLine(night.hours, moon)
                             }
                         }
                     }
-                    if (sel != null) WhyCard(sel)
-                    if (spotScores.isNotEmpty() && sel != null) WhereCard(spotScores, sel)
-                    if (kpDays != null) KpOutlookCard(kpDays, now)
+                    SoftReveal(sel != null) { sel?.let { WhyCard(it) } }
+                    SoftReveal(spotScores.isNotEmpty() && sel != null) { sel?.let { WhereCard(spotScores, it) } }
+                    SoftReveal(kpDays != null) { kpDays?.let { KpOutlookCard(it, now) } }
                     MadeWithLove(errors)
                     Spacer(Modifier.height(16.dp))
                 }
@@ -756,4 +760,16 @@ private fun RefreshIcon(modifier: Modifier = Modifier) {
         }
         drawPath(path, Ink, style = Stroke(sw, cap = StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
     }
+}
+
+/** Cards fade and unfold into place when their data arrives, instead of popping in. */
+@Composable
+private fun androidx.compose.foundation.layout.ColumnScope.SoftReveal(visible: Boolean, content: @Composable () -> Unit) {
+    androidx.compose.animation.AnimatedVisibility(
+        visible = visible,
+        enter = androidx.compose.animation.fadeIn(tween(420, easing = FastOutSlowInEasing)) +
+            androidx.compose.animation.expandVertically(spring(dampingRatio = 0.9f, stiffness = 260f)),
+        exit = androidx.compose.animation.fadeOut(tween(200)) +
+            androidx.compose.animation.shrinkVertically(spring(dampingRatio = 1f, stiffness = 400f)),
+    ) { content() }
 }
