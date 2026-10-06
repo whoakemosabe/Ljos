@@ -75,7 +75,11 @@ object Alerts {
             peak.time + 60 * MIN_MS > now && peak.score >= prefs.threshold && prefs.lastTonightKey != nightKey
         ) {
             val best = Model.spotsAt(peak.time, inp, now).firstOrNull()
-            val where = best?.let { L.t(" Clearest at ${it.spot.name}.", " Heiðskírast við ${it.spot.name}.") } ?: ""
+            val where = when {
+                best == null -> ""
+                best.spot.id == "home" -> L.t(" Best right where you are.", " Best þar sem þú ert.")
+                else -> L.t(" Best at ${best.spot.name}.", " Best við ${best.spot.name}.")
+            }
             post(
                 context, CH_TONIGHT, ID_TONIGHT,
                 L.t("Tonight: ${peak.score} · ${Model.label(peak.score)}", "Í kvöld: ${peak.score} · ${Model.label(peak.score)}"),

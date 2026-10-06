@@ -247,14 +247,21 @@ internal fun WhereCard(spots: List<SpotScore>, sel: HourScore) {
     val context = LocalContext.current
     val view = LocalView.current
     val home = spots.firstOrNull { it.spot.id == "home" } ?: spots.first()
-    val best = spots.firstOrNull { it.score > 0 && it.spot.id != "home" }
+    // spots arrive ranked: same sky score, but town lights cost 15% when comparing.
+    val top = spots.firstOrNull { it.score > 0 }
+    val stayPut = top?.spot?.id == "home"
+    val best = if (stayPut) null else top
     var picked by remember(sel.time) { mutableStateOf(best?.spot?.id) }
     val pickedSpot = spots.firstOrNull { it.spot.id == picked }
 
     Column(Modifier.glass()) {
         CardTitle(
             L.t("Where to go at ", "Hvert á að fara kl. ") + Fmt.hhmm(sel.time),
-            L.t("Tap a pin or a place", "Ýttu á pinna eða stað"),
+            when {
+                top == null -> L.t("No clear, dark spot nearby at this hour", "Enginn heiðskír, dimmur staður nálægt á þessum tíma")
+                stayPut -> L.t("Best right where you are", "Best þar sem þú ert")
+                else -> L.t("Same scores as above. Dark spots win ties with town lights.", "Sömu einkunnir og ofar. Dimmir staðir vinna bæjarljós á jöfnu.")
+            },
         )
         Spacer(Modifier.height(12.dp))
         SpotMap(
@@ -306,11 +313,17 @@ internal fun WhereCard(spots: List<SpotScore>, sel: HourScore) {
             ) {
                 Box(Modifier.size(8.dp).clip(CircleShape).background(scoreColor(s.score)))
                 Spacer(Modifier.width(10.dp))
-                Text(s.spot.name, color = Ink, fontSize = 14.sp, modifier = Modifier.weight(1f))
-                Text(
-                    if (here) L.t("you're here", "þú ert hér") else Fmt.distance(s.distanceKm),
-                    color = Faint, fontSize = 12.sp,
-                )
+                Column(Modifier.weight(1f)) {
+                    Text(s.spot.name, color = Ink, fontSize = 14.sp)
+                    Text(
+                        when {
+                            here && s.townLights -> L.t("you're here · town lights dim faint aurora", "þú ert hér · bæjarljós dempa dauf norðurljós")
+                            here -> L.t("you're here", "þú ert hér")
+                            else -> Fmt.distance(s.distanceKm) + " · " + L.t("dark sky", "dimmur himinn")
+                        },
+                        color = Faint, fontSize = 11.sp,
+                    )
+                }
                 Spacer(Modifier.width(12.dp))
                 Text(s.score.toString(), color = scoreColor(s.score), fontSize = 16.sp, fontWeight = FontWeight.Light)
             }

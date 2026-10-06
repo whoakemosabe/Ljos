@@ -483,7 +483,7 @@ private fun Header(
             Spacer(Modifier.weight(1f))
             RoundButton(onClick = onRefresh, enabled = !loading) {
                 if (loading) CircularProgressIndicator(Modifier.size(16.dp), color = Ink, strokeWidth = 2.dp)
-                else Text("↻", color = Ink, fontSize = 18.sp, modifier = Modifier.graphicsLayer { rotationZ = pull().coerceIn(0f, 1.5f) * 300f })
+                else RefreshIcon(Modifier.graphicsLayer { rotationZ = pull().coerceIn(0f, 1.5f) * 300f })
             }
             Spacer(Modifier.width(8.dp))
             RoundButton(onClick = onSettings) { TuneIcon() }
@@ -719,4 +719,41 @@ private fun skyFor(h: HourScore, night: Night?): SkyState {
         moonY = 0.32f - (h.moonAlt.coerceIn(0.0, 40.0) / 40.0).toFloat() * 0.22f,
         storm = ((h.kp - 4.5) / 2.0).coerceIn(0.0, 1.0).toFloat(),
     )
+}
+
+/**
+ * Circular-arrow refresh icon drawn geometrically, so it sits dead centre in its circle
+ * (a text glyph carries font ascent/descent and drifts off-centre).
+ */
+@Composable
+private fun RefreshIcon(modifier: Modifier = Modifier) {
+    Canvas(modifier.size(18.dp)) {
+        val sw = 1.8.dp.toPx()
+        val r = size.minDimension / 2f - sw - 1.dp.toPx()
+        val c = Offset(size.width / 2f, size.height / 2f)
+        val startDeg = -60f
+        val sweep = 290f
+        drawArc(
+            Ink, startDeg, sweep, false,
+            topLeft = Offset(c.x - r, c.y - r), size = androidx.compose.ui.geometry.Size(r * 2, r * 2),
+            style = Stroke(sw, cap = StrokeCap.Round),
+        )
+        // Arrowhead at the arc's end, pointing clockwise (the way the arc travels).
+        val endDeg = startDeg + sweep
+        val a = Math.toRadians(endDeg.toDouble())
+        val tip = Offset(c.x + (r * kotlin.math.cos(a)).toFloat(), c.y + (r * kotlin.math.sin(a)).toFloat())
+        val head = 4.2.dp.toPx()
+        // Clockwise travel at angle θ heads toward θ + 90°; the wings trail back toward θ − 90°.
+        val back = Math.toRadians(endDeg.toDouble() - 90.0)
+        fun wing(off: Double) = Offset(
+            tip.x + (head * kotlin.math.cos(back + off)).toFloat(),
+            tip.y + (head * kotlin.math.sin(back + off)).toFloat(),
+        )
+        val path = Path().apply {
+            moveTo(wing(0.55).x, wing(0.55).y)
+            lineTo(tip.x, tip.y)
+            lineTo(wing(-0.55).x, wing(-0.55).y)
+        }
+        drawPath(path, Ink, style = Stroke(sw, cap = StrokeCap.Round, join = androidx.compose.ui.graphics.StrokeJoin.Round))
+    }
 }

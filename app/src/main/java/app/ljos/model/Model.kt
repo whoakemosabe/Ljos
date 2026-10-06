@@ -40,7 +40,19 @@ data class Night(
     val darkUntil: Long?,
 )
 
-data class SpotScore(val spot: Spot, val score: Int, val cloud: Int, val distanceKm: Double)
+/**
+ * One place at one hour. [score] is the same sky score shown everywhere else (so home matches
+ * the big number). [rank] is what we sort by: identical, except places inside town lights lose
+ * 15%, so a dark spot wins a tie with town.
+ */
+data class SpotScore(
+    val spot: Spot,
+    val score: Int,
+    val cloud: Int,
+    val distanceKm: Double,
+    val rank: Int = score,
+    val townLights: Boolean = false,
+)
 
 data class NowState(
     val score: Int,
@@ -209,9 +221,10 @@ object Model {
 
     fun spotsAt(t: Long, inp: Inputs, now: Long): List<SpotScore> =
         inp.spots.map { s ->
-            val h = hourScore(t, s, inp, now, townPenalty = true)
-            SpotScore(s, h.score, h.cloud, Geo.km(inp.home.lat, inp.home.lon, s.lat, s.lon))
-        }.sortedWith(compareByDescending<SpotScore> { it.score }.thenBy { it.distanceKm })
+            val h = hourScore(t, s, inp, now)
+            val rank = if (s.dark) h.score else (h.score * TOWN_LIGHTS).roundToInt()
+            SpotScore(s, h.score, h.cloud, Geo.km(inp.home.lat, inp.home.lon, s.lat, s.lon), rank, townLights = !s.dark)
+        }.sortedWith(compareByDescending<SpotScore> { it.rank }.thenByDescending { it.score }.thenBy { it.distanceKm })
 
     fun nowState(now: Long, inp: Inputs): NowState {
         val hourStart = now - now % HOUR_MS

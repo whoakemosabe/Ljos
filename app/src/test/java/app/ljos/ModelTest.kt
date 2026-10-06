@@ -96,4 +96,17 @@ class ModelTest {
         // Same sky everywhere, so a dark spot must beat town lights at home.
         assertTrue(ranked.first().spot.dark)
     }
+
+    // The number on a place is the same number shown everywhere else for that hour;
+    // town lights only affect the ordering.
+    @Test fun homeShowsTheSameScoreInTheSpotsList() {
+        val t = ms("2024-01-11T22:00:00Z")
+        val inp = inputs(t, 2.0, 0)
+        val now = t - 12 * HOUR_MS
+        val main = Model.hourScore(t, Spots.home, inp, now).score
+        val listed = Model.spotsAt(t, inp, now).first { it.spot.id == "home" }
+        assertEquals(main, listed.score)
+        assertTrue(listed.townLights)
+        assertTrue(listed.rank < listed.score)
+    }
 }
