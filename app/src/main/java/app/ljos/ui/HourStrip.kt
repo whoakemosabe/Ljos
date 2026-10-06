@@ -30,7 +30,7 @@ fun HourStrip(
     hours: List<HourScore>,
     selected: Long?,
     now: Long,
-    onSelect: (Long) -> Unit,
+    onSelect: ((Long) -> Unit)?,
     modifier: Modifier = Modifier,
 ) {
     val measurer = rememberTextMeasurer()
@@ -41,16 +41,19 @@ fun HourStrip(
         modifier
             .fillMaxWidth()
             .height(156.dp)
-            .pointerInput(hours) {
-                detectTapGestures { o ->
-                    if (n > 0) onSelect(hours[(o.x / size.width * n).toInt().coerceIn(0, n - 1)].time)
-                }
-            }
-            .pointerInput(hours) {
-                detectHorizontalDragGestures { change, _ ->
-                    if (n > 0) onSelect(hours[(change.position.x / size.width * n).toInt().coerceIn(0, n - 1)].time)
-                }
-            }
+            .then(
+                if (onSelect == null) Modifier else Modifier
+                    .pointerInput(hours) {
+                        detectTapGestures { o ->
+                            if (n > 0) onSelect(hours[(o.x / size.width * n).toInt().coerceIn(0, n - 1)].time)
+                        }
+                    }
+                    .pointerInput(hours) {
+                        detectHorizontalDragGestures { change, _ ->
+                            if (n > 0) onSelect(hours[(change.position.x / size.width * n).toInt().coerceIn(0, n - 1)].time)
+                        }
+                    }
+            )
     ) {
         if (n == 0) return@Canvas
         val labelH = 28.dp.toPx()

@@ -7,7 +7,6 @@ import app.ljos.data.KpPoint
 import app.ljos.data.MIN_MS
 import app.ljos.data.MagReading
 import app.ljos.data.Spot
-import app.ljos.data.Spots
 import app.ljos.data.WindReading
 import java.time.Instant
 import java.time.ZoneId
@@ -161,7 +160,8 @@ object Model {
         return start to end
     }
 
-    fun night(now: Long, inp: Inputs, spot: Spot = Spots.home, zone: ZoneId = ZoneId.systemDefault()): Night {
+    fun night(now: Long, inp: Inputs, zone: ZoneId = ZoneId.systemDefault()): Night {
+        val spot = inp.home
         val (start, end) = nightWindow(now, zone)
         val all = ArrayList<HourScore>()
         var t = start
@@ -181,15 +181,15 @@ object Model {
     }
 
     fun spotsAt(t: Long, inp: Inputs, now: Long): List<SpotScore> =
-        Spots.all.map { s ->
+        inp.spots.map { s ->
             val h = hourScore(t, s, inp, now, townPenalty = true)
-            SpotScore(s, h.score, h.cloud, Geo.km(Spots.home.lat, Spots.home.lon, s.lat, s.lon))
+            SpotScore(s, h.score, h.cloud, Geo.km(inp.home.lat, inp.home.lon, s.lat, s.lon))
         }.sortedWith(compareByDescending<SpotScore> { it.score }.thenBy { it.distanceKm })
 
     fun nowState(now: Long, inp: Inputs): NowState {
         val hourStart = now - now % HOUR_MS
-        val h = hourScore(hourStart, Spots.home, inp, now)
-        val sunNow = Astro.sunAltitude(now, Spots.home.lat, Spots.home.lon)
+        val h = hourScore(hourStart, inp.home, inp, now)
+        val sunNow = Astro.sunAltitude(now, inp.home.lat, inp.home.lon)
         val mag = inp.mag
         val bzFresh = mag != null && now - mag.time <= 60 * MIN_MS
         val bz = mag?.bz
@@ -206,10 +206,10 @@ object Model {
 
     /** Only worth fetching the heavy minute-level feed when it's dark and somewhere is clear-ish. */
     fun worthLiveCheck(now: Long, inp: Inputs): Boolean {
-        val sun = Astro.sunAltitude(now, Spots.home.lat, Spots.home.lon)
+        val sun = Astro.sunAltitude(now, inp.home.lat, inp.home.lon)
         if (sun > -9.0) return false
         val hourStart = now - now % HOUR_MS
-        return Spots.all.any { s ->
+        return inp.spots.any { s ->
             val series = inp.clouds[s.id]
             clearFactor(series, series?.indexAt(hourStart) ?: -1).first >= 0.4
         }

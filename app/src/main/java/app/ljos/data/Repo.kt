@@ -1,6 +1,7 @@
 package app.ljos.data
 
 import android.content.Context
+import app.ljos.Prefs
 import app.ljos.model.Model
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.async
@@ -19,15 +20,27 @@ import java.util.Collections
  */
 class Repo(context: Context) {
     private val dir = File(context.applicationContext.filesDir, "feeds").apply { mkdirs() }
+    private val prefs = Prefs(context)
+
+    private fun place(): Pair<Spot, List<Spot>> {
+        val home = prefs.home
+        return home to Spots.forHome(home)
+    }
 
     suspend fun refresh(force: Boolean = false): List<String> = withContext(Dispatchers.IO) {
         val errors: MutableList<String> = Collections.synchronizedList(ArrayList())
+        val (_, spots) = place()
+        val cloudsUrl = Feeds.cloudsUrl(spots)
+        // A new location means the cached clouds are for the wrong places.
+        val moved = read(CLOUDS_URL) != cloudsUrl
         coroutineScope {
             listOf(
                 async { pull(KP, 60 * MIN_MS, Feeds.KP_URL, force, errors) { Feeds.parseKp(it).isNotEmpty() } },
                 async {
-                    pull(CLOUDS, 60 * MIN_MS, Feeds.cloudsUrl(Spots.all), force, errors) {
-                        Feeds.parseClouds(it, Spots.all).isNotEmpty()
+                    pull(CLOUDS, 60 * MIN_MS, cloudsUrl, force || moved, errors) {
+                        val ok = Feeds.parseClouds(it, spots).isNotEmpty()
+                        if (ok) write(CLOUDS_URL, cloudsUrl)
+                        ok
                     }
                 },
                 async { pull(MAG, 10 * MIN_MS, Feeds.MAG_SUMMARY_URL, force, errors) { Feeds.parseMagSummary(it) != null } },
@@ -47,13 +60,15 @@ class Repo(context: Context) {
 
     fun inputs(): Inputs {
         val kp = parse(KP) { Feeds.parseKp(it) } ?: emptyList()
-        val clouds = parse(CLOUDS) { Feeds.parseClouds(it, Spots.all) } ?: emptyMap()
+        val (home, spots) = place()
+        val cloudsFresh = read(CLOUDS_URL) == Feeds.cloudsUrl(spots)
+        val clouds = if (cloudsFresh) parse(CLOUDS) { Feeds.parseClouds(it, spots) } ?: emptyMap() else emptyMap()
         val magSummary = parse(MAG) { Feeds.parseMagSummary(it) }
         val magMinute = parse(MAG_RT) { Feeds.parseMagRtsw(it) }
         val mag = listOfNotNull(magSummary, magMinute).maxByOrNull { it.time }
         val wind = parse(WIND) { Feeds.parseWindSummary(it) }
         val updated = listOf(KP, CLOUDS, MAG, WIND).maxOf { f(it).takeIf { file -> file.exists() }?.lastModified() ?: 0L }
-        return Inputs(kp, clouds, mag, wind, updated)
+        return Inputs(kp, clouds, mag, wind, updated, home, spots)
     }
 
     private fun <T> parse(name: String, parser: (String) -> T?): T? {
@@ -123,5 +138,6 @@ class Repo(context: Context) {
         const val MAG = "mag.json"
         const val MAG_RT = "mag_rt.json"
         const val WIND = "wind.json"
+        const val CLOUDS_URL = "clouds.url"
     }
 }

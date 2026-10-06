@@ -54,6 +54,9 @@ class Inputs(
     val mag: MagReading?,
     val wind: WindReading?,
     val updatedAt: Long,
+    /** Where "you" are. Spots[0] is always this place. */
+    val home: Spot = Spots.home,
+    val spots: List<Spot> = Spots.all,
 ) {
     val isEmpty: Boolean get() = kp.isEmpty() && clouds.isEmpty()
 }
