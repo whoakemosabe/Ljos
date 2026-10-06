@@ -330,9 +330,6 @@ fun LjosApp() {
                 ) {
                     Hero(
                         night, inp, loading,
-                        now = now,
-                        moon = moon,
-                        onScrub = { t -> selected = t },
                         scoreAlpha = { if (scoreMorph() > 0f) 0f else 1f },
                         // Store the position as if unscrolled: identical every frame, so no recomposition.
                         onScorePlaced = { pos, size -> heroBase = pos + Offset(0f, scroll.value.toFloat()); heroSize = size },

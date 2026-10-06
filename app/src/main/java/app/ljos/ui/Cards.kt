@@ -45,7 +45,6 @@ import app.ljos.Fmt
 import app.ljos.L
 import app.ljos.data.Inputs
 import app.ljos.model.HourScore
-import app.ljos.model.MoonTimeline
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.widthIn
 import app.ljos.model.Model
@@ -57,97 +56,46 @@ import kotlin.math.roundToInt
 internal val Glow = Shadow(color = Color(0x99000000), blurRadius = 24f)
 
 internal val HeroScoreStyle: TextStyle = TextStyle(
-    color = Color.White, fontSize = 84.sp, fontWeight = FontWeight.ExtraLight,
-    lineHeight = 88.sp, shadow = Glow,
+    color = Color.White, fontSize = 120.sp, fontWeight = FontWeight.ExtraLight,
+    lineHeight = 124.sp, shadow = Glow,
 )
 
-/**
- * Tonight at a glance. With dark hours, a night dial (drag the ring to explore, release to snap
- * back) wraps the score; otherwise just the headline.
- */
+/** Tonight at a glance: the big score, what it means, and when the peak and darkness are. */
 @Composable
 internal fun Hero(
     night: Night?,
     inp: Inputs?,
     loading: Boolean,
-    now: Long = System.currentTimeMillis(),
-    moon: MoonTimeline? = null,
-    onScrub: (Long?) -> Unit = {},
     scoreAlpha: () -> Float = { 1f },
     onScorePlaced: (Offset, IntSize) -> Unit = { _, _ -> },
 ) {
     val peak = night?.peak
     val shown by animateIntAsState(peak?.score ?: 0, tween(1200), label = "score")
-    Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        if (night != null && night.hours.isNotEmpty() && peak != null) {
-            NightDial(
-                hours = night.hours,
-                moon = moon,
-                now = now,
-                onScrub = onScrub,
-                modifier = Modifier.widthIn(max = 360.dp).fillMaxWidth().aspectRatio(1f),
-            ) { scrubbed ->
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        if (scrubbed == null) L.t("TONIGHT", "Í KVÖLD") else L.t("AT ", "KL. ") + Fmt.hhmm(scrubbed.time),
-                        color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Medium, letterSpacing = 3.sp,
-                    )
-                    // Keyed on the hour (not the number), so the load-in count-up stays a plain
-                    // count while scrubbing between hours rolls each new number in.
-                    androidx.compose.animation.AnimatedContent(
-                        targetState = scrubbed?.time ?: -1L,
-                        transitionSpec = {
-                            val later = targetState > initialState
-                            (androidx.compose.animation.slideInVertically(tween(220)) { if (later) it / 3 else -it / 3 } +
-                                androidx.compose.animation.fadeIn(tween(220))) togetherWith
-                                (androidx.compose.animation.slideOutVertically(tween(170)) { if (later) -it / 3 else it / 3 } +
-                                    androidx.compose.animation.fadeOut(tween(170)))
-                        },
-                        label = "dialScore",
-                    ) { key ->
-                        val hour = night.hours.firstOrNull { it.time == key }
-                        val v = hour?.score ?: shown
-                        Text(
-                            v.toString(),
-                            style = HeroScoreStyle.copy(color = if (hour == null) Color.White else scoreColor(v)),
-                            modifier = Modifier
-                                .onGloballyPositioned { if (hour == null) onScorePlaced(it.positionInRoot(), it.size) }
-                                .graphicsLayer { alpha = if (hour == null) scoreAlpha() else 1f },
-                        )
-                    }
-                    Text(
-                        Model.label(scrubbed?.score ?: peak.score),
-                        style = TextStyle(color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Light, shadow = Glow),
-                    )
-                    if (scrubbed != null) {
-                        Text(
-                            "Kp ${Fmt.one(scrubbed.kp)} · ${Fmt.cloud(scrubbed.cloud)}",
-                            color = Faint, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp),
-                        )
-                    }
-                }
-            }
-            Spacer(Modifier.height(4.dp))
+    Column(Modifier.fillMaxWidth().padding(top = 28.dp, bottom = 18.dp)) {
+        Text(L.t("TONIGHT", "Í KVÖLD"), color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 3.sp)
+        Text(
+            if (peak != null) shown.toString() else "—",
+            style = HeroScoreStyle,
+            modifier = Modifier
+                .onGloballyPositioned { onScorePlaced(it.positionInRoot(), it.size) }
+                .graphicsLayer { alpha = if (peak != null) scoreAlpha() else 1f },
+        )
+        val headline = when {
+            peak != null -> Model.label(peak.score)
+            night != null -> L.t("Too bright for aurora", "Of bjart fyrir norðurljós")
+            inp == null || inp.isEmpty -> if (loading) L.t("Reading the sky…", "Les himininn…") else L.t("No data yet — tap ↻", "Engin gögn enn — ýttu á ↻")
+            else -> "—"
+        }
+        Text(headline, style = TextStyle(color = Ink, fontSize = 26.sp, fontWeight = FontWeight.Light, shadow = Glow))
+        if (peak != null) {
+            Spacer(Modifier.height(6.dp))
             Text(
                 L.t("Peak around ", "Hámark um ") + "${Fmt.hhmm(peak.time)} · Kp ${Fmt.one(peak.kp)} · ${Fmt.cloud(peak.cloud)}",
                 color = Muted, fontSize = 14.sp,
             )
-            if (night.darkFrom != null && night.darkUntil != null) {
-                Text(
-                    L.t("Dark ", "Myrkur ") + "${Fmt.hhmm(night.darkFrom)}–${Fmt.hhmm(night.darkUntil)} · " +
-                        L.t("drag the ring to explore", "dragðu hringinn til að skoða"),
-                    color = Faint, fontSize = 12.sp,
-                )
-            }
-        } else {
-            val headline = when {
-                night != null -> L.t("Too bright for aurora", "Of bjart fyrir norðurljós")
-                inp == null || inp.isEmpty -> if (loading) L.t("Reading the sky…", "Les himininn…") else L.t("No data yet — tap ↻", "Engin gögn enn — ýttu á ↻")
-                else -> "—"
-            }
-            Spacer(Modifier.height(60.dp))
-            Text(headline, style = TextStyle(color = Ink, fontSize = 26.sp, fontWeight = FontWeight.Light, shadow = Glow))
-            Spacer(Modifier.height(60.dp))
+        }
+        if (night?.darkFrom != null && night.darkUntil != null) {
+            Text(L.t("Dark ", "Myrkur ") + "${Fmt.hhmm(night.darkFrom)}–${Fmt.hhmm(night.darkUntil)}", color = Faint, fontSize = 13.sp)
         }
     }
 }
