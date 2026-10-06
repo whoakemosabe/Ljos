@@ -7,6 +7,8 @@ import android.os.Build
 import androidx.annotation.RequiresApi
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -16,13 +18,17 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.CompositingStrategy
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -31,7 +37,9 @@ import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -179,4 +187,143 @@ internal fun DrawScope.drawGlassLight(radius: Float, tint: Color) {
         cornerRadius = CornerRadius((r.x - w / 2f).coerceAtLeast(0f)),
         style = Stroke(w),
     )
+}
+
+// ---------------------------------------------------------------------------------------------
+// Glass header: one full-width pane of glass across the top, dissolving softly at the bottom.
+
+private const val LIP = """
+uniform shader content;
+uniform float edge;     // where the glass's body ends
+uniform float rim;      // how far above the edge the bending starts
+uniform float tail;     // how far below the edge it eases back to straight
+uniform float strength; // how far it pulls, at the edge
+
+half4 main(float2 p) {
+    float m;
+    if (p.y <= edge) {
+        float t = clamp(1.0 - (edge - p.y) / rim, 0.0, 1.0);
+        m = t * t * t;
+    } else {
+        float t = clamp(1.0 - (p.y - edge) / tail, 0.0, 1.0);
+        m = t * t;
+    }
+    // Near the bottom edge the view is pulled up from below, like light through a glass lip.
+    return content.eval(float2(p.x, p.y + m * strength));
+}
+"""
+
+private var lipBroken = false
+
+@RequiresApi(33)
+private fun lipEffect(edge: Float, rim: Float, tail: Float, bend: Float, frost: Float): AndroidRenderEffect {
+    val blur = AndroidRenderEffect.createBlurEffect(frost, frost, Shader.TileMode.CLAMP)
+    if (lipBroken) return blur
+    val shader = try { RuntimeShader(LIP) } catch (e: Exception) { lipBroken = true; return blur }
+    shader.setFloatUniform("edge", edge)
+    shader.setFloatUniform("rim", rim)
+    shader.setFloatUniform("tail", tail)
+    shader.setFloatUniform("strength", bend)
+    return AndroidRenderEffect.createChainEffect(AndroidRenderEffect.createRuntimeShaderEffect(shader, "content"), blur)
+}
+
+/**
+ * A pane of liquid glass across the top of a screen or sheet. [backdrop] (recorded with
+ * [backdropSource] from the same top-left corner) shows through it frosted. The glass's body
+ * runs [bodyPx] down; below that it dissolves over [fade] (no line), and right at the edge the
+ * view bends a little, like the thick lip of a glass pane. A soft sheen catches the light.
+ * Android 13+ bends, 12 frosts, older phones get the tint.
+ */
+@Composable
+fun GlassHeader(
+    backdrop: GraphicsLayer,
+    bodyPx: () -> Float,
+    fade: Dp,
+    tint: Color,
+    modifier: Modifier = Modifier,
+    frost: Dp = 20.dp,
+    bend: Dp = 10.dp,
+) {
+    val density = LocalDensity.current
+    val fadePx = with(density) { fade.toPx() }
+    val bleed = with(density) { (frost * 3).roundToPx() }
+    Box(
+        modifier
+            .fillMaxWidth()
+            .layout { measurable, constraints ->
+                val h = (bodyPx() + fadePx).toInt().coerceAtLeast(1)
+                val p = measurable.measure(constraints.copy(minHeight = h, maxHeight = h))
+                layout(p.width, h) { p.place(0, 0) }
+            }
+            .clipToBounds()
+            .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+            .drawWithContent {
+                drawContent()
+                // The whole pane eases out over the fade, slowly at first: (1 - x)².
+                val h = size.height
+                val k = ((h - fadePx) / h).coerceIn(0f, 1f)
+                fun at(x: Float) = k + (1f - k) * x
+                drawRect(
+                    Brush.verticalGradient(
+                        0f to Color.Black,
+                        k to Color.Black,
+                        at(0.25f) to Color.Black.copy(alpha = 0.56f),
+                        at(0.5f) to Color.Black.copy(alpha = 0.25f),
+                        at(0.75f) to Color.Black.copy(alpha = 0.06f),
+                        1f to Color.Transparent,
+                    ),
+                    blendMode = BlendMode.DstIn,
+                )
+            }
+    ) {
+        if (Build.VERSION.SDK_INT >= 31) {
+            Box(
+                Modifier
+                    // A little taller than the pane so the frost sees what's just below it.
+                    .layout { measurable, constraints ->
+                        val p = measurable.measure(constraints.copy(minHeight = constraints.maxHeight + bleed, maxHeight = constraints.maxHeight + bleed))
+                        layout(p.width, constraints.maxHeight) { p.place(0, 0) }
+                    }
+                    .fillMaxWidth()
+                    .graphicsLayer {
+                        val f = frost.toPx()
+                        val edge = bodyPx()
+                        renderEffect = if (Build.VERSION.SDK_INT >= 33) {
+                            lipEffect(edge, 22.dp.toPx(), fadePx, bend.toPx(), f).asComposeRenderEffect()
+                        } else {
+                            BlurEffect(f, f, TileMode.Clamp)
+                        }
+                    }
+                    .drawBehind { drawLayer(backdrop) }
+            )
+        }
+        Box(
+            Modifier
+                .fillMaxSize()
+                .drawBehind {
+                    val h = size.height
+                    val k = ((h - fadePx) / h).coerceIn(0f, 1f)
+                    // Tint, a touch deeper behind the status bar.
+                    drawRect(Brush.verticalGradient(0f to tint, k to tint.copy(alpha = tint.alpha * 0.8f), 1f to tint.copy(alpha = tint.alpha * 0.5f)))
+                    // Sheen from the top left, like light on glass.
+                    drawRect(
+                        Brush.radialGradient(
+                            listOf(Color(0x1FFFFFFF), Color.Transparent),
+                            center = Offset(size.width * 0.15f, 0f),
+                            radius = size.width * 0.7f,
+                        )
+                    )
+                    // A faint glow along the glass's lower lip, soft on both sides (not a line).
+                    val e = h - fadePx
+                    val band = 14.dp.toPx()
+                    drawRect(
+                        Brush.verticalGradient(
+                            ((e - band) / h).coerceIn(0f, 1f) to Color.Transparent,
+                            (e / h).coerceIn(0f, 1f) to Color(0x0DFFFFFF),
+                            ((e + band) / h).coerceIn(0f, 1f) to Color.Transparent,
+                        )
+                    )
+                }
+        )
+    }
 }

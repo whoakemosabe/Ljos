@@ -128,11 +128,13 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
-// Header: floating liquid-glass pieces, measured down from the bottom of the status bar.
+// Header: one pane of liquid glass across the top, measured down from the bottom of the status bar.
 private val HeaderPadTop = 6.dp
-private val GlassH = 48.dp
-// The page starts just under the glass (6 + 48 + 32); the hero's label sits at 92.
-private val PageTop = 86.dp
+private val HeaderRow = 40.dp
+private val HeaderBody = 54.dp      // the glass's body: 6 + 40 row + 8
+private val HeaderFade = 32.dp      // then it dissolves over this
+// The page starts where the glass has fully dissolved, so nothing is frosted at rest.
+private val PageTop = HeaderBody + HeaderFade
 
 @Composable
 fun LjosApp() {
@@ -348,9 +350,6 @@ fun LjosApp() {
                 Column(
                     Modifier
                         .fillMaxSize()
-                        // Scroll edge: content fades out just under the status bar, so the clock
-                        // and icons stay clean. Nothing is blurred; only the glass pieces frost.
-                        .fadeUnderHeader(statusTop + 2.dp, statusTop + 34.dp)
                         .graphicsLayer { translationY = pullPx * 0.55f + pullIntro.value * 30.dp.toPx() }
                         .nestedScroll(pullConnection)
                         .verticalScroll(scroll)
@@ -385,7 +384,7 @@ fun LjosApp() {
                                 if (target in collapsed) toggle(target)
                                 val coords = cardSpots[target]
                                 if (coords != null && coords.isAttached) {
-                                    val headerBottom = with(density) { (statusTop + HeaderPadTop + GlassH + 14.dp).toPx() }
+                                    val headerBottom = with(density) { (statusTop + HeaderBody + HeaderFade + 4.dp).toPx() }
                                     val y = coords.positionInRoot().y
                                     scope.launch {
                                         scroll.animateScrollTo(
@@ -462,13 +461,8 @@ fun LjosApp() {
                 }
             }
 
-            // A soft shade behind the status bar (no blur).
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(statusTop + 28.dp)
-                    .background(Brush.verticalGradient(listOf(NightBg.copy(alpha = 0.55f), Color.Transparent)))
-            )
+            val headerBodyPx = with(density) { (statusTop + HeaderBody).toPx() }
+            GlassHeader(pageLayer, bodyPx = { headerBodyPx }, fade = HeaderFade, tint = NightBg.copy(alpha = 0.42f))
             PullHint(
                 pullFraction = pullFraction,
                 loading = loading,
@@ -476,7 +470,6 @@ fun LjosApp() {
                 intro = { pullIntro.value },
             )
             Header(
-                backdrop = pageLayer,
                 placeName = home.name,
                 score = night?.peak?.score,
                 scoreMorph = scoreMorph,
@@ -560,13 +553,11 @@ fun LjosApp() {
 }
 
 /**
- * Floating liquid-glass header: a capsule with "Ljós" and the place (tap it for settings), and
- * two round glass buttons. The page scrolls under it, sharp, and only the glass frosts and bends
- * it. Once the hero has scrolled away, the score slides into the capsule as a pill.
+ * Title row over the glass header: "Ljós" and the place (tap for settings), the score pill once
+ * the hero has scrolled away, and the refresh and settings buttons.
  */
 @Composable
 private fun Header(
-    backdrop: GraphicsLayer,
     placeName: String,
     score: Int?,
     scoreMorph: () -> Float,
@@ -577,53 +568,47 @@ private fun Header(
     pull: () -> Float = { 0f },
 ) {
     val view = LocalView.current
-    BoxWithConstraints(
+    Row(
         Modifier
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.statusBars)
-            .padding(horizontal = 12.dp)
+            .padding(start = 20.dp, end = 16.dp)
             .padding(top = HeaderPadTop)
-            .height(GlassH)
+            .height(HeaderRow),
+        verticalAlignment = Alignment.CenterVertically,
     ) {
-        val capsuleMax = maxWidth - GlassH * 2 - 8.dp - 10.dp
-        LiquidGlass(
-            backdrop,
-            cornerRadius = GlassH / 2,
-            modifier = Modifier
-                .align(Alignment.CenterStart)
-                .height(GlassH)
-                .widthIn(max = capsuleMax)
+        Row(
+            Modifier
+                .weight(1f)
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
                     Haptics.tap(view); onSettings()
                 },
+            verticalAlignment = Alignment.CenterVertically,
         ) {
-            Row(Modifier.padding(start = 16.dp, end = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text("Ljós", color = Ink, fontSize = 20.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
-                Spacer(Modifier.width(12.dp))
-                PinIcon(Modifier.size(width = 10.dp, height = 13.dp))
-                Spacer(Modifier.width(6.dp))
-                Text(
-                    placeName, maxLines = 1, fontSize = 13.sp, color = Ink.copy(alpha = 0.8f),
-                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                    modifier = Modifier.weight(1f, fill = false),
-                )
-                if (score != null) ScoreSlot(score, scoreMorph, onPillTarget)
-            }
+            Text("Ljós", color = Ink, fontSize = 20.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
+            Spacer(Modifier.width(12.dp))
+            PinIcon(Modifier.size(width = 10.dp, height = 13.dp))
+            Spacer(Modifier.width(6.dp))
+            Text(
+                placeName, maxLines = 1, fontSize = 13.sp, color = Ink.copy(alpha = 0.8f),
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier.weight(1f, fill = false),
+            )
+            if (score != null) ScoreSlot(score, scoreMorph, onPillTarget)
         }
-        Row(Modifier.align(Alignment.CenterEnd), verticalAlignment = Alignment.CenterVertically) {
-            GlassButton(backdrop, onClick = onRefresh, enabled = !loading) {
-                if (loading) CircularProgressIndicator(Modifier.size(16.dp), color = Ink, strokeWidth = 2.dp)
-                else RefreshIcon(Modifier.graphicsLayer { rotationZ = pull().coerceIn(0f, 1.5f) * 300f })
-            }
-            Spacer(Modifier.width(8.dp))
-            GlassButton(backdrop, onClick = onSettings) { TuneIcon() }
+        Spacer(Modifier.width(10.dp))
+        RoundButton(onClick = onRefresh, enabled = !loading) {
+            if (loading) CircularProgressIndicator(Modifier.size(16.dp), color = Ink, strokeWidth = 2.dp)
+            else RefreshIcon(Modifier.graphicsLayer { rotationZ = pull().coerceIn(0f, 1.5f) * 300f })
         }
+        Spacer(Modifier.width(8.dp))
+        RoundButton(onClick = onSettings) { TuneIcon() }
     }
 }
 
 /**
- * The score pill at the end of the capsule. Its slot opens as the number flies up, so the
- * capsule grows to fit it; the pill itself stays put, so the flight always has the same target.
+ * The score pill after the place name. Its slot opens as the number flies up; the pill itself
+ * stays put, so the flight always has the same target.
  */
 @Composable
 private fun ScoreSlot(score: Int, scoreMorph: () -> Float, onPillTarget: (Offset) -> Unit) {
@@ -659,25 +644,27 @@ private fun ScoreSlot(score: Int, scoreMorph: () -> Float, onPillTarget: (Offset
 }
 
 @Composable
-private fun GlassButton(backdrop: GraphicsLayer?, onClick: () -> Unit, enabled: Boolean = true, content: @Composable () -> Unit) {
+private fun RoundButton(onClick: () -> Unit, enabled: Boolean = true, content: @Composable () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(if (pressed) 0.9f else 1f, spring(dampingRatio = 0.5f, stiffness = 600f), label = "press")
     val view = LocalView.current
-    LiquidGlass(
-        backdrop,
-        cornerRadius = GlassH / 2,
-        // requiredSize: never squeezed by a crowded row, so it stays a true circle
-        modifier = Modifier
-            .requiredSize(GlassH)
+    Box(
+        Modifier
+            // requiredSize: never squeezed by a crowded row, so it stays a true circle
+            .requiredSize(36.dp)
             .graphicsLayer { scaleX = scale; scaleY = scale }
+            .clip(CircleShape)
+            .background(Color(0x1FFFFFFF))
+            .border(1.dp, Color(0x14FFFFFF), CircleShape)
             .clickable(interactionSource = interaction, indication = null, enabled = enabled) { Haptics.tap(view); onClick() },
         contentAlignment = Alignment.Center,
     ) { content() }
 }
 
-// Settings sheet header: 8 + 4 handle + 8 + 36 title row + 2.
-private val SheetHeader = 58.dp
+// Settings sheet header: 8 + 4 handle + 8 + 30 title row + 4; its glass then dissolves over 24.
+private val SheetHeader = 54.dp
+private val SheetFade = 24.dp
 
 /**
  * Bottom sheet that follows the finger, made of liquid glass: the screen behind shows through
@@ -697,6 +684,7 @@ private fun SettingsSheet(
 ) {
     var heightPx by remember { mutableIntStateOf(100_000) }
     val inner = rememberScrollState()
+    val layer = rememberGraphicsLayer()
     val connection = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
@@ -758,15 +746,20 @@ private fun SettingsSheet(
             )
             Column(
                 Modifier
-                    // Scroll edge: content fades out just under the title instead of being
-                    // blurred, so the header stays clean and nothing is cut off.
-                    .fadeUnderHeader(SheetHeader + 2.dp, SheetHeader + 26.dp)
+                    // The sheet's content has a see-through background, so the sharp copy fades
+                    // out under the glass header (as the glass fades in), and the glass shows a
+                    // frosted copy recorded before this mask.
+                    .fadeUnderHeader(SheetHeader, SheetHeader + SheetFade)
+                    .backdropSource(layer)
                     .nestedScroll(connection)
                     .verticalScroll(inner)
                     .windowInsetsPadding(WindowInsets.navigationBars)
                     .padding(horizontal = 22.dp)
-                    .padding(top = SheetHeader + 16.dp, bottom = 18.dp)
+                    .padding(top = SheetHeader + SheetFade, bottom = 18.dp)
             ) { content() }
+
+            val sheetBodyPx = with(LocalDensity.current) { SheetHeader.toPx() }
+            GlassHeader(layer, bodyPx = { sheetBodyPx }, fade = SheetFade, tint = Color(0x8C0A1022))
 
             Column(
                 Modifier
@@ -791,17 +784,10 @@ private fun SettingsSheet(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(L.t("Settings", "Stillingar"), color = Ink, fontSize = 22.sp, fontWeight = FontWeight.Light)
                     Spacer(Modifier.weight(1f))
-                    LiquidGlass(
-                        backdrop = null,
-                        cornerRadius = 18.dp,
-                        modifier = Modifier.height(36.dp).clickable(onClick = onClose),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Text(
-                            L.t("Done", "Lokið"), color = Green, fontSize = 15.sp, fontWeight = FontWeight.Medium,
-                            modifier = Modifier.padding(horizontal = 16.dp),
-                        )
-                    }
+                    Text(
+                        L.t("Done", "Lokið"), color = Green, fontSize = 15.sp, fontWeight = FontWeight.Medium,
+                        modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable(onClick = onClose).padding(horizontal = 8.dp, vertical = 4.dp),
+                    )
                 }
             }
         }
