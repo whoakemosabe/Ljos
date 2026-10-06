@@ -22,6 +22,7 @@ class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorke
         val inp = repo.inputs()
         try { Alerts.check(applicationContext, inp) } catch (e: Exception) { }
         try { Widgets.updateAll(applicationContext) } catch (e: Exception) { }
+        try { UpdateWatch.checkAndNotify(applicationContext) } catch (e: Exception) { }
         return Result.success()
     }
 }

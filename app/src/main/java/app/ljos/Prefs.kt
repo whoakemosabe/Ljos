@@ -106,6 +106,17 @@ class Prefs(context: Context) {
         set(v) = p.edit().putBoolean("live_sky", v).apply()
 
     /** How many times the "pull down to refresh" hint has been shown on open (shown 3×). */
+    /** Update watch: when GitHub was last asked, the newest version seen, and the last one we notified about. */
+    var lastUpdateCheck: Long
+        get() = p.getLong("last_update_check", 0L)
+        set(v) = p.edit().putLong("last_update_check", v).apply()
+    var availableVersion: String
+        get() = p.getString("available_version", "") ?: ""
+        set(v) = p.edit().putString("available_version", v).apply()
+    var notifiedVersion: String
+        get() = p.getString("notified_version", "") ?: ""
+        set(v) = p.edit().putString("notified_version", v).apply()
+
     var pullHintCount: Int
         get() = p.getInt("pull_hint_count", 0)
         set(v) = p.edit().putInt("pull_hint_count", v).apply()

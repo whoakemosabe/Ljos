@@ -27,6 +27,8 @@ object Alerts {
     private const val CH_TONIGHT = "tonight"
     private const val CH_NOW = "lookup"
     private const val CH_LIVE = "live"
+    private const val CH_UPDATE = "updates"
+    const val EXTRA_OPEN_UPDATES = "open_updates"
     private const val ID_TONIGHT = 1
     private const val ID_NOW = 2
     private const val ID_LIVE = 3
@@ -46,11 +48,28 @@ object Alerts {
             }
         )
         nm.createNotificationChannel(
+            NotificationChannel(CH_UPDATE, L.t("App updates", "Uppfærslur"), NotificationManager.IMPORTANCE_LOW).apply {
+                description = L.t("When a new version of Ljós is out", "Þegar ný útgáfa af Ljós er komin")
+                setShowBadge(true)
+            }
+        )
+        nm.createNotificationChannel(
             NotificationChannel(CH_LIVE, L.t("Aurora on lock screen", "Norðurljós á lásskjá"), NotificationManager.IMPORTANCE_LOW).apply {
                 description = L.t("Silent live card while aurora is likely", "Hljóðlaust spjald á meðan norðurljós eru líkleg")
                 lockscreenVisibility = android.app.Notification.VISIBILITY_PUBLIC
                 setShowBadge(false)
             }
+        )
+    }
+
+    /** One quiet notification when a new version is out. Tapping opens Settings → Updates. */
+    fun postUpdate(context: Context, version: String) {
+        createChannels(context)
+        post(
+            context, CH_UPDATE, 4,
+            L.t("Ljós $version is ready", "Ljós $version er tilbúin"),
+            L.t("Tap to update.", "Ýttu til að uppfæra."),
+            openUpdates = true,
         )
     }
 
@@ -115,11 +134,13 @@ object Alerts {
     @SuppressLint("MissingPermission")
     private fun post(
         context: Context, channel: String, id: Int, title: String, text: String,
-        ongoing: Boolean = false, progress: Int? = null,
+        ongoing: Boolean = false, progress: Int? = null, openUpdates: Boolean = false,
     ) {
         val open = PendingIntent.getActivity(
             context, id,
-            Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+            Intent(context, MainActivity::class.java)
+                .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)
+                .putExtra(EXTRA_OPEN_UPDATES, openUpdates),
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT,
         )
         val b = NotificationCompat.Builder(context, channel)

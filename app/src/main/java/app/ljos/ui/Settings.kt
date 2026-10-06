@@ -279,6 +279,17 @@ private fun UpdateSettings() {
     var state by remember { mutableStateOf<UpdateUi>(UpdateUi.Idle) }
     var progress by remember { mutableFloatStateOf(0f) }
     val version = remember { Updater.installedVersion(context) }
+    // If an update was already spotted (banner or notification), have it ready to download.
+    LaunchedEffect(Unit) {
+        if (app.ljos.work.UpdateWatch.waiting(context) != null) {
+            state = UpdateUi.Checking
+            state = when (val r = Updater.check(context, "")) {
+                Updater.Check.UpToDate -> UpdateUi.UpToDate
+                is Updater.Check.Available -> UpdateUi.Available(r.release)
+                is Updater.Check.Failed -> UpdateUi.Error(r.message)
+            }
+        }
+    }
 
     SectionLabel(L.t("UPDATES", "UPPFÆRSLUR"))
     Row(verticalAlignment = Alignment.CenterVertically) {

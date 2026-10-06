@@ -164,6 +164,21 @@ fun LjosApp() {
 
     // Settings sheet position: 0 = fully open, 1 = hidden.
     val sheet = remember { Animatable(1f) }
+    // A newer version waiting on GitHub (checked at most hourly on open; the background refresh
+    // checks every 6 hours and notifies). Bumping jumpToUpdates scrolls Settings to Updates.
+    var updateWaiting by remember { mutableStateOf(app.ljos.work.UpdateWatch.waiting(context)) }
+    var jumpToUpdates by remember { mutableIntStateOf(0) }
+    val openUpdates by app.ljos.work.UpdateWatch.openUpdates
+    LaunchedEffect(openUpdates) {
+        if (openUpdates) {
+            app.ljos.work.UpdateWatch.openUpdates.value = false
+            sheet.animateTo(0f, spring(dampingRatio = 0.86f, stiffness = 420f))
+            jumpToUpdates++
+        }
+    }
+    LaunchedEffect(Unit) {
+        updateWaiting = try { app.ljos.work.UpdateWatch.check(context, background = false) } catch (e: Exception) { updateWaiting }
+    }
     fun openSheet() { scope.launch { sheet.animateTo(0f, spring(dampingRatio = 0.86f, stiffness = 420f)) } }
     fun closeSheet() { scope.launch { sheet.animateTo(1f, tween(240)) } }
     BackHandler(enabled = sheet.targetValue < 1f) { closeSheet() }
@@ -381,6 +396,14 @@ fun LjosApp() {
                     // Order follows the questions people ask: will I see it → when → where →
                     // what to wear → this week.
                     val tonightSummary: @Composable ColumnScope.() -> Unit = {
+                        SoftReveal(updateWaiting != null) {
+                            UpdateBanner(updateWaiting ?: "") {
+                                scope.launch {
+                                    sheet.animateTo(0f, spring(dampingRatio = 0.86f, stiffness = 420f))
+                                    jumpToUpdates++
+                                }
+                            }
+                        }
                         Hero(
                             night, inp, loading,
                             now = now,
@@ -547,6 +570,7 @@ fun LjosApp() {
             )
             SettingsSheet(
                 backdrop = pageBackdrop,
+                jumpToEnd = jumpToUpdates,
                 sheet = sheet,
                 maxHeight = screenH * 0.9f,
                 onClose = { closeSheet() },
@@ -731,6 +755,8 @@ private val SheetFade = 24.dp
 @Composable
 private fun SettingsSheet(
     backdrop: LayerBackdrop,
+    /** Changes when the sheet should scroll to the bottom (Updates). */
+    jumpToEnd: Int = 0,
     sheet: Animatable<Float, *>,
     maxHeight: Dp,
     onClose: () -> Unit,
@@ -741,6 +767,12 @@ private fun SettingsSheet(
     var heightPx by remember { mutableIntStateOf(100_000) }
     val inner = rememberScrollState()
     val layer = rememberLayerBackdrop()
+    LaunchedEffect(jumpToEnd) {
+        if (jumpToEnd > 0) {
+            delay(250)
+            inner.animateScrollTo(inner.maxValue, spring(dampingRatio = 0.9f, stiffness = 200f))
+        }
+    }
     val connection = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
@@ -998,5 +1030,25 @@ private fun PullHint(pullFraction: () -> Float, loading: Boolean, top: Dp, intro
                 Text(t, color = Muted, fontSize = 12.sp, letterSpacing = 0.4.sp)
             }
         }
+    }
+}
+
+
+/** "Ljós 1.0.22 is ready · Update", shown at the top of the page when a new version is out. */
+@Composable
+private fun UpdateBanner(version: String, onClick: () -> Unit) {
+    val view = LocalView.current
+    Row(
+        Modifier
+            .clip(RoundedCornerShape(16.dp))
+            .background(Brush.horizontalGradient(listOf(Color(0x263DFFA0), Color(0x1AB79CFF))))
+            .border(1.dp, Color(0x333DFFA0), RoundedCornerShape(16.dp))
+            .clickable { Haptics.tap(view); onClick() }
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(L.t("Ljós $version is ready", "Ljós $version er tilbúin"), color = Ink, fontSize = 14.sp)
+        Spacer(Modifier.width(10.dp))
+        Text(L.t("Update ›", "Uppfæra ›"), color = Green, fontSize = 14.sp, fontWeight = FontWeight.Medium)
     }
 }

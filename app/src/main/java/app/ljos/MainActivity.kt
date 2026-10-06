@@ -36,6 +36,7 @@ class MainActivity : ComponentActivity() {
         Alerts.createChannels(this)
         Scheduler.ensure(this)
         val prefs = Prefs(this)
+        handleIntent(intent)
         setContent {
             // No Android 12+ "stretch" overscroll: inside the recorded blur layer its spring-back
             // never fires, leaving the page stretched and swallowing swipes at the bottom.
@@ -55,6 +56,19 @@ class MainActivity : ComponentActivity() {
                 }
             }
             }
+        }
+    }
+
+    override fun onNewIntent(intent: android.content.Intent) {
+        super.onNewIntent(intent)
+        handleIntent(intent)
+    }
+
+    /** The "update ready" notification asks to open Settings → Updates. */
+    private fun handleIntent(intent: android.content.Intent?) {
+        if (intent?.getBooleanExtra(Alerts.EXTRA_OPEN_UPDATES, false) == true) {
+            intent.removeExtra(Alerts.EXTRA_OPEN_UPDATES)
+            app.ljos.work.UpdateWatch.openUpdates.value = true
         }
     }
 }
