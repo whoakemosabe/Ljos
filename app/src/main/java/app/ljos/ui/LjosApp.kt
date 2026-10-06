@@ -10,6 +10,8 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.animate
 import androidx.compose.runtime.mutableFloatStateOf
@@ -126,16 +128,10 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
-// Header geometry, measured down from the bottom of the status bar.
+// Header: floating liquid-glass pieces, measured down from the bottom of the status bar.
 private val HeaderPadTop = 6.dp
-private val HeaderRow = 36.dp       // title + round buttons
-private val HeaderLine2 = 34.dp     // top of the place chip, under the title
-private val HeaderExpanded = 66.dp  // bottom of the place chip (6 + 34 + 26)
-// Full frost stops 14dp above the header's last line; the 40dp fade runs on from there
-// (the header's own text is drawn sharp on top, so it doesn't matter that it overlaps).
-private val FrostExpanded = 52.dp   // fade ends 92dp below the status bar
-private val FrostCollapsed = 34.dp  // buttons end at 42; fade ends at 74
-// The page starts at 86 and the hero's label at 92, where the blur has fully gone.
+private val GlassH = 48.dp
+// The page starts just under the glass (6 + 48 + 32); the hero's label sits at 92.
 private val PageTop = 86.dp
 
 @Composable
@@ -260,25 +256,19 @@ fun LjosApp() {
 
         // Everything scroll- or drag-linked below is read inside layout/draw lambdas, never during
         // composition, so scrolling and dragging the sheet don't rebuild the screen every frame.
-        val placeRange = with(density) { 110.dp.toPx() }
         // Long runway so the number drifts up gently rather than snapping into the header.
         val flightRange = with(density) { 340.dp.toPx() }
         val flightLead = with(density) { 200.dp.toPx() }
-        val headerOrigin = with(density) { Offset(20.dp.toPx(), (statusTop + HeaderPadTop).toPx()) }
-        val placeMorph: () -> Float = { (scroll.value / placeRange).coerceIn(0f, 1f) }
         val scoreMorph: () -> Float = {
             if (!heroBase.isSpecified || !pillTarget.isSpecified) 0f
             else {
                 // Never in flight at rest: the flight starts only after you've scrolled, once the
                 // number is within flightLead of the header, then takes flightRange of scrolling.
                 val restCenterY = heroBase.y + heroSize.height / 2f
-                val landY = headerOrigin.y + pillTarget.y
+                val landY = pillTarget.y
                 val startScroll = (restCenterY - landY - flightLead).coerceAtLeast(0f)
                 ((scroll.value - startScroll) / flightRange).coerceIn(0f, 1f)
             }
-        }
-        val headerFrostPx: () -> Float = {
-            with(density) { (statusTop + FrostExpanded + (FrostCollapsed - FrostExpanded) * placeMorph()).toPx() }
         }
         // First three opens: the page dips a little to show the pull-to-refresh hint, then settles.
         val showPullIntro = remember { prefs.pullHintCount < 3 }
@@ -358,6 +348,9 @@ fun LjosApp() {
                 Column(
                     Modifier
                         .fillMaxSize()
+                        // Scroll edge: content fades out just under the status bar, so the clock
+                        // and icons stay clean. Nothing is blurred; only the glass pieces frost.
+                        .fadeUnderHeader(statusTop + 2.dp, statusTop + 34.dp)
                         .graphicsLayer { translationY = pullPx * 0.55f + pullIntro.value * 30.dp.toPx() }
                         .nestedScroll(pullConnection)
                         .verticalScroll(scroll)
@@ -392,7 +385,7 @@ fun LjosApp() {
                                 if (target in collapsed) toggle(target)
                                 val coords = cardSpots[target]
                                 if (coords != null && coords.isAttached) {
-                                    val headerBottom = with(density) { (statusTop + FrostCollapsed + Frost.Fade + 6.dp).toPx() }
+                                    val headerBottom = with(density) { (statusTop + HeaderPadTop + GlassH + 14.dp).toPx() }
                                     val y = coords.positionInRoot().y
                                     scope.launch {
                                         scroll.animateScrollTo(
@@ -469,7 +462,13 @@ fun LjosApp() {
                 }
             }
 
-            FrostHeader(pageLayer, frostPx = headerFrostPx, base = NightBg)
+            // A soft shade behind the status bar (no blur).
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .height(statusTop + 28.dp)
+                    .background(Brush.verticalGradient(listOf(NightBg.copy(alpha = 0.55f), Color.Transparent)))
+            )
             PullHint(
                 pullFraction = pullFraction,
                 loading = loading,
@@ -477,9 +476,9 @@ fun LjosApp() {
                 intro = { pullIntro.value },
             )
             Header(
+                backdrop = pageLayer,
                 placeName = home.name,
                 score = night?.peak?.score,
-                placeMorph = placeMorph,
                 scoreMorph = scoreMorph,
                 loading = loading,
                 onRefresh = { scope.launch { reload(true) } },
@@ -500,7 +499,7 @@ fun LjosApp() {
                     } else {
                         val e = FastOutSlowInEasing.transform(m)
                         val sc = 1f + (endScale - 1f) * e
-                        val target = headerOrigin + pillTarget
+                        val target = pillTarget
                         transformOrigin = TransformOrigin(0f, 0f)
                         scaleX = sc
                         scaleY = sc
@@ -533,6 +532,7 @@ fun LjosApp() {
                     .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { closeSheet() }
             )
             SettingsSheet(
+                backdrop = pageLayer,
                 sheet = sheet,
                 maxHeight = screenH * 0.9f,
                 onClose = { closeSheet() },
@@ -560,15 +560,15 @@ fun LjosApp() {
 }
 
 /**
- * Expanded: "Ljós" with the place on its own line below. As you scroll, the place glides up into
- * the title line, then "Tonight 63 · Good chance" fades in after it. Everything moves on the GPU
- * (graphicsLayer), so nothing re-lays out mid-scroll.
+ * Floating liquid-glass header: a capsule with "Ljós" and the place (tap it for settings), and
+ * two round glass buttons. The page scrolls under it, sharp, and only the glass frosts and bends
+ * it. Once the hero has scrolled away, the score slides into the capsule as a pill.
  */
 @Composable
 private fun Header(
+    backdrop: GraphicsLayer,
     placeName: String,
     score: Int?,
-    placeMorph: () -> Float,
     scoreMorph: () -> Float,
     loading: Boolean,
     onRefresh: () -> Unit,
@@ -576,128 +576,118 @@ private fun Header(
     onPillTarget: (Offset) -> Unit,
     pull: () -> Float = { 0f },
 ) {
-    val density = LocalDensity.current
-    var titleW by remember { mutableIntStateOf(0) }
-    var chipW by remember { mutableIntStateOf(0) }
-    var chipH by remember { mutableIntStateOf(0) }
-    var pillW by remember { mutableIntStateOf(0) }
-    var pillH by remember { mutableIntStateOf(0) }
+    val view = LocalView.current
     BoxWithConstraints(
         Modifier
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.statusBars)
-            .padding(horizontal = 20.dp)
+            .padding(horizontal = 12.dp)
             .padding(top = HeaderPadTop)
-            .height(HeaderExpanded - HeaderPadTop)
+            .height(GlassH)
     ) {
-        val rowH = with(density) { HeaderRow.toPx() }
-        val gap = with(density) { 10.dp.toPx() }
-        val line2Y = with(density) { HeaderLine2.toPx() }
-        val buttonsW = with(density) { 92.dp.toPx() }
-        val fullW = constraints.maxWidth.toFloat()
-
-        Row(Modifier.fillMaxWidth().height(HeaderRow), verticalAlignment = Alignment.CenterVertically) {
-            Text(
-                "Ljós", color = Ink, fontSize = 20.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp,
-                modifier = Modifier.onSizeChanged { titleW = it.width },
-            )
-            Spacer(Modifier.weight(1f))
-            RoundButton(onClick = onRefresh, enabled = !loading) {
+        val capsuleMax = maxWidth - GlassH * 2 - 8.dp - 10.dp
+        LiquidGlass(
+            backdrop,
+            cornerRadius = GlassH / 2,
+            modifier = Modifier
+                .align(Alignment.CenterStart)
+                .height(GlassH)
+                .widthIn(max = capsuleMax)
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                    Haptics.tap(view); onSettings()
+                },
+        ) {
+            Row(Modifier.padding(start = 16.dp, end = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("Ljós", color = Ink, fontSize = 20.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
+                Spacer(Modifier.width(12.dp))
+                PinIcon(Modifier.size(width = 10.dp, height = 13.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    placeName, maxLines = 1, fontSize = 13.sp, color = Ink.copy(alpha = 0.8f),
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                if (score != null) ScoreSlot(score, scoreMorph, onPillTarget)
+            }
+        }
+        Row(Modifier.align(Alignment.CenterEnd), verticalAlignment = Alignment.CenterVertically) {
+            GlassButton(backdrop, onClick = onRefresh, enabled = !loading) {
                 if (loading) CircularProgressIndicator(Modifier.size(16.dp), color = Ink, strokeWidth = 2.dp)
                 else RefreshIcon(Modifier.graphicsLayer { rotationZ = pull().coerceIn(0f, 1.5f) * 300f })
             }
             Spacer(Modifier.width(8.dp))
-            RoundButton(onClick = onSettings) { TuneIcon() }
+            GlassButton(backdrop, onClick = onSettings) { TuneIcon() }
         }
+    }
+}
 
-        // Place chip: own line when expanded, glides into the title line when collapsed.
-        Row(
+/**
+ * The score pill at the end of the capsule. Its slot opens as the number flies up, so the
+ * capsule grows to fit it; the pill itself stays put, so the flight always has the same target.
+ */
+@Composable
+private fun ScoreSlot(score: Int, scoreMorph: () -> Float, onPillTarget: (Offset) -> Unit) {
+    Box(
+        Modifier.layout { measurable, constraints ->
+            val p = measurable.measure(constraints.copy(minWidth = 0))
+            val gap = 10.dp.roundToPx()
+            val open = FastOutSlowInEasing.transform(((scoreMorph() - 0.55f) / 0.35f).coerceIn(0f, 1f))
+            layout(((p.width + gap) * open).roundToInt(), p.height) { p.place(gap, 0) }
+        }
+    ) {
+        Box(
             Modifier
-                .graphicsLayer {
-                    val p = placeMorph()
-                    translationX = (titleW + gap) * p
-                    translationY = line2Y * (1f - p) + ((rowH - chipH) / 2f) * p
+                // Where the number should land: the pill's centre, on screen.
+                .onGloballyPositioned {
+                    val p = it.positionInRoot()
+                    onPillTarget(Offset(p.x + it.size.width / 2f, p.y + it.size.height / 2f))
                 }
-                .onSizeChanged { chipW = it.width; chipH = it.height }
-                .clip(RoundedCornerShape(10.dp))
-                .clickable(onClick = onSettings)
-                .padding(vertical = 4.dp, horizontal = 2.dp),
-            verticalAlignment = Alignment.CenterVertically,
+                .graphicsLayer {
+                    val landed = ((scoreMorph() - 0.8f) / 0.2f).coerceIn(0f, 1f)
+                    alpha = landed
+                    val sc = 0.9f + 0.1f * landed
+                    scaleX = sc; scaleY = sc
+                }
+                .clip(RoundedCornerShape(12.dp))
+                .background(scoreColor(score).copy(alpha = 0.18f))
+                .border(1.dp, scoreColor(score).copy(alpha = 0.45f), RoundedCornerShape(12.dp))
+                .padding(horizontal = 9.dp, vertical = 3.dp),
         ) {
-            PinIcon(Modifier.size(width = 10.dp, height = 13.dp))
-            Spacer(Modifier.width(6.dp))
-            // Width that fits between the title and the score pill once collapsed.
-            val nameMax = with(density) {
-                (fullW - buttonsW - pillW - titleW - gap * 2 - 24.dp.toPx()).coerceAtLeast(40.dp.toPx()).toDp()
-            }
-            Text(
-                placeName, maxLines = 1, fontSize = 13.sp, color = Ink.copy(alpha = 0.78f),
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                modifier = Modifier.widthIn(max = nameMax),
-            )
-            Text("  ›", color = Faint, fontSize = 13.sp, modifier = Modifier.graphicsLayer { alpha = 1f - placeMorph() })
-        }
-
-        // Compact score pill, right-aligned against the buttons once the hero has scrolled away.
-        if (score != null) {
-            val pillX = fullW - buttonsW - pillW
-            // Tell the screen where the number should land (pill centre, header coordinates).
-            LaunchedEffect(pillX, pillW, pillH) {
-                if (pillW > 0) onPillTarget(Offset(pillX + pillW / 2f, rowH / 2f))
-            }
-            Box(
-                Modifier
-                    .onSizeChanged { pillW = it.width; pillH = it.height }
-                    .graphicsLayer {
-                        val landed = ((scoreMorph() - 0.8f) / 0.2f).coerceIn(0f, 1f)
-                        translationX = pillX
-                        translationY = (rowH - pillH) / 2f
-                        alpha = landed
-                        val sc = 0.9f + 0.1f * landed
-                        scaleX = sc; scaleY = sc
-                    }
-                    .clip(RoundedCornerShape(12.dp))
-                    .background(scoreColor(score).copy(alpha = 0.18f))
-                    .border(1.dp, scoreColor(score).copy(alpha = 0.45f), RoundedCornerShape(12.dp))
-                    .padding(horizontal = 9.dp, vertical = 3.dp),
-            ) {
-                Text(score.toString(), color = scoreColor(score), fontSize = 14.sp, fontWeight = FontWeight.Medium)
-            }
+            Text(score.toString(), color = scoreColor(score), fontSize = 14.sp, fontWeight = FontWeight.Medium)
         }
     }
 }
 
 @Composable
-private fun RoundButton(onClick: () -> Unit, enabled: Boolean = true, content: @Composable () -> Unit) {
+private fun GlassButton(backdrop: GraphicsLayer?, onClick: () -> Unit, enabled: Boolean = true, content: @Composable () -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(if (pressed) 0.9f else 1f, spring(dampingRatio = 0.5f, stiffness = 600f), label = "press")
     val view = LocalView.current
-    Box(
-        Modifier
-            // requiredSize: never squeezed by a crowded row, so it stays a true circle
-            .requiredSize(36.dp)
+    LiquidGlass(
+        backdrop,
+        cornerRadius = GlassH / 2,
+        // requiredSize: never squeezed by a crowded row, so it stays a true circle
+        modifier = Modifier
+            .requiredSize(GlassH)
             .graphicsLayer { scaleX = scale; scaleY = scale }
-            .clip(CircleShape)
-            .background(Color(0x1FFFFFFF))
-            .border(1.dp, Color(0x14FFFFFF), CircleShape)
             .clickable(interactionSource = interaction, indication = null, enabled = enabled) { Haptics.tap(view); onClick() },
         contentAlignment = Alignment.Center,
     ) { content() }
 }
 
-// Settings sheet header: 8 + 4 handle + 8 + 30 title row + 4.
-private val SheetHeader = 54.dp
-// Same frost as the main screen: full frost to 40dp, eased off by 80dp.
-private val SheetFrost = 40.dp
+// Settings sheet header: 8 + 4 handle + 8 + 36 title row + 2.
+private val SheetHeader = 58.dp
 
 /**
- * Bottom sheet that follows the finger. It has its own blurred header (same technique as the
- * main screen) that you can drag, and drags inside the content move the sheet once the content
- * is scrolled to the top.
+ * Bottom sheet that follows the finger, made of liquid glass: the screen behind shows through
+ * frosted, bending at the top rim. Content fades out just under the title as it scrolls up.
+ * The header can be dragged, and drags inside the content move the sheet once the content is
+ * scrolled to the top.
  */
 @Composable
 private fun SettingsSheet(
+    backdrop: GraphicsLayer,
     sheet: Animatable<Float, *>,
     maxHeight: Dp,
     onClose: () -> Unit,
@@ -707,7 +697,6 @@ private fun SettingsSheet(
 ) {
     var heightPx by remember { mutableIntStateOf(100_000) }
     val inner = rememberScrollState()
-    val layer = rememberGraphicsLayer()
     val connection = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
@@ -738,7 +727,7 @@ private fun SettingsSheet(
     val dragState = rememberDraggableState { d -> onDrag(d / heightPx) }
 
     val shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
-    val tint = if (Build.VERSION.SDK_INT >= 31) Color(0x660A1022) else Color(0xEB0A1022)
+    val tint = if (Build.VERSION.SDK_INT >= 31) Color(0x8C0A1022) else Color(0xEB0A1022)
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
         Box(
             Modifier
@@ -747,28 +736,38 @@ private fun SettingsSheet(
                 .onSizeChanged { heightPx = it.height.coerceAtLeast(1) }
                 .offset { IntOffset(0, (sheet.value * heightPx).roundToInt()) }
                 .clip(shape)
-                .background(tint)
-                .background(Brush.verticalGradient(listOf(Color(0x24FFFFFF), Color(0x06FFFFFF))))
-                .border(1.dp, Color(0x2EFFFFFF), shape)
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { }
         ) {
+            // The glass itself. It runs 48dp past the bottom so only the top corners are rounded
+            // (the sheet's clip trims the rest).
+            LiquidGlass(
+                backdrop,
+                cornerRadius = 32.dp,
+                tint = tint,
+                frost = 22.dp,
+                rim = 22.dp,
+                modifier = Modifier
+                    .matchParentSize()
+                    .layout { measurable, constraints ->
+                        val extra = 48.dp.roundToPx()
+                        val p = measurable.measure(
+                            androidx.compose.ui.unit.Constraints.fixed(constraints.maxWidth, constraints.maxHeight + extra)
+                        )
+                        layout(constraints.maxWidth, constraints.maxHeight) { p.place(0, 0) }
+                    },
+            )
             Column(
                 Modifier
-                    // Fade the sharp content out where the header sits, so only the blurred copy
-                    // shows there. (The sheet's content has no opaque background, so without this
-                    // plain text stays readable through the blur.) The recorded layer below is
-                    // captured before this mask, so the blur still has full content to work with.
-                    .fadeUnderHeader(SheetFrost + Frost.Fade * Frost.SharpFrom, SheetFrost + Frost.Fade)
-                    .backdropSource(layer)
+                    // Scroll edge: content fades out just under the title instead of being
+                    // blurred, so the header stays clean and nothing is cut off.
+                    .fadeUnderHeader(SheetHeader + 2.dp, SheetHeader + 26.dp)
                     .nestedScroll(connection)
                     .verticalScroll(inner)
                     .windowInsetsPadding(WindowInsets.navigationBars)
                     .padding(horizontal = 22.dp)
-                    .padding(top = SheetFrost + Frost.Fade, bottom = 18.dp)
+                    .padding(top = SheetHeader + 16.dp, bottom = 18.dp)
             ) { content() }
 
-            val frostPx = with(LocalDensity.current) { SheetFrost.toPx() }
-            FrostHeader(layer, frostPx = { frostPx }, base = Color(0xFF0A1022))
             Column(
                 Modifier
                     .fillMaxWidth()
@@ -792,10 +791,17 @@ private fun SettingsSheet(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(L.t("Settings", "Stillingar"), color = Ink, fontSize = 22.sp, fontWeight = FontWeight.Light)
                     Spacer(Modifier.weight(1f))
-                    Text(
-                        L.t("Done", "Lokið"), color = Green, fontSize = 15.sp, fontWeight = FontWeight.Medium,
-                        modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable(onClick = onClose).padding(horizontal = 8.dp, vertical = 4.dp),
-                    )
+                    LiquidGlass(
+                        backdrop = null,
+                        cornerRadius = 18.dp,
+                        modifier = Modifier.height(36.dp).clickable(onClick = onClose),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(
+                            L.t("Done", "Lokið"), color = Green, fontSize = 15.sp, fontWeight = FontWeight.Medium,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    }
                 }
             }
         }
