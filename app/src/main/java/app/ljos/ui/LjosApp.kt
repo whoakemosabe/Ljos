@@ -219,11 +219,9 @@ fun LjosApp() {
     val tomorrowNight = remember(inp, now) { inp?.takeUnless { it.isEmpty }?.let { Model.tomorrow(now, it) } }
     var showTomorrow by remember { mutableStateOf(false) }
     val shownNight = if (showTomorrow && tomorrowNight != null) tomorrowNight else night
-    val sel: HourScore? = shownNight?.let { n ->
-        n.hours.firstOrNull { it.time == selected }
-            ?: n.hours.firstOrNull { now >= it.time && now < it.time + HOUR_MS && it.factors.dark > 0 }
-            ?: n.peak
-    }
+    // The hour everything below talks about: the one you tapped, else tonight's peak, which is the
+    // hour the big number is for. So the big number, the hour bar and "where to go" always agree.
+    val sel: HourScore? = shownNight?.let { n -> n.hours.firstOrNull { it.time == selected } ?: n.peak }
     val explicitSelection = shownNight?.hours?.any { it.time == selected } == true
     val spotScores = remember(inp, sel?.time, now) {
         if (inp != null && sel != null) Model.spotsAt(sel.time, inp, now) else emptyList()
@@ -234,7 +232,6 @@ fun LjosApp() {
         else Model.moonTimeline(n.hours.first().time, n.hours.last().time + HOUR_MS, inp.home)
     }
     val weather = remember(inp, sel?.time) { if (inp != null && sel != null) Model.weatherAt(inp, inp.home, sel.time) else null }
-    val isNight = nowState?.isDark == true
 
     // Folded cards, remembered between launches.
     var collapsed by remember { mutableStateOf(prefs.collapsedCards) }
@@ -358,13 +355,8 @@ fun LjosApp() {
                         .padding(horizontal = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
-                    // Order follows the questions people ask.
-                    // Day (planning): will I see it → when → where → what to wear → this week.
-                    // Night (going out now): what's happening now → where → how to photograph it →
-                    // the rest of tonight → what to wear → this week.
-                    val liveNow: @Composable ColumnScope.() -> Unit = {
-                        SoftReveal(isNight) { nowState?.let { NowCard(it, inp?.solarWind.orEmpty(), now) } }
-                    }
+                    // Order follows the questions people ask: will I see it → when → where →
+                    // what to wear → this week.
                     val tonightSummary: @Composable ColumnScope.() -> Unit = {
                         Hero(
                             night, inp, loading,
@@ -373,6 +365,15 @@ fun LjosApp() {
                             // Store the position as if unscrolled: identical every frame, so no recomposition.
                             onScorePlaced = { pos, size -> heroBase = pos + Offset(0f, scroll.value.toFloat()); heroSize = size },
                         )
+                        // Live solar wind, folded into a line under the number; tap for details.
+                        SoftReveal(nowState?.bz != null) {
+                            nowState?.let { st ->
+                                SolarWindStrip(
+                                    st, inp?.solarWind.orEmpty(), now,
+                                    open = "wind-open" in collapsed, onToggle = { toggle("wind-open") },
+                                )
+                            }
+                        }
                         val peak = night?.peak
                         if (night != null && peak != null) {
                             ConditionChips(peak, night, now) { id ->
@@ -419,16 +420,6 @@ fun LjosApp() {
                             }
                         }
                     }
-                    val photoTips: @Composable ColumnScope.() -> Unit = {
-                        val photoScore = maxOf(nowState?.score ?: 0, if (isNight) night?.peak?.score ?: 0 else 0)
-                        SoftReveal(isNight && photoScore >= 40) {
-                            PhotoTipsCard(
-                                score = photoScore,
-                                moonBright = (sel?.moonIllum ?: 0.0) > 0.5 && (sel?.moonAlt ?: 0.0) > 0,
-                                collapsed = "photo" in collapsed, onToggle = { toggle("photo") },
-                            )
-                        }
-                    }
                     val dressForIt: @Composable ColumnScope.() -> Unit = {
                         SoftReveal(weather != null && sel != null) {
                             if (weather != null && sel != null) {
@@ -441,7 +432,8 @@ fun LjosApp() {
                             sel?.let {
                                 WhereCard(
                                     spotScores, it, "where" in collapsed, { toggle("where") },
-                                    tomorrow = showTomorrow, modifier = Modifier.cardAnchor("where"),
+                                    tomorrow = showTomorrow, atPeak = !explicitSelection,
+                                    modifier = Modifier.cardAnchor("where"),
                                 )
                             }
                         }
@@ -451,11 +443,7 @@ fun LjosApp() {
                             kpDays?.let { KpOutlookCard(it, now, "days" in collapsed, { toggle("days") }, Modifier.cardAnchor("days")) }
                         }
                     }
-                    if (isNight) {
-                        liveNow(); whereToGo(); photoTips(); tonightSummary(); hourByHour(); dressForIt(); nextDays()
-                    } else {
-                        tonightSummary(); hourByHour(); whereToGo(); dressForIt(); nextDays()
-                    }
+                    tonightSummary(); hourByHour(); whereToGo(); dressForIt(); nextDays()
                     MadeWithLove(errors)
                     Spacer(Modifier.height(16.dp))
                 }

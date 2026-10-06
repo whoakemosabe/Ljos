@@ -1,5 +1,16 @@
 package app.ljos.ui
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.shrinkVertically
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.spring
@@ -108,6 +119,89 @@ internal fun Hero(
         if (next != null) {
             Spacer(Modifier.height(6.dp))
             Text(next, color = Muted, fontSize = 14.sp)
+        }
+    }
+}
+
+/**
+ * Under the big number: what the solar wind is doing, in plain words, with the last two hours
+ * as a sparkline. Tap to fold out the details (what's arriving, live score, clouds here).
+ */
+@Composable
+internal fun SolarWindStrip(
+    st: NowState,
+    solarWind: List<SwPoint>,
+    now: Long,
+    open: Boolean,
+    onToggle: () -> Unit,
+) {
+    val view = LocalView.current
+    val bz = st.bz
+    val (word, color) = when {
+        st.lookUp -> L.t("Look up now", "Líttu upp núna") to Green
+        bz == null || !st.bzFresh -> L.t("No live data", "Engin lifandi gögn") to Faint
+        bz <= -3 -> L.t("Helping", "Hjálpar") to Green
+        bz >= 3 -> L.t("Quiet", "Rólegt") to Muted
+        else -> L.t("Neutral", "Hlutlaust") to Ink
+    }
+    val turn by animateFloatAsState(if (open) 180f else 0f, spring(dampingRatio = 0.7f, stiffness = 300f), label = "windChevron")
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(16.dp))
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                Haptics.tap(view); onToggle()
+            }
+            .padding(vertical = 4.dp)
+    ) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Text(L.t("SOLAR WIND", "SÓLVINDUR"), color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Medium, letterSpacing = 2.sp)
+            Spacer(Modifier.width(8.dp))
+            Text(word, color = color, fontSize = 13.sp, fontWeight = FontWeight.Medium)
+            Spacer(Modifier.weight(1f))
+            st.etaMinutes?.let {
+                Text(L.t("reaches us in ~$it min", "nær okkur eftir ~$it mín"), color = Faint, fontSize = 12.sp)
+                Spacer(Modifier.width(4.dp))
+            }
+            Canvas(Modifier.size(18.dp).graphicsLayer { rotationZ = turn }) {
+                val w = size.width
+                val path = Path().apply { moveTo(w * 0.3f, w * 0.42f); lineTo(w * 0.5f, w * 0.6f); lineTo(w * 0.7f, w * 0.42f) }
+                drawPath(path, Faint, style = Stroke(1.6.dp.toPx(), cap = StrokeCap.Round))
+            }
+        }
+        val recent = solarWind.filter { now - it.time <= 2 * HOUR_MS }
+        if (recent.size > 20) {
+            Spacer(Modifier.height(6.dp))
+            BzSparkline(recent, now, Modifier.fillMaxWidth().height(34.dp))
+        }
+        AnimatedVisibility(
+            visible = open,
+            enter = expandVertically(spring(dampingRatio = 0.85f, stiffness = 300f)) + fadeIn(tween(260)),
+            exit = shrinkVertically(spring(dampingRatio = 0.9f, stiffness = 400f)) + fadeOut(tween(160)),
+        ) {
+            Column(Modifier.padding(top = 8.dp)) {
+                if (recent.size > 20) {
+                    Text(
+                        L.t("Last 2 hours at the satellite, 1.5 million km out. Dips below the line (field pointing south) are what switch aurora on.",
+                            "Síðustu 2 klst við gervitunglið, 1,5 milljón km í burtu. Dýfur undir línuna (segulsvið til suðurs) kveikja á norðurljósum."),
+                        color = Faint, fontSize = 12.sp,
+                    )
+                    Spacer(Modifier.height(8.dp))
+                }
+                val rows = buildList {
+                    if (bz != null) add(L.t("Bz now", "Bz núna") to "${Fmt.signed(bz)} nT" + if (!st.bzFresh) L.t(" (old)", " (gamalt)") else "")
+                    st.bzSustained?.let { add(L.t("Arriving now, 20 min average", "Kemur núna, 20 mín meðaltal") to "${Fmt.signed(it)} nT") }
+                    add(L.t("Score right now", "Einkunn núna") to st.score.toString())
+                    add(L.t("Clouds here", "Ský hér") to Fmt.cloud(st.cloud))
+                    st.clearerSpot?.let { add(L.t("Clearer at", "Heiðskírara við") to "${it.spot.name} (${Fmt.cloud(it.cloud)})") }
+                }
+                rows.forEach { (k, v) ->
+                    Row(Modifier.padding(vertical = 3.dp)) {
+                        Text(k, color = Muted, fontSize = 13.sp, modifier = Modifier.weight(1f))
+                        Text(v, color = Ink, fontSize = 13.sp)
+                    }
+                }
+            }
         }
     }
 }
@@ -242,6 +336,8 @@ internal fun WhereCard(
     collapsed: Boolean,
     onToggle: () -> Unit,
     tomorrow: Boolean = false,
+    /** True when showing the default hour, tonight's peak (the hour the big number is for). */
+    atPeak: Boolean = true,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -260,7 +356,11 @@ internal fun WhereCard(
         subtitle = when {
             top == null -> L.t("No clear, dark spot nearby at this hour", "Enginn heiðskír, dimmur staður nálægt á þessum tíma")
             stayPut -> L.t("Best right where you are", "Best þar sem þú ert")
-            else -> L.t("Same scores as above. Dark spots win ties with town lights.", "Sömu einkunnir og ofar. Dimmir staðir vinna bæjarljós á jöfnu.")
+            atPeak -> L.t(
+                "Tonight's peak hour. ${home.spot.name} matches the big number; other places have their own clouds.",
+                "Hámark kvöldsins. ${home.spot.name} er sama og stóra talan; aðrir staðir hafa sín eigin ský.",
+            )
+            else -> L.t("At the hour you picked. Each place has its own clouds.", "Á tímanum sem þú valdir. Hver staður hefur sín ský.")
         },
         summary = when {
             top == null -> L.t("Nothing clear nearby", "Ekkert heiðskírt nálægt")
