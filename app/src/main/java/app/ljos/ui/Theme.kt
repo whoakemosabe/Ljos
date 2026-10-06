@@ -8,6 +8,7 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.composed
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -36,12 +37,23 @@ fun scoreColor(score: Int): Color {
 private val CardShape = RoundedCornerShape(24.dp)
 
 /** Frosted card: translucent fill with a soft top sheen and hairline border. */
-fun Modifier.glass(): Modifier = this
-    .clip(CardShape)
-    .background(Color(0x66070B16))
-    .background(Brush.verticalGradient(listOf(Color(0x1AFFFFFF), Color(0x08FFFFFF))))
-    .border(1.dp, Color(0x1FFFFFFF), CardShape)
-    .padding(18.dp)
+/**
+ * A card. On the main page (Android 13+) it's liquid glass over the sky; elsewhere, or on older
+ * phones, the original frosted-tint card.
+ */
+fun Modifier.glass(): Modifier = composed {
+    val backdrop = LocalGlassBackdrop.current
+    if (backdrop != null && android.os.Build.VERSION.SDK_INT >= 33) {
+        glassCard(backdrop, CardShape, LocalGlassAngle.current).padding(18.dp)
+    } else {
+        this
+            .clip(CardShape)
+            .background(Color(0x66070B16))
+            .background(Brush.verticalGradient(listOf(Color(0x1AFFFFFF), Color(0x08FFFFFF))))
+            .border(1.dp, Color(0x1FFFFFFF), CardShape)
+            .padding(18.dp)
+    }
+}
 
 @Composable
 fun LjosTheme(content: @Composable () -> Unit) {

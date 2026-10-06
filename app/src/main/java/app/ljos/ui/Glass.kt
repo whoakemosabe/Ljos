@@ -218,6 +218,36 @@ private fun DrawScope.drawGlint(l: Offset, k: Float, margin: Float) {
 /** Pages and cards that want glass controls read the backdrop to refract from here. */
 val LocalGlassBackdrop = androidx.compose.runtime.staticCompositionLocalOf<LayerBackdrop?> { null }
 
+/** Shared tilt-following highlight angle, so every glass piece on the page uses one sensor. */
+val LocalGlassAngle = androidx.compose.runtime.staticCompositionLocalOf<State<Float>?> { null }
+
+/**
+ * Liquid glass for a card: more frost than a control (it carries text), a gentle lens around its
+ * rounded edge with colour fringing, a rim highlight that follows the tilt, a soft shadow and a
+ * dark wash so text stays crisp over bright aurora.
+ */
+fun Modifier.glassCard(
+    backdrop: LayerBackdrop,
+    shape: androidx.compose.foundation.shape.CornerBasedShape,
+    lightAngle: State<Float>? = null,
+): Modifier = drawBackdrop(
+    backdrop = backdrop,
+    shape = { shape },
+    effects = {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            colorControls(saturation = 1.2f)
+            blur(10.dp.toPx())
+            lens(16.dp.toPx(), 24.dp.toPx(), chromaticAberration = true)
+        }
+    },
+    highlight = { Highlight(style = HighlightStyle.Default(angle = lightAngle?.value ?: 45f)) },
+    shadow = { Shadow(radius = 20.dp, color = Color.Black.copy(alpha = 0.25f)) },
+    onDrawSurface = {
+        drawRect(Color(0x4D070B16))
+        drawRect(Brush.verticalGradient(listOf(Color(0x14FFFFFF), Color(0x05FFFFFF))))
+    },
+)
+
 /**
  * The angle light catches the glass rims at, following the phone's tilt: 45° (top left) held
  * normally, swinging as you roll the phone.

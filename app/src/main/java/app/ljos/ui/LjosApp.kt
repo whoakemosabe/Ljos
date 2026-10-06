@@ -275,6 +275,7 @@ fun LjosApp() {
     // The sky alone, for glass controls that sit on the page itself (they can't refract a
     // recording of the page they're part of).
     val skyBackdrop = rememberLayerBackdrop()
+    val glassAngle = rememberGlassLightAngle()
 
     BoxWithConstraints(Modifier.fillMaxSize().background(NightBg)) {
         val screenH = maxHeight
@@ -392,7 +393,7 @@ fun LjosApp() {
                         .padding(horizontal = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
-                    androidx.compose.runtime.CompositionLocalProvider(LocalGlassBackdrop provides skyBackdrop) {
+                    androidx.compose.runtime.CompositionLocalProvider(LocalGlassBackdrop provides skyBackdrop, LocalGlassAngle provides glassAngle) {
                     // Order follows the questions people ask: will I see it → when → where →
                     // what to wear → this week.
                     val tonightSummary: @Composable ColumnScope.() -> Unit = {

@@ -131,7 +131,7 @@ internal fun ConditionChips(peak: HourScore, night: Night, now: Long, onChip: (S
         night.darkUntil != null && now < night.darkUntil -> time(night.darkUntil)
         else -> time(night.darkFrom)
     }
-    val angle = rememberGlassLightAngle()
+    val angle = LocalGlassAngle.current
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         val m = Modifier.weight(1f)
         val backdrop = LocalGlassBackdrop.current
