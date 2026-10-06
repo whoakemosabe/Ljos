@@ -227,7 +227,8 @@ fun LjosApp() {
         // Everything scroll- or drag-linked below is read inside layout/draw lambdas, never during
         // composition, so scrolling and dragging the sheet don't rebuild the screen every frame.
         val placeRange = with(density) { 110.dp.toPx() }
-        val flightRange = with(density) { 170.dp.toPx() }
+        // Long runway so the number drifts up gently rather than snapping into the header.
+        val flightRange = with(density) { 340.dp.toPx() }
         val headerOrigin = with(density) { Offset(20.dp.toPx(), statusTop.toPx() + 12.dp.toPx()) }
         val placeMorph: () -> Float = { (scroll.value / placeRange).coerceIn(0f, 1f) }
         val scoreMorph: () -> Float = {
@@ -587,7 +588,7 @@ private fun SettingsSheet(
                     .padding(top = SheetHeader + 4.dp, bottom = 18.dp)
             ) { content() }
 
-            ProgressiveBlurHeader(layer, SheetHeader + 44.dp, tint = Color(0xB30A1022))
+            ProgressiveBlurHeader(layer, SheetHeader + 40.dp, maxRadius = 56.dp, tint = Color(0xE00A1022))
             Column(
                 Modifier
                     .fillMaxWidth()

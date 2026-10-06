@@ -56,8 +56,10 @@ fun ProgressiveBlurHeader(
         for (i in 0 until bands) {
             val t = if (bands == 1) 1f else i / (bands - 1f)
             val radius = maxRadius * (0.12f + 0.88f * t.pow(1.6f))
-            val end = 1f - 0.5f * t          // where this band has fully faded out
-            val solid = (end - 0.42f).coerceAtLeast(0f)
+            // Each band is fully on over a generous top section and dissolves below it; stronger
+            // bands stop a little higher. The area behind the title stays heavily frosted.
+            val end = 1f - 0.32f * t          // where this band has fully faded out
+            val solid = (end - 0.32f).coerceAtLeast(0f)
             Box(
                 modifier
                     .fillMaxWidth()
