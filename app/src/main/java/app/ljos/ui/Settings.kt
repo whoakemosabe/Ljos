@@ -43,7 +43,6 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -385,12 +384,24 @@ private fun UpdateSettings() {
     }
     if (state is UpdateUi.Downloading) {
         Spacer(Modifier.height(8.dp))
-        LinearProgressIndicator(
-            progress = { progress },
-            modifier = Modifier.fillMaxWidth().height(4.dp).clip(RoundedCornerShape(2.dp)),
-            color = Green,
-            trackColor = Color(0x1AFFFFFF),
-        )
+        val shown by animateFloatAsState(progress, tween(260), label = "download")
+        Box(
+            Modifier
+                .fillMaxWidth()
+                .height(4.dp)
+                .clip(RoundedCornerShape(2.dp))
+                .background(Color(0x1AFFFFFF))
+        ) {
+            if (shown > 0.002f) {
+                Box(
+                    Modifier
+                        .fillMaxWidth(shown)
+                        .fillMaxHeight()
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(Brush.horizontalGradient(listOf(Teal, Green)))
+                )
+            }
+        }
     }
 
     Spacer(Modifier.height(10.dp))

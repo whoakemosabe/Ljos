@@ -84,6 +84,10 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.graphics.TransformOrigin
+import androidx.compose.ui.geometry.isSpecified
+import androidx.compose.foundation.layout.wrapContentSize
 import androidx.compose.ui.unit.Velocity
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -126,6 +130,9 @@ fun LjosApp() {
     var home by remember { mutableStateOf(prefs.home) }
     var detecting by remember { mutableStateOf(false) }
     val scroll = rememberScrollState()
+    var heroPos by remember { mutableStateOf(Offset.Unspecified) }
+    var heroSize by remember { mutableStateOf(IntSize.Zero) }
+    var pillTarget by remember { mutableStateOf(Offset.Unspecified) }
 
     // Settings sheet position: 0 = fully open, 1 = hidden.
     val sheet = remember { Animatable(1f) }
@@ -210,7 +217,17 @@ fun LjosApp() {
         val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
         // Scroll-linked, not toggled, so the header morph tracks your finger exactly.
         val placeMorph = with(density) { (scroll.value / 110.dp.toPx()).coerceIn(0f, 1f) }
-        val scoreMorph = with(density) { ((scroll.value - 200.dp.toPx()) / 90.dp.toPx()).coerceIn(0f, 1f) }
+        // Score flight: starts as the big number nears the header, lands in the pill ~150dp later.
+        val headerOrigin = with(density) { Offset(20.dp.toPx(), statusTop.toPx() + 12.dp.toPx()) }
+        val scoreMorph = with(density) {
+            if (!heroPos.isSpecified || !pillTarget.isSpecified) 0f
+            else {
+                val heroCenterY = heroPos.y + heroSize.height / 2f
+                val landY = headerOrigin.y + pillTarget.y
+                val startY = landY + 170.dp.toPx()
+                ((startY - heroCenterY) / (startY - landY)).coerceIn(0f, 1f)
+            }
+        }
         val barH = HeaderExpanded + (HeaderCollapsed - HeaderExpanded) * placeMorph
         val headerH = statusTop + barH + HeaderFade
 
@@ -230,7 +247,11 @@ fun LjosApp() {
                         .padding(horizontal = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
-                    Hero(night, inp, loading)
+                    Hero(
+                        night, inp, loading,
+                        hideScore = scoreMorph > 0f,
+                        onScorePlaced = { pos, size -> heroPos = pos; heroSize = size },
+                    )
                     if (nowState != null && nowState.isDark) NowCard(nowState)
                     if (night != null && night.hours.isNotEmpty()) {
                         Column(Modifier.glass()) {
@@ -260,7 +281,37 @@ fun LjosApp() {
                 loading = loading,
                 onRefresh = { scope.launch { reload(true) } },
                 onSettings = { openSheet() },
+                onPillTarget = { pillTarget = it },
             )
+
+            // The big number itself, flying from the hero into the header pill.
+            val peakScore = night?.peak?.score
+            if (peakScore != null && scoreMorph > 0f && heroPos.isSpecified && pillTarget.isSpecified) {
+                val e = FastOutSlowInEasing.transform(scoreMorph)
+                val endScale = with(density) { 15.sp.toPx() / 120.sp.toPx() } * 1.25f
+                val s = 1f + (endScale - 1f) * e
+                val target = headerOrigin + pillTarget
+                Text(
+                    peakScore.toString(),
+                    style = HeroScoreStyle.copy(
+                        color = androidx.compose.ui.graphics.lerp(Color.White, scoreColor(peakScore), e),
+                        fontWeight = if (e > 0.6f) FontWeight.Light else FontWeight.ExtraLight,
+                    ),
+                    maxLines = 1,
+                    modifier = Modifier
+                        .wrapContentSize(Alignment.TopStart, unbounded = true)
+                        .graphicsLayer {
+                            transformOrigin = TransformOrigin(0f, 0f)
+                            scaleX = s
+                            scaleY = s
+                            val cx = (heroPos.x + heroSize.width / 2f) * (1f - e) + target.x * e
+                            val cy = (heroPos.y + heroSize.height / 2f) * (1f - e) + target.y * e
+                            translationX = cx - heroSize.width * s / 2f
+                            translationY = cy - heroSize.height * s / 2f
+                            alpha = 1f - ((scoreMorph - 0.86f) / 0.14f).coerceIn(0f, 1f)
+                        },
+                )
+            }
         }
 
         if (sheet.value < 0.999f) {
@@ -310,6 +361,7 @@ private fun Header(
     loading: Boolean,
     onRefresh: () -> Unit,
     onSettings: () -> Unit,
+    onPillTarget: (Offset) -> Unit,
 ) {
     val density = LocalDensity.current
     var titleW by remember { mutableIntStateOf(0) }
@@ -376,14 +428,19 @@ private fun Header(
         // Compact score pill, right-aligned against the buttons once the hero has scrolled away.
         if (score != null) {
             val pillX = fullW - buttonsW - pillW
+            // Tell the screen where the number should land (pill centre, header coordinates).
+            LaunchedEffect(pillX, pillW, pillH) {
+                if (pillW > 0) onPillTarget(Offset(pillX + pillW / 2f, rowH / 2f))
+            }
+            val landed = ((scoreMorph - 0.8f) / 0.2f).coerceIn(0f, 1f)
             Box(
                 Modifier
                     .onSizeChanged { pillW = it.width; pillH = it.height }
                     .graphicsLayer {
                         translationX = pillX
-                        translationY = (rowH - pillH) / 2f + (1f - scoreMorph) * 6.dp.toPx()
-                        alpha = scoreMorph
-                        val sc = 0.85f + 0.15f * scoreMorph
+                        translationY = (rowH - pillH) / 2f
+                        alpha = landed
+                        val sc = 0.9f + 0.1f * landed
                         scaleX = sc; scaleY = sc
                     }
                     .clip(RoundedCornerShape(12.dp))

@@ -22,6 +22,11 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -38,18 +43,29 @@ import kotlin.math.roundToInt
 
 internal val Glow = Shadow(color = Color(0x99000000), blurRadius = 24f)
 
+internal val HeroScoreStyle: TextStyle = TextStyle(
+    color = Color.White, fontSize = 120.sp, fontWeight = FontWeight.ExtraLight,
+    lineHeight = 124.sp, shadow = Glow,
+)
+
 @Composable
-internal fun Hero(night: Night?, inp: Inputs?, loading: Boolean) {
+internal fun Hero(
+    night: Night?,
+    inp: Inputs?,
+    loading: Boolean,
+    hideScore: Boolean = false,
+    onScorePlaced: (Offset, IntSize) -> Unit = { _, _ -> },
+) {
     val peak = night?.peak
     val shown by animateIntAsState(peak?.score ?: 0, tween(1200), label = "score")
     Column(Modifier.fillMaxWidth().padding(top = 28.dp, bottom = 18.dp)) {
         Text(L.t("TONIGHT", "Í KVÖLD"), color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 3.sp)
         Text(
             if (peak != null) shown.toString() else "—",
-            style = TextStyle(
-                color = Color.White, fontSize = 120.sp, fontWeight = FontWeight.ExtraLight,
-                lineHeight = 124.sp, shadow = Glow,
-            ),
+            style = HeroScoreStyle,
+            modifier = Modifier
+                .onGloballyPositioned { onScorePlaced(it.positionInRoot(), it.size) }
+                .graphicsLayer { alpha = if (hideScore && peak != null) 0f else 1f },
         )
         val headline = when {
             peak != null -> Model.label(peak.score)
