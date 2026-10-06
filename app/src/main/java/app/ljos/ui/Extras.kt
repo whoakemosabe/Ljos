@@ -32,7 +32,10 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
+import app.ljos.R
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.ljos.Fmt
@@ -45,6 +48,7 @@ import app.ljos.model.MoonTimeline
 import kotlin.math.roundToInt
 
 private val MoonGold = Color(0xFFF3E7C1)
+private val Pacifico = FontFamily(Font(R.font.pacifico))
 
 /**
  * A hairline under the hour strip showing when the moon is up. Brighter moon, brighter line.
@@ -234,13 +238,12 @@ internal fun MadeWithLove(errors: List<String>) {
             Spacer(Modifier.width(8.dp))
             Text(L.t("IN", "Í"), color = Faint, fontSize = 10.sp, letterSpacing = 3.sp, fontWeight = FontWeight.Medium)
         }
-        Spacer(Modifier.height(4.dp))
+        Spacer(Modifier.height(2.dp))
         Text(
             "Njarðvík",
             style = TextStyle(
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Light,
-                letterSpacing = 1.5.sp,
+                fontFamily = Pacifico,
+                fontSize = 28.sp,
                 brush = Brush.linearGradient(
                     *arrayOf(
                         0f to Ink.copy(alpha = 0.55f),
