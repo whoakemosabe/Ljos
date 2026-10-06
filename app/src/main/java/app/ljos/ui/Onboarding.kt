@@ -83,10 +83,11 @@ fun Onboarding(onDone: () -> Unit) {
     val view = LocalView.current
     val context = LocalContext.current
     val prefs = remember { Prefs(context) }
-    // Aurora brightens as you move through the pages.
+    // Aurora brightens page by page. Keyed on the target page (not the live swipe offset),
+    // so swiping doesn't recompose the screen every frame.
     val glow by animateFloatAsState(
-        0.35f + 0.3f * (pager.currentPage + pager.currentPageOffsetFraction),
-        spring(stiffness = 120f),
+        0.35f + 0.3f * pager.targetPage,
+        tween(900, easing = FastOutSlowInEasing),
         label = "glow",
     )
 
@@ -100,15 +101,22 @@ fun Onboarding(onDone: () -> Unit) {
                     prefs.icelandic = L.icelandic
                 }
             }
-            HorizontalPager(state = pager, modifier = Modifier.weight(1f)) { page ->
-                // Gentle parallax: content drifts and fades as pages slide.
-                val offset = (pager.currentPage - page + pager.currentPageOffsetFraction)
+            HorizontalPager(
+                state = pager,
+                modifier = Modifier.weight(1f),
+                beyondViewportPageCount = 1, // neighbours are ready before you swipe to them
+            ) { page ->
                 Box(
                     Modifier
                         .fillMaxSize()
                         .graphicsLayer {
-                            alpha = 1f - offset.absoluteValue.coerceIn(0f, 1f) * 0.6f
-                            translationX = offset * size.width * 0.25f
+                            // Read the swipe offset here (draw phase only): soft fade and a
+                            // slight scale-down as a page leaves, no extra sideways motion.
+                            val offset = ((pager.currentPage - page) + pager.currentPageOffsetFraction).absoluteValue.coerceIn(0f, 1f)
+                            alpha = 1f - offset * 0.55f
+                            val sc = 1f - offset * 0.06f
+                            scaleX = sc
+                            scaleY = sc
                         }
                         .padding(horizontal = 28.dp),
                 ) {
