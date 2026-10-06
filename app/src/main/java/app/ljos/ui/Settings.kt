@@ -5,7 +5,28 @@ import android.content.Intent
 import android.net.Uri
 import android.os.PowerManager
 import android.provider.Settings
+import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.spring
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.offset
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.FilterQuality
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import app.ljos.data.MapTiles
+import kotlin.math.roundToInt
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -22,11 +43,7 @@ import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.FilterChip
-import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.Switch
-import androidx.compose.material3.SwitchDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -77,18 +94,8 @@ internal fun SettingsContent(
     onClose: () -> Unit,
 ) {
     Column {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(L.t("Settings", "Stillingar"), color = Ink, fontSize = 22.sp, fontWeight = FontWeight.Light)
-            Spacer(Modifier.weight(1f))
-            Text(
-                L.t("Done", "Lokið"), color = Green, fontSize = 15.sp, fontWeight = FontWeight.Medium,
-                modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable(onClick = onClose).padding(8.dp),
-            )
-        }
-        Spacer(Modifier.height(10.dp))
-
         SectionLabel(L.t("LOCATION", "STAÐSETNING"))
-        SpotsMap(home, spots, Modifier.fillMaxWidth().height(150.dp))
+        SpotsMap(home, spots, Modifier.fillMaxWidth().height(190.dp))
         Spacer(Modifier.height(10.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
@@ -125,47 +132,76 @@ internal fun SettingsContent(
     }
 }
 
-/** A tiny "radar" of you and the comparison spots, scaled to fit. No map tiles needed. */
+/** Dark OpenStreetMap tiles with your pin and the comparison spots. */
 @Composable
 private fun SpotsMap(home: Spot, spots: List<Spot>, modifier: Modifier) {
-    val shape = RoundedCornerShape(16.dp)
-    Canvas(
+    val context = LocalContext.current
+    val shape = RoundedCornerShape(18.dp)
+    BoxWithConstraints(
         modifier
             .clip(shape)
             .background(Color(0xFF0A1322))
-            .border(1.dp, Color(0x1AFFFFFF), shape)
+            .border(1.dp, Color(0x1FFFFFFF), shape)
     ) {
-        val c = Offset(size.width / 2f, size.height / 2f)
-        val kmMax = max(10.0, spots.maxOf { Geo.km(home.lat, home.lon, it.lat, it.lon) })
-        val pxPerKm = (size.height / 2f - 16.dp.toPx()) / kmMax.toFloat()
-        // Rings every 10 km
-        var r = 10
-        while (r <= kmMax + 1) {
-            drawCircle(
-                Color(0x1AFFFFFF), radius = r * pxPerKm, center = c,
-                style = Stroke(1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 8f))),
+        val wDp = maxWidth.value
+        val hDp = maxHeight.value
+        val radiusKm = spots.maxOf { Geo.km(home.lat, home.lon, it.lat, it.lon) }.coerceAtLeast(8.0)
+        val zoom = remember(home.lat, radiusKm, hDp) { MapTiles.zoomFor(home.lat, radiusKm, hDp / 2f) }
+        var tiles by remember { mutableStateOf<List<MapTiles.Tile>>(emptyList()) }
+        LaunchedEffect(home.lat, home.lon, zoom, wDp, hDp) {
+            tiles = MapTiles.load(context, home.lat, home.lon, zoom, wDp, hDp)
+        }
+        val fade by animateFloatAsState(if (tiles.isEmpty()) 0f else 1f, tween(700), label = "tiles")
+        val images = remember(tiles) { tiles.map { it to it.bitmap.asImageBitmap() } }
+
+        Canvas(Modifier.fillMaxSize()) {
+            val px = size.width / wDp
+            val (cx, cy) = MapTiles.project(home.lat, home.lon, zoom)
+            fun toScreen(wx: Double, wy: Double) = Offset(
+                ((wx - (cx - wDp / 2)) * px).toFloat(),
+                ((wy - (cy - hDp / 2)) * px).toFloat(),
             )
-            r += 10
+            images.forEach { (t, img) ->
+                val o = toScreen(t.x * 256.0, t.y * 256.0)
+                val side = (256 * px).roundToInt() + 1
+                drawImage(
+                    img,
+                    dstOffset = IntOffset(o.x.roundToInt(), o.y.roundToInt()),
+                    dstSize = IntSize(side, side),
+                    alpha = fade,
+                    filterQuality = FilterQuality.Medium,
+                )
+            }
+            // Cool night tint so the map sits inside the app's palette
+            drawRect(Color(0x330A1A3A))
+            drawRect(Brush.radialGradient(listOf(Color.Transparent, Color(0x99050812)), radius = size.maxDimension * 0.75f))
+
+            spots.drop(1).forEach { s ->
+                val (wx, wy) = MapTiles.project(s.lat, s.lon, zoom)
+                val p = toScreen(wx, wy)
+                drawCircle(Teal.copy(alpha = 0.22f), 9.dp.toPx(), p)
+                drawCircle(Teal, 3.5.dp.toPx(), p)
+                drawCircle(Color(0xFF0A1322), 1.4.dp.toPx(), p)
+            }
+            val c = Offset(size.width / 2f, size.height / 2f)
+            drawCircle(Green.copy(alpha = 0.16f), 26.dp.toPx(), c)
+            drawCircle(Green.copy(alpha = 0.10f), 14.dp.toPx(), c)
+            val head = c + Offset(0f, -15.dp.toPx())
+            val pin = androidx.compose.ui.graphics.Path().apply {
+                moveTo(c.x, c.y)
+                lineTo(head.x - 7.5.dp.toPx(), head.y + 3.dp.toPx())
+                lineTo(head.x + 7.5.dp.toPx(), head.y + 3.dp.toPx())
+                close()
+            }
+            drawCircle(Color(0x66000000), 3.dp.toPx(), c + Offset(0f, 1.dp.toPx()))
+            drawPath(pin, Green)
+            drawCircle(Green, 8.5.dp.toPx(), head)
+            drawCircle(Color(0xFF0A1322), 3.2.dp.toPx(), head)
         }
-        val kmPerLon = 111.32 * cos(Math.toRadians(home.lat))
-        spots.drop(1).forEach { s ->
-            val dx = ((s.lon - home.lon) * kmPerLon).toFloat() * pxPerKm
-            val dy = (-(s.lat - home.lat) * 111.32).toFloat() * pxPerKm
-            drawCircle(Color(0x332FD3C6), 7.dp.toPx(), c + Offset(dx, dy))
-            drawCircle(Teal, 3.dp.toPx(), c + Offset(dx, dy))
-        }
-        // Pin: glow, then a teardrop drawn as circle + triangle
-        drawCircle(Green.copy(alpha = 0.18f), 22.dp.toPx(), c)
-        val head = c + Offset(0f, -14.dp.toPx())
-        val path = androidx.compose.ui.graphics.Path().apply {
-            moveTo(c.x, c.y)
-            lineTo(head.x - 7.dp.toPx(), head.y + 3.dp.toPx())
-            lineTo(head.x + 7.dp.toPx(), head.y + 3.dp.toPx())
-            close()
-        }
-        drawPath(path, Green)
-        drawCircle(Green, 8.dp.toPx(), head)
-        drawCircle(Color(0xFF0A1322), 3.dp.toPx(), head)
+        Text(
+            MapTiles.ATTRIBUTION, color = Color(0x80E8F1FF), fontSize = 9.sp,
+            modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp),
+        )
     }
 }
 
@@ -203,7 +239,13 @@ private fun AlertSettings() {
         L.t("No sounds or pop-ups; the lock screen card stays silent", "Engin hljóð eða sprettigluggar; lásskjáspjaldið er hljóðlaust"),
         quiet,
     ) { quiet = it; prefs.quietOn = it }
-    if (quiet) {
+    androidx.compose.animation.AnimatedVisibility(
+        visible = quiet,
+        enter = androidx.compose.animation.expandVertically(spring(dampingRatio = 0.85f, stiffness = 300f)) +
+            androidx.compose.animation.fadeIn(tween(260)),
+        exit = androidx.compose.animation.shrinkVertically(spring(dampingRatio = 0.9f, stiffness = 400f)) +
+            androidx.compose.animation.fadeOut(tween(180)),
+    ) {
         Row(Modifier.padding(bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
             HourStepper(L.t("From", "Frá"), quietFrom) { quietFrom = it; prefs.quietFrom = it }
             Spacer(Modifier.width(18.dp))
@@ -213,22 +255,9 @@ private fun AlertSettings() {
     Spacer(Modifier.height(8.dp))
     Text(L.t("Heads-up level", "Viðvörunarmark"), color = Ink, fontSize = 14.sp)
     Spacer(Modifier.height(6.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        listOf(30, 40, 50, 60, 70).forEach { v ->
-            FilterChip(
-                selected = threshold == v,
-                onClick = { threshold = v; prefs.threshold = v },
-                label = { Text(v.toString()) },
-                shape = RoundedCornerShape(12.dp),
-                colors = FilterChipDefaults.filterChipColors(
-                    containerColor = Color(0x10FFFFFF),
-                    labelColor = Muted,
-                    selectedContainerColor = Green,
-                    selectedLabelColor = Color(0xFF03130B),
-                ),
-                border = null,
-            )
-        }
+    val levels = listOf(30, 40, 50, 60, 70)
+    SlidingSegments(levels.map { it.toString() }, levels.indexOf(threshold).coerceAtLeast(0), Modifier.fillMaxWidth()) {
+        threshold = levels[it]; prefs.threshold = levels[it]
     }
 }
 
@@ -402,12 +431,17 @@ private fun UpdateSettings() {
 
 @Composable
 private fun Pill(text: String, primary: Boolean, busy: Boolean = false, icon: Boolean = false, onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (pressed) 0.94f else 1f, spring(dampingRatio = 0.55f, stiffness = 600f), label = "press")
     Row(
         Modifier
+            .graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(RoundedCornerShape(14.dp))
             .background(if (primary) Green else Color(0x1AFFFFFF))
-            .clickable(onClick = onClick)
-            .padding(horizontal = 14.dp, vertical = 9.dp),
+            .clickable(interactionSource = interaction, indication = null, onClick = onClick)
+            .padding(horizontal = 14.dp, vertical = 9.dp)
+            .animateContentSize(spring(dampingRatio = 0.8f, stiffness = 500f)),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         val fg = if (primary) Color(0xFF03130B) else Ink
@@ -435,22 +469,47 @@ private fun SectionLabel(text: String) {
 
 @Composable
 private fun ToggleRow(title: String, sub: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(RoundedCornerShape(12.dp))
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onChange(!checked) }
+            .padding(vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
         Column(Modifier.weight(1f).padding(end = 12.dp)) {
             Text(title, color = Ink, fontSize = 15.sp)
             Text(sub, color = Faint, fontSize = 12.sp)
         }
-        Switch(
-            checked = checked,
-            onCheckedChange = onChange,
-            colors = SwitchDefaults.colors(
-                checkedTrackColor = Green,
-                checkedThumbColor = Color(0xFF03130B),
-                uncheckedTrackColor = Color(0x1AFFFFFF),
-                uncheckedThumbColor = Muted,
-                uncheckedBorderColor = Color(0x33FFFFFF),
-            ),
-        )
+        SoftSwitch(checked) { onChange(it) }
+    }
+}
+
+/** A springy switch: the knob glides and squishes a little, the track glows green when on. */
+@Composable
+private fun SoftSwitch(checked: Boolean, onChange: (Boolean) -> Unit) {
+    val pos by animateFloatAsState(if (checked) 1f else 0f, spring(dampingRatio = 0.62f, stiffness = 380f), label = "knob")
+    val track by animateColorAsState(if (checked) Green else Color(0x24FFFFFF), tween(320), label = "track")
+    val knob by animateColorAsState(if (checked) Color(0xFF03130B) else Color(0xFFCFD8E6), tween(320), label = "knobColor")
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val stretch by animateFloatAsState(if (pressed) 1.25f else 1f, spring(dampingRatio = 0.6f, stiffness = 500f), label = "stretch")
+    Canvas(
+        Modifier
+            .size(width = 46.dp, height = 28.dp)
+            .clickable(interactionSource = interaction, indication = null) { onChange(!checked) }
+    ) {
+        val h = size.height
+        drawRoundRect(track, cornerRadius = CornerRadius(h / 2f))
+        if (checked || pos > 0.01f) {
+            drawRoundRect(Green.copy(alpha = 0.25f * pos), Offset(-3.dp.toPx(), -3.dp.toPx()),
+                Size(size.width + 6.dp.toPx(), h + 6.dp.toPx()), CornerRadius(h / 2f + 3.dp.toPx()))
+        }
+        val pad = 3.dp.toPx()
+        val d = h - pad * 2
+        val w = d * stretch
+        val x = pad + (size.width - pad * 2 - w) * pos
+        drawRoundRect(knob, Offset(x, pad), Size(w, d), CornerRadius(d / 2f))
     }
 }
 
@@ -487,31 +546,52 @@ private fun DisplaySettings() {
     }
 }
 
-/** Compact segmented control: a glass track with a green pill on the chosen option. */
 @Composable
 private fun SegmentRow(title: String, options: List<String>, selected: Int, onSelect: (Int) -> Unit) {
     Row(Modifier.fillMaxWidth().padding(vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
         Text(title, color = Ink, fontSize = 15.sp, modifier = Modifier.weight(1f))
-        Row(
+        SlidingSegments(options, selected, Modifier.width((options.size * 76).dp), onSelect)
+    }
+}
+
+/** Glass track with a green pill that glides to the chosen option. */
+@Composable
+private fun SlidingSegments(options: List<String>, selected: Int, modifier: Modifier, onSelect: (Int) -> Unit) {
+    val pos by animateFloatAsState(selected.toFloat(), spring(dampingRatio = 0.72f, stiffness = 340f), label = "segment")
+    BoxWithConstraints(
+        modifier
+            .height(36.dp)
+            .clip(RoundedCornerShape(13.dp))
+            .background(Color(0x14FFFFFF))
+            .border(1.dp, Color(0x14FFFFFF), RoundedCornerShape(13.dp))
+            .padding(3.dp)
+    ) {
+        val segW = maxWidth / options.size
+        Box(
             Modifier
-                .clip(RoundedCornerShape(12.dp))
-                .background(Color(0x14FFFFFF))
-                .border(1.dp, Color(0x14FFFFFF), RoundedCornerShape(12.dp))
-                .padding(3.dp)
-        ) {
+                .offset(x = segW * pos)
+                .width(segW)
+                .fillMaxHeight()
+                .clip(RoundedCornerShape(10.dp))
+                .background(Brush.horizontalGradient(listOf(Green, Color(0xFF5CFFC0))))
+        )
+        Row(Modifier.fillMaxSize()) {
             options.forEachIndexed { i, label ->
-                val on = i == selected
-                Text(
-                    label,
-                    color = if (on) Color(0xFF03130B) else Muted,
-                    fontSize = 13.sp,
-                    fontWeight = if (on) FontWeight.Medium else FontWeight.Normal,
-                    modifier = Modifier
-                        .clip(RoundedCornerShape(9.dp))
-                        .background(if (on) Green else Color.Transparent)
-                        .clickable { onSelect(i) }
-                        .padding(horizontal = 12.dp, vertical = 6.dp),
-                )
+                val closeness = (1f - kotlin.math.abs(pos - i)).coerceIn(0f, 1f)
+                Box(
+                    Modifier
+                        .weight(1f)
+                        .fillMaxHeight()
+                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onSelect(i) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        label,
+                        color = androidx.compose.ui.graphics.lerp(Muted, Color(0xFF03130B), closeness),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Medium,
+                    )
+                }
             }
         }
     }

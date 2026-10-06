@@ -7,6 +7,12 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.foundation.gestures.Orientation
+import androidx.compose.foundation.gestures.draggable
+import androidx.compose.foundation.gestures.rememberDraggableState
+import androidx.compose.foundation.interaction.collectIsPressedAsState
+import androidx.compose.ui.graphics.rememberGraphicsLayer
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -98,8 +104,9 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
-private val HeaderBar = 92.dp
-private val HeaderFade = 44.dp
+private val HeaderExpanded = 82.dp
+private val HeaderCollapsed = 56.dp
+private val HeaderFade = 40.dp
 
 @Composable
 fun LjosApp() {
@@ -192,92 +199,62 @@ fun LjosApp() {
     val kpDays = remember(inp, now) { inp?.takeIf { it.kp.isNotEmpty() }?.let { Model.kpOutlook(it.kp, now) } }
     val intensity by animateFloatAsState((night?.peak?.score ?: 0) / 100f, tween(1800), label = "intensity")
 
-    // The page, drawn once for real and once (blurred, non-interactive) inside the header.
-    val page: @Composable (Boolean) -> Unit = { interactive ->
-        Box(Modifier.fillMaxSize()) {
-            AuroraBackground(intensity, Modifier.fillMaxSize())
-            Column(
-                Modifier
-                    .fillMaxSize()
-                    .verticalScroll(scroll, enabled = interactive)
-                    .windowInsetsPadding(WindowInsets.navigationBars)
-                    .padding(top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + HeaderBar)
-                    .padding(horizontal = 20.dp),
-                verticalArrangement = Arrangement.spacedBy(14.dp),
-            ) {
-                Hero(night, inp, loading)
-                if (nowState != null && nowState.isDark) NowCard(nowState)
-                if (night != null && night.hours.isNotEmpty()) {
-                    Column(Modifier.glass()) {
-                        CardTitle(L.t("Hour by hour", "Klukkustund fyrir klukkustund"), L.t("Tap or drag a bar", "Ýttu á eða dragðu súlu"))
-                        Spacer(Modifier.height(12.dp))
-                        HourStrip(night.hours, sel?.time, now, onSelect = if (interactive) { t -> selected = t } else null)
-                        if (moon != null) {
-                            Spacer(Modifier.height(10.dp))
-                            MoonLine(night.hours, moon)
-                        }
-                    }
-                }
-                if (sel != null) WhyCard(sel)
-                if (spotScores.isNotEmpty() && sel != null) WhereCard(spotScores, sel)
-                if (kpDays != null) KpOutlookCard(kpDays, now)
-                MadeWithLove(errors)
-                Spacer(Modifier.height(16.dp))
-            }
-        }
-    }
+    // Recorded once per frame and reused (blurred) by the header, so the page is only composed once.
+    val pageLayer = rememberGraphicsLayer()
 
     BoxWithConstraints(Modifier.fillMaxSize().background(NightBg)) {
         val screenH = maxHeight
         val openness = 1f - sheet.value
         val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-        val headerH = statusTop + HeaderBar + HeaderFade
-        val heroGonePx = with(density) { 260.dp.toPx() }
-        val collapsed = scroll.value > heroGonePx
+        // Scroll-linked, not toggled, so the header morph tracks your finger exactly.
+        val placeMorph = with(density) { (scroll.value / 110.dp.toPx()).coerceIn(0f, 1f) }
+        val scoreMorph = with(density) { ((scroll.value - 200.dp.toPx()) / 90.dp.toPx()).coerceIn(0f, 1f) }
+        val barH = HeaderExpanded + (HeaderCollapsed - HeaderExpanded) * placeMorph
+        val headerH = statusTop + barH + HeaderFade
 
         Box(
             Modifier
                 .fillMaxSize()
                 .then(if (openness > 0.01f) Modifier.blur((28 * openness).dp) else Modifier)
         ) {
-            page(true)
-
-            // Progressive blur: a blurred copy of the page, masked so it fades out downward.
-            if (Build.VERSION.SDK_INT >= 31) {
-                Box(
+            Box(Modifier.fillMaxSize().backdropSource(pageLayer)) {
+                AuroraBackground(intensity, Modifier.fillMaxSize())
+                Column(
                     Modifier
-                        .fillMaxWidth()
-                        .height(headerH)
-                        .clipToBounds()
-                        .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
-                        .drawWithContent {
-                            drawContent()
-                            drawRect(
-                                Brush.verticalGradient(0f to Color.Black, 0.55f to Color.Black, 1f to Color.Transparent),
-                                blendMode = BlendMode.DstIn,
-                            )
-                        }
+                        .fillMaxSize()
+                        .verticalScroll(scroll)
+                        .windowInsetsPadding(WindowInsets.navigationBars)
+                        .padding(top = statusTop + HeaderExpanded + 8.dp)
+                        .padding(horizontal = 20.dp),
+                    verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
-                    Box(
-                        Modifier
-                            .fillMaxWidth()
-                            .wrapContentHeight(Alignment.Top, unbounded = true)
-                            .height(screenH)
-                            .blur(22.dp, BlurredEdgeTreatment.Rectangle)
-                    ) { page(false) }
+                    Hero(night, inp, loading)
+                    if (nowState != null && nowState.isDark) NowCard(nowState)
+                    if (night != null && night.hours.isNotEmpty()) {
+                        Column(Modifier.glass()) {
+                            CardTitle(L.t("Hour by hour", "Klukkustund fyrir klukkustund"), L.t("Tap or drag a bar", "Ýttu á eða dragðu súlu"))
+                            Spacer(Modifier.height(12.dp))
+                            HourStrip(night.hours, sel?.time, now, onSelect = { t -> selected = t })
+                            if (moon != null) {
+                                Spacer(Modifier.height(10.dp))
+                                MoonLine(night.hours, moon)
+                            }
+                        }
+                    }
+                    if (sel != null) WhyCard(sel)
+                    if (spotScores.isNotEmpty() && sel != null) WhereCard(spotScores, sel)
+                    if (kpDays != null) KpOutlookCard(kpDays, now)
+                    MadeWithLove(errors)
+                    Spacer(Modifier.height(16.dp))
                 }
             }
-            // Tint so the title stays readable over a bright aurora
-            Box(
-                Modifier
-                    .fillMaxWidth()
-                    .height(headerH)
-                    .background(Brush.verticalGradient(listOf(Color(0x99050812), Color(0x00050812))))
-            )
+
+            ProgressiveBlurHeader(pageLayer, headerH)
             Header(
                 placeName = home.name,
                 score = night?.peak?.score,
-                collapsed = collapsed,
+                placeMorph = placeMorph,
+                scoreMorph = scoreMorph,
                 loading = loading,
                 onRefresh = { scope.launch { reload(true) } },
                 onSettings = { openSheet() },
@@ -294,9 +271,10 @@ fun LjosApp() {
             SettingsSheet(
                 sheet = sheet,
                 maxHeight = screenH * 0.9f,
+                onClose = { closeSheet() },
                 onSettle = { velocity ->
                     scope.launch {
-                        if (sheet.value > 0.3f || velocity > 1400f) sheet.animateTo(1f, tween(220))
+                        if (sheet.value > 0.3f || velocity > 1400f) sheet.animateTo(1f, tween(240, easing = FastOutSlowInEasing))
                         else sheet.animateTo(0f, spring(dampingRatio = 0.86f, stiffness = 420f))
                     }
                 },
@@ -316,31 +294,45 @@ fun LjosApp() {
     }
 }
 
+/**
+ * Expanded: "Ljós" with the place on its own line below. As you scroll, the place glides up into
+ * the title line, then "Tonight 63 · Good chance" fades in after it. Everything moves on the GPU
+ * (graphicsLayer), so nothing re-lays out mid-scroll.
+ */
 @Composable
 private fun Header(
     placeName: String,
     score: Int?,
-    collapsed: Boolean,
+    placeMorph: Float,
+    scoreMorph: Float,
     loading: Boolean,
     onRefresh: () -> Unit,
     onSettings: () -> Unit,
 ) {
-    val miniAlpha by animateFloatAsState(if (collapsed && score != null) 1f else 0f, tween(300), label = "mini")
-    Column(
+    val density = LocalDensity.current
+    var titleW by remember { mutableIntStateOf(0) }
+    var chipW by remember { mutableIntStateOf(0) }
+    var chipH by remember { mutableIntStateOf(0) }
+    var scoreH by remember { mutableIntStateOf(0) }
+    BoxWithConstraints(
         Modifier
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.statusBars)
             .padding(horizontal = 20.dp)
-            .padding(top = 10.dp)
+            .padding(top = 12.dp)
+            .height(HeaderExpanded - 12.dp)
     ) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Text("Ljós", color = Ink, fontSize = 20.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
-            if (score != null) {
-                Text(
-                    L.t("  ·  Tonight $score · ", "  ·  Í kvöld $score · ") + Model.label(score),
-                    color = Muted.copy(alpha = Muted.alpha * miniAlpha), fontSize = 13.sp, maxLines = 1,
-                )
-            }
+        val rowH = with(density) { 36.dp.toPx() }
+        val gap = with(density) { 10.dp.toPx() }
+        val line2Y = with(density) { 42.dp.toPx() }
+        val buttonsW = with(density) { 88.dp.toPx() }
+        val fullW = constraints.maxWidth.toFloat()
+
+        Row(Modifier.fillMaxWidth().height(36.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(
+                "Ljós", color = Ink, fontSize = 20.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp,
+                modifier = Modifier.onSizeChanged { titleW = it.width },
+            )
             Spacer(Modifier.weight(1f))
             RoundButton(onClick = onRefresh, enabled = !loading) {
                 if (loading) CircularProgressIndicator(Modifier.size(16.dp), color = Ink, strokeWidth = 2.dp)
@@ -349,9 +341,14 @@ private fun Header(
             Spacer(Modifier.width(8.dp))
             RoundButton(onClick = onSettings) { TuneIcon() }
         }
+
+        // Place chip: own line when expanded, glides into the title line when collapsed.
+        val chipX = (titleW + gap) * placeMorph
+        val chipY = line2Y * (1f - placeMorph) + ((rowH - chipH) / 2f) * placeMorph
         Row(
             Modifier
-                .padding(top = 6.dp)
+                .graphicsLayer { translationX = chipX; translationY = chipY }
+                .onSizeChanged { chipW = it.width; chipH = it.height }
                 .clip(RoundedCornerShape(10.dp))
                 .clickable(onClick = onSettings)
                 .padding(vertical = 4.dp, horizontal = 2.dp),
@@ -359,43 +356,73 @@ private fun Header(
         ) {
             PinIcon(Modifier.size(width = 10.dp, height = 13.dp))
             Spacer(Modifier.width(6.dp))
-            Text(placeName, color = Muted, fontSize = 13.sp, maxLines = 1)
-            Text("  ›", color = Faint, fontSize = 13.sp)
+            Text(
+                placeName, maxLines = 1, fontSize = 13.sp,
+                color = androidx.compose.ui.graphics.lerp(Muted, Ink.copy(alpha = 0.8f), placeMorph),
+            )
+            Text("  ›", color = Faint.copy(alpha = Faint.alpha * (1f - placeMorph)), fontSize = 13.sp)
+        }
+
+        // "Tonight 63 · Good chance" after the place, once the hero has scrolled away.
+        if (score != null) {
+            val scoreX = titleW + gap + chipW + gap * 0.4f
+            val maxW = (fullW - buttonsW - scoreX).coerceAtLeast(0f)
+            Text(
+                "· " + L.t("Tonight $score · ", "Í kvöld $score · ") + Model.label(score),
+                color = Muted, fontSize = 13.sp, maxLines = 1,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .width(with(density) { maxW.toDp() })
+                    .onSizeChanged { scoreH = it.height }
+                    .graphicsLayer {
+                        translationX = scoreX
+                        translationY = (rowH - scoreH) / 2f + (1f - scoreMorph) * 8.dp.toPx()
+                        alpha = scoreMorph * placeMorph
+                    },
+            )
         }
     }
 }
 
 @Composable
 private fun RoundButton(onClick: () -> Unit, enabled: Boolean = true, content: @Composable () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (pressed) 0.9f else 1f, spring(dampingRatio = 0.5f, stiffness = 600f), label = "press")
     Box(
         Modifier
             .size(36.dp)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(CircleShape)
             .background(Color(0x1FFFFFFF))
             .border(1.dp, Color(0x14FFFFFF), CircleShape)
-            .clickable(enabled = enabled, onClick = onClick),
+            .clickable(interactionSource = interaction, indication = null, enabled = enabled, onClick = onClick),
         contentAlignment = Alignment.Center,
     ) { content() }
 }
 
+private val SheetHeader = 66.dp
+
 /**
- * Bottom sheet that follows the finger. Drags inside its scrolling content move the sheet
- * whenever the content is already at the top, so you can pull it down from anywhere.
+ * Bottom sheet that follows the finger. It has its own blurred header (same technique as the
+ * main screen) that you can drag, and drags inside the content move the sheet once the content
+ * is scrolled to the top.
  */
 @Composable
 private fun SettingsSheet(
     sheet: Animatable<Float, *>,
     maxHeight: Dp,
+    onClose: () -> Unit,
     onSettle: (velocityY: Float) -> Unit,
     onDrag: (fraction: Float) -> Unit,
     content: @Composable () -> Unit,
 ) {
     var heightPx by remember { mutableIntStateOf(100_000) }
     val inner = rememberScrollState()
+    val layer = rememberGraphicsLayer()
     val connection = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                // Pulling up while the sheet is partly down: raise the sheet before scrolling content.
                 if (available.y < 0 && sheet.value > 0f) {
                     onDrag(available.y / heightPx)
                     return Offset(0f, available.y)
@@ -404,7 +431,6 @@ private fun SettingsSheet(
             }
 
             override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
-                // Content is at the top and the finger keeps going down: move the sheet.
                 if (available.y > 0 && source == NestedScrollSource.UserInput) {
                     onDrag(available.y / heightPx)
                     return Offset(0f, available.y)
@@ -421,12 +447,12 @@ private fun SettingsSheet(
             }
         }
     }
+    val dragState = rememberDraggableState { d -> onDrag(d / heightPx) }
 
     val shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
-    // On Android 12+ the page behind is blurred, so the sheet itself can stay very see-through.
     val tint = if (Build.VERSION.SDK_INT >= 31) Color(0x660A1022) else Color(0xEB0A1022)
     Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
-        Column(
+        Box(
             Modifier
                 .fillMaxWidth()
                 .heightIn(max = maxHeight)
@@ -437,21 +463,47 @@ private fun SettingsSheet(
                 .background(Brush.verticalGradient(listOf(Color(0x24FFFFFF), Color(0x06FFFFFF))))
                 .border(1.dp, Color(0x2EFFFFFF), shape)
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { }
-                .nestedScroll(connection)
-                .verticalScroll(inner)
-                .windowInsetsPadding(WindowInsets.navigationBars)
-                .padding(horizontal = 22.dp)
-                .padding(top = 12.dp, bottom = 16.dp)
         ) {
-            Box(
+            Column(
                 Modifier
-                    .align(Alignment.CenterHorizontally)
-                    .size(width = 40.dp, height = 4.dp)
-                    .clip(RoundedCornerShape(2.dp))
-                    .background(Color(0x59FFFFFF))
-            )
-            Spacer(Modifier.height(14.dp))
-            content()
+                    .backdropSource(layer)
+                    .nestedScroll(connection)
+                    .verticalScroll(inner)
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .padding(horizontal = 22.dp)
+                    .padding(top = SheetHeader + 4.dp, bottom = 18.dp)
+            ) { content() }
+
+            ProgressiveBlurHeader(layer, SheetHeader + 26.dp, radius = 18.dp, tint = Color(0x8C0A1022))
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .height(SheetHeader)
+                    .draggable(
+                        state = dragState,
+                        orientation = Orientation.Vertical,
+                        onDragStopped = { v -> onSettle(v) },
+                    )
+                    .padding(horizontal = 22.dp)
+                    .padding(top = 10.dp)
+            ) {
+                Box(
+                    Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .size(width = 40.dp, height = 4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(Color(0x59FFFFFF))
+                )
+                Spacer(Modifier.height(10.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(L.t("Settings", "Stillingar"), color = Ink, fontSize = 22.sp, fontWeight = FontWeight.Light)
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        L.t("Done", "Lokið"), color = Green, fontSize = 15.sp, fontWeight = FontWeight.Medium,
+                        modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable(onClick = onClose).padding(horizontal = 8.dp, vertical = 4.dp),
+                    )
+                }
+            }
         }
     }
 }

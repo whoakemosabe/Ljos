@@ -1,10 +1,10 @@
 package app.ljos.ui
 
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.animation.core.RepeatMode
 import androidx.compose.animation.core.animateFloat
 import androidx.compose.animation.core.infiniteRepeatable
-import androidx.compose.animation.core.keyframes
 import androidx.compose.animation.core.rememberInfiniteTransition
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Canvas
@@ -29,7 +29,8 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
-import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -180,26 +181,19 @@ internal fun MadeWithLove(errors: List<String>) {
     val context = LocalContext.current
     val version = remember { Updater.installedVersion(context) }
     val t = rememberInfiniteTransition(label = "love")
-    val beat by t.animateFloat(
-        initialValue = 1f,
+    // Heart colour drifts green ↔ violet; slow ease so it breathes rather than blinks.
+    val drift by t.animateFloat(
+        initialValue = 0f,
         targetValue = 1f,
-        animationSpec = infiniteRepeatable(
-            keyframes {
-                durationMillis = 1400
-                1f at 0
-                1.22f at 120
-                1f at 260
-                1.14f at 380
-                1f at 560
-            }
-        ),
-        label = "beat",
+        animationSpec = infiniteRepeatable(tween(6500, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "drift",
     )
-    val shimmer by t.animateFloat(
-        initialValue = -1f,
-        targetValue = 2f,
-        animationSpec = infiniteRepeatable(tween(4200, easing = LinearEasing), RepeatMode.Restart),
-        label = "shimmer",
+    // Town name: a long green–violet ribbon sliding through the letters.
+    val flow by t.animateFloat(
+        initialValue = 0f,
+        targetValue = 1f,
+        animationSpec = infiniteRepeatable(tween(11_000, easing = LinearEasing), RepeatMode.Restart),
+        label = "flow",
     )
 
     Column(
@@ -218,22 +212,22 @@ internal fun MadeWithLove(errors: List<String>) {
             Text(L.t("MADE WITH", "GERT MEÐ"), color = Faint, fontSize = 10.sp, letterSpacing = 3.sp, fontWeight = FontWeight.Medium)
             Spacer(Modifier.width(8.dp))
             Canvas(Modifier.size(14.dp)) {
-                scale(beat) {
-                    val w = size.width
-                    val h = size.height
-                    val heart = Path().apply {
-                        moveTo(0.5f * w, 0.92f * h)
-                        cubicTo(0.18f * w, 0.70f * h, 0f, 0.50f * h, 0f, 0.30f * h)
-                        cubicTo(0f, 0.12f * h, 0.14f * w, 0f, 0.29f * w, 0f)
-                        cubicTo(0.39f * w, 0f, 0.46f * w, 0.06f * h, 0.5f * w, 0.14f * h)
-                        cubicTo(0.54f * w, 0.06f * h, 0.61f * w, 0f, 0.71f * w, 0f)
-                        cubicTo(0.86f * w, 0f, w, 0.12f * h, w, 0.30f * h)
-                        cubicTo(w, 0.50f * h, 0.82f * w, 0.70f * h, 0.5f * w, 0.92f * h)
-                        close()
-                    }
-                    drawCircle(Green.copy(alpha = (0.18f * (beat - 0.9f) * 3f).coerceIn(0f, 0.3f)), w * 0.9f, Offset(w / 2f, h / 2f))
-                    drawPath(heart, Brush.linearGradient(listOf(Green, Violet), Offset(0f, h), Offset(w, 0f)))
+                val w = size.width
+                val h = size.height
+                val heart = Path().apply {
+                    moveTo(0.5f * w, 0.92f * h)
+                    cubicTo(0.18f * w, 0.70f * h, 0f, 0.50f * h, 0f, 0.30f * h)
+                    cubicTo(0f, 0.12f * h, 0.14f * w, 0f, 0.29f * w, 0f)
+                    cubicTo(0.39f * w, 0f, 0.46f * w, 0.06f * h, 0.5f * w, 0.14f * h)
+                    cubicTo(0.54f * w, 0.06f * h, 0.61f * w, 0f, 0.71f * w, 0f)
+                    cubicTo(0.86f * w, 0f, w, 0.12f * h, w, 0.30f * h)
+                    cubicTo(w, 0.50f * h, 0.82f * w, 0.70f * h, 0.5f * w, 0.92f * h)
+                    close()
                 }
+                val a = lerp(Green, Violet, drift)
+                val b = lerp(Violet, Green, drift)
+                drawCircle(a.copy(alpha = 0.16f), w * 0.95f, Offset(w / 2f, h / 2f))
+                drawPath(heart, Brush.linearGradient(listOf(a, b), Offset(0f, h), Offset(w, 0f)))
             }
             Spacer(Modifier.width(8.dp))
             Text(L.t("IN", "Í"), color = Faint, fontSize = 10.sp, letterSpacing = 3.sp, fontWeight = FontWeight.Medium)
@@ -245,15 +239,10 @@ internal fun MadeWithLove(errors: List<String>) {
                 fontFamily = Pacifico,
                 fontSize = 28.sp,
                 brush = Brush.linearGradient(
-                    *arrayOf(
-                        0f to Ink.copy(alpha = 0.55f),
-                        (shimmer - 0.25f).coerceIn(0f, 1f) to Ink.copy(alpha = 0.55f),
-                        shimmer.coerceIn(0f, 1f) to Green,
-                        (shimmer + 0.25f).coerceIn(0f, 1f) to Ink.copy(alpha = 0.55f),
-                        1f to Ink.copy(alpha = 0.55f),
-                    ),
-                    start = Offset(0f, 0f),
-                    end = Offset(400f, 0f),
+                    colors = listOf(Green, Color(0xFF8FF5D0), Violet, Color(0xFFD9C8FF), Green),
+                    start = Offset(-flow * 600f, 0f),
+                    end = Offset(-flow * 600f + 600f, 120f),
+                    tileMode = TileMode.Repeated,
                 ),
             ),
         )
