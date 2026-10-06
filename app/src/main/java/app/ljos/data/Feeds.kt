@@ -12,13 +12,17 @@ object Feeds {
     const val MAG_SUMMARY_URL = "https://services.swpc.noaa.gov/products/summary/solar-wind-mag-field.json"
     const val WIND_SUMMARY_URL = "https://services.swpc.noaa.gov/products/summary/solar-wind-speed.json"
     const val MAG_RTSW_URL = "https://services.swpc.noaa.gov/json/rtsw/rtsw_mag_1m.json"
+    const val WIND_RTSW_URL = "https://services.swpc.noaa.gov/json/rtsw/rtsw_wind_1m.json"
+    const val KP_NOW_URL = "https://services.swpc.noaa.gov/json/planetary_k_index_1m.json"
 
     fun cloudsUrl(spots: List<Spot>): String {
         val lats = spots.joinToString(",") { String.format(Locale.US, "%.4f", it.lat) }
         val lons = spots.joinToString(",") { String.format(Locale.US, "%.4f", it.lon) }
         return "https://api.open-meteo.com/v1/forecast?latitude=$lats&longitude=$lons" +
             "&hourly=cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high" +
-            "&timeformat=unixtime&timezone=GMT&past_days=1&forecast_days=3"
+            "&timeformat=unixtime&timezone=GMT&past_days=1&forecast_days=3" +
+            // DMI HARMONIE: 2 km model covering Iceland, blended with ECMWF beyond ~2.5 days.
+            "&models=dmi_seamless"
     }
 
     /** NOAA times are UTC, with or without a trailing Z, sometimes with a space instead of T. */
@@ -115,6 +119,58 @@ object Feeds {
             )
         }
         return out
+    }
+
+    /** Latest minute of NOAA's estimated planetary Kp. */
+    fun parseKpNow(json: String): KpPoint? {
+        val arr = JSONArray(json.trim())
+        var best: KpPoint? = null
+        for (i in 0 until arr.length()) {
+            val o = arr.optJSONObject(i) ?: continue
+            val kp = num(o, "estimated_kp", "kp_index") ?: continue
+            val tt = str(o, "time_tag") ?: continue
+            val t = try { parseTime(tt) } catch (e: Exception) { continue }
+            val current = best
+            if (current == null || t > current.time) best = KpPoint(t, kp, predicted = false)
+        }
+        return best
+    }
+
+    /**
+     * Joins the minute magnetic-field and plasma feeds into one series, oldest first.
+     * Several spacecraft report at once; for each minute the one NOAA marks active wins.
+     */
+    fun parseSolarWind(magJson: String, windJson: String?): List<SwPoint> {
+        data class M(val bz: Double, val by: Double, val bt: Double, val active: Boolean)
+        val mag = HashMap<Long, M>()
+        val ma = JSONArray(magJson.trim())
+        for (i in 0 until ma.length()) {
+            val o = ma.optJSONObject(i) ?: continue
+            val bz = num(o, "bz_gsm") ?: continue
+            val by = num(o, "by_gsm") ?: continue
+            val bt = num(o, "bt") ?: continue
+            val t = try { parseTime(str(o, "time_tag") ?: continue) } catch (e: Exception) { continue }
+            val minute = t - t % 60_000L
+            val active = o.optBoolean("active", false)
+            val prev = mag[minute]
+            if (prev == null || (active && !prev.active)) mag[minute] = M(bz, by, bt, active)
+        }
+        val speed = HashMap<Long, Pair<Double, Boolean>>()
+        if (windJson != null) {
+            val wa = JSONArray(windJson.trim())
+            for (i in 0 until wa.length()) {
+                val o = wa.optJSONObject(i) ?: continue
+                val v = num(o, "proton_speed") ?: continue
+                val t = try { parseTime(str(o, "time_tag") ?: continue) } catch (e: Exception) { continue }
+                val minute = t - t % 60_000L
+                val active = o.optBoolean("active", false)
+                val prev = speed[minute]
+                if (prev == null || (active && !prev.second)) speed[minute] = v to active
+            }
+        }
+        return mag.entries.sortedBy { it.key }.map { (t, m) ->
+            SwPoint(t, m.bz, m.by, m.bt, speed[t]?.first ?: Double.NaN)
+        }
     }
 
     private fun ints(hourly: JSONObject, key: String, n: Int): IntArray {

@@ -114,6 +114,7 @@ internal fun NowCard(st: NowState) {
                     color = accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp,
                 )
                 Spacer(Modifier.height(4.dp))
+                val eta = st.etaMinutes?.let { L.t(" · here in ~$it min", " · hér eftir ~$it mín") } ?: ""
                 val bzText = when {
                     st.bz == null -> L.t("Solar wind data unavailable", "Sólvindsgögn vantar")
                     !st.bzFresh -> L.t("Solar wind data is stale", "Sólvindsgögn eru gömul")
@@ -121,7 +122,13 @@ internal fun NowCard(st: NowState) {
                     st.bz >= 3 -> "Bz ${Fmt.signed(st.bz)} nT · " + L.t("pointing north, quiet", "til norðurs, rólegt")
                     else -> "Bz ${Fmt.signed(st.bz)} nT · " + L.t("neutral", "hlutlaust")
                 }
-                Text(bzText, color = Muted, fontSize = 13.sp)
+                Text(bzText + eta, color = Muted, fontSize = 13.sp)
+                st.bzSustained?.let {
+                    Text(
+                        L.t("Arriving now: Bz ${Fmt.signed(it)} nT on average", "Kemur núna: Bz ${Fmt.signed(it)} nT að meðaltali"),
+                        color = Faint, fontSize = 12.sp,
+                    )
+                }
                 Text(Fmt.cloud(st.cloud) + L.t(" here", " hér"), color = Faint, fontSize = 13.sp)
                 st.clearerSpot?.let {
                     Text(L.t("Clearer at ", "Heiðskírara við ") + "${it.spot.name} (${Fmt.cloud(it.cloud)})", color = Green, fontSize = 13.sp)

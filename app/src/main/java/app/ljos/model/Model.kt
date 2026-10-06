@@ -51,6 +51,10 @@ data class NowState(
     val lookUp: Boolean,
     /** Clearest dark spot right now, if home is cloudy but somewhere nearby isn't. */
     val clearerSpot: SpotScore?,
+    /** Minutes until what's measured at L1 now reaches Earth; null without live solar wind. */
+    val etaMinutes: Int? = null,
+    /** Mean Bz arriving over the last ~20 minutes (sustained, not a blip). */
+    val bzSustained: Double? = null,
 )
 
 object Model {
@@ -81,11 +85,16 @@ object Model {
         return b
     }
 
-    /** Sun above -6° (civil twilight) is too bright. Full darkness from -15°. */
+    /**
+     * Sun above -6° is daylight/civil twilight: nothing. Faint aurora needs nautical darkness
+     * (-12°), so the factor climbs slowly through -6…-12° and reaches full at -15°.
+     */
     fun darkFactor(sunAlt: Double): Double = when {
         sunAlt >= -6.0 -> 0.0
-        sunAlt <= -15.0 -> 1.0
-        else -> 0.45 + 0.55 * ((-6.0 - sunAlt) / 9.0)
+        sunAlt >= -9.0 -> 0.15 + 0.30 * ((-6.0 - sunAlt) / 3.0)   // -6 → 0.15, -9 → 0.45
+        sunAlt >= -12.0 -> 0.45 + 0.35 * ((-9.0 - sunAlt) / 3.0)  // -9 → 0.45, -12 → 0.80
+        sunAlt > -15.0 -> 0.80 + 0.20 * ((-12.0 - sunAlt) / 3.0)  // -12 → 0.80, -15 → 1.0
+        else -> 1.0
     }
 
     /** Low and mid cloud block everything; thin high cloud only partly. Returns factor and effective %. */
@@ -122,13 +131,30 @@ object Model {
         val sun = Astro.sunAltitude(mid, spot.lat, spot.lon)
         val moonAlt = Astro.moonAltitude(mid, spot.lat, spot.lon)
         val moonIllum = Astro.moonIllumination(mid)
-        val kp = kpAt(inp.kp, t) ?: DEFAULT_KP
+        val forecastKp = kpAt(inp.kp, t) ?: DEFAULT_KP
+        // For the current hour, NOAA's minute-by-minute estimated Kp beats the 3-hour forecast;
+        // for the next hour, blend the two.
+        val kpNow = inp.kpNow?.takeIf { now - it.time <= 30 * MIN_MS }?.kp
+        val kp = when {
+            kpNow == null -> forecastKp
+            now >= t && now < t + HOUR_MS -> kpNow
+            now >= t - HOUR_MS && now < t -> (kpNow + forecastKp) / 2.0
+            else -> forecastKp
+        }
 
-        val boost = liveBoost(inp.mag, inp.wind, now)
-        val weight = when {
-            now >= t && now < t + HOUR_MS -> 1.0
-            now >= t - HOUR_MS && now < t -> 0.5
-            else -> 0.0
+        // Live solar wind: use what will actually be arriving at Earth during this hour,
+        // given today's travel time from L1. Falls back to the single summary reading.
+        val arrival = Live.arriving(inp, now, t, t + HOUR_MS)
+        val (boost, weight) = if (arrival != null) {
+            Live.boost(arrival) to 1.0
+        } else if (inp.solarWind.isEmpty()) {
+            liveBoost(inp.mag, inp.wind, now) to when {
+                now >= t && now < t + HOUR_MS -> 1.0
+                now >= t - HOUR_MS && now < t -> 0.5
+                else -> 0.0
+            }
+        } else {
+            null to 0.0
         }
         val activity = (activityFromKp(kp) + (boost ?: 0.0) * weight).coerceIn(0.05, 1.0)
 
@@ -191,24 +217,35 @@ object Model {
         val hourStart = now - now % HOUR_MS
         val h = hourScore(hourStart, inp.home, inp, now)
         val sunNow = Astro.sunAltitude(now, inp.home.lat, inp.home.lon)
+        val latest = Live.latest(inp, now)
         val mag = inp.mag
-        val bzFresh = mag != null && now - mag.time <= 60 * MIN_MS
-        val bz = mag?.bz
+        val bz = latest?.bz ?: mag?.bz
+        val bzFresh = latest != null || (mag != null && now - mag.time <= 60 * MIN_MS)
 
         val bestDark = spotsAt(hourStart, inp, now).firstOrNull { it.spot.dark }
         val homeClear = h.factors.clear >= 0.45
         val elsewhereClear = bestDark != null && bestDark.cloud in 0..50
-        val lookUp = sunNow < -9.0 && bzFresh && bz != null && bz <= -6.0 &&
-            (homeClear || elsewhereClear) && maxOf(h.score, bestDark?.score ?: 0) >= 40
+        val skyOk = sunNow < -9.0 && (homeClear || elsewhereClear) && maxOf(h.score, bestDark?.score ?: 0) >= 40
 
+        // Sustained southward field arriving *now* (the last ~20 min of L1 data, shifted by travel time).
+        val arriving = Live.arriving(inp, now, now - 20 * MIN_MS, now)
+        val driven = if (arriving != null) {
+            arriving.meanBz <= -5.0 && arriving.southFraction >= 0.75
+        } else {
+            bzFresh && bz != null && bz <= -6.0 // fallback: single summary reading
+        }
+        val lookUp = skyOk && driven
+
+        val speed = Live.speed(inp, now)
+        val eta = if (latest != null && speed != null) (Live.delayMs(speed) / MIN_MS).toInt() else null
         val clearer = if (!homeClear && elsewhereClear) bestDark else null
-        return NowState(h.score, sunNow < -6.0, h.cloud, bz, bzFresh, lookUp, clearer)
+        return NowState(h.score, sunNow < -6.0, h.cloud, bz, bzFresh, lookUp, clearer, eta, arriving?.meanBz)
     }
 
-    /** Only worth fetching the heavy minute-level feed when it's dark and somewhere is clear-ish. */
+    /** Only worth fetching the minute-level feeds when it's getting dark and somewhere is clear-ish. */
     fun worthLiveCheck(now: Long, inp: Inputs): Boolean {
         val sun = Astro.sunAltitude(now, inp.home.lat, inp.home.lon)
-        if (sun > -9.0) return false
+        if (sun > -4.0) return false
         val hourStart = now - now % HOUR_MS
         return inp.spots.any { s ->
             val series = inp.clouds[s.id]

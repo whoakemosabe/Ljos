@@ -57,6 +57,20 @@ class Inputs(
     /** Where "you" are. Spots[0] is always this place. */
     val home: Spot = Spots.home,
     val spots: List<Spot> = Spots.all,
+    /** NOAA's minute-by-minute estimated Kp (latest reading), for "right now". */
+    val kpNow: KpPoint? = null,
+    /** Minute-level solar wind at the L1 satellite, oldest first. Empty when not fetched. */
+    val solarWind: List<SwPoint> = emptyList(),
 ) {
     val isEmpty: Boolean get() = kp.isEmpty() && clouds.isEmpty()
 }
+
+/** One minute of solar wind measured at L1, ~1.5 million km upstream of Earth. */
+data class SwPoint(
+    val time: Long,
+    val bz: Double,
+    val by: Double,
+    val bt: Double,
+    /** km/s; NaN if the plasma instrument had no reading that minute. */
+    val speed: Double,
+)

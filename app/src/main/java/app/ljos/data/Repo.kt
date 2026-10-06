@@ -45,15 +45,19 @@ class Repo(context: Context) {
                 },
                 async { pull(MAG, 10 * MIN_MS, Feeds.MAG_SUMMARY_URL, force, errors) { Feeds.parseMagSummary(it) != null } },
                 async { pull(WIND, 10 * MIN_MS, Feeds.WIND_SUMMARY_URL, force, errors) { Feeds.parseWindSummary(it) != null } },
+                async { pull(KP_NOW, 10 * MIN_MS, Feeds.KP_NOW_URL, force, errors) { Feeds.parseKpNow(it) != null } },
             ).awaitAll()
         }
-        // The summary feed sometimes lags. When it's dark and clear enough to matter,
-        // fall back to the minute-by-minute feed (bigger download, so only then).
+        // Minute-level solar wind (for travel time, coupling and "sustained" checks) is a bigger
+        // download, so only fetch it once it's getting dark and somewhere is clear enough to matter.
         val now = System.currentTimeMillis()
-        val inp = inputs()
-        val magAge = inp.mag?.let { now - it.time } ?: Long.MAX_VALUE
-        if (magAge > 45 * MIN_MS && Model.worthLiveCheck(now, inp)) {
-            pull(MAG_RT, 10 * MIN_MS, Feeds.MAG_RTSW_URL, force, errors) { Feeds.parseMagRtsw(it) != null }
+        if (Model.worthLiveCheck(now, inputs())) {
+            coroutineScope {
+                listOf(
+                    async { pull(MAG_RT, 10 * MIN_MS, Feeds.MAG_RTSW_URL, force, errors) { Feeds.parseMagRtsw(it) != null } },
+                    async { pull(WIND_RT, 10 * MIN_MS, Feeds.WIND_RTSW_URL, force, errors) { it.trim().startsWith("[") } },
+                ).awaitAll()
+            }
         }
         errors.toList()
     }
@@ -67,8 +71,15 @@ class Repo(context: Context) {
         val magMinute = parse(MAG_RT) { Feeds.parseMagRtsw(it) }
         val mag = listOfNotNull(magSummary, magMinute).maxByOrNull { it.time }
         val wind = parse(WIND) { Feeds.parseWindSummary(it) }
+        val kpNow = parse(KP_NOW) { Feeds.parseKpNow(it) }
+        // Only trust the minute series while it's recent; old files would skew "now".
+        val magRtFresh = f(MAG_RT).let { it.exists() && System.currentTimeMillis() - it.lastModified() < 90 * MIN_MS }
+        val solarWind = if (magRtFresh) {
+            val magText = read(MAG_RT)
+            if (magText == null) emptyList() else try { Feeds.parseSolarWind(magText, read(WIND_RT)) } catch (e: Exception) { emptyList() }
+        } else emptyList()
         val updated = listOf(KP, CLOUDS, MAG, WIND).maxOf { f(it).takeIf { file -> file.exists() }?.lastModified() ?: 0L }
-        return Inputs(kp, clouds, mag, wind, updated, home, spots)
+        return Inputs(kp, clouds, mag, wind, updated, home, spots, kpNow, solarWind)
     }
 
     private fun <T> parse(name: String, parser: (String) -> T?): T? {
@@ -113,7 +124,8 @@ class Repo(context: Context) {
         KP -> "Kp forecast"
         CLOUDS -> "Clouds"
         MAG, MAG_RT -> "Solar wind field"
-        WIND -> "Solar wind speed"
+        WIND, WIND_RT -> "Solar wind speed"
+        KP_NOW -> "Live Kp"
         else -> name
     }
 
@@ -139,5 +151,7 @@ class Repo(context: Context) {
         const val MAG_RT = "mag_rt.json"
         const val WIND = "wind.json"
         const val CLOUDS_URL = "clouds.url"
+        const val KP_NOW = "kp_now.json"
+        const val WIND_RT = "wind_rt.json"
     }
 }
