@@ -753,12 +753,10 @@ private fun ScoreSlot(score: Int, scoreMorph: () -> Float, onPillTarget: (Offset
                     val sc = 0.9f + 0.1f * landed
                     scaleX = sc; scaleY = sc
                 }
-                .clip(RoundedCornerShape(12.dp))
-                .background(scoreColor(score).copy(alpha = 0.18f))
-                .border(1.dp, scoreColor(score).copy(alpha = 0.45f), RoundedCornerShape(12.dp))
-                .padding(horizontal = 9.dp, vertical = 3.dp),
+                .padding(horizontal = 2.dp, vertical = 3.dp),
         ) {
-            Text(score.toString(), color = scoreColor(score), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            // Just the number, in its colour; the glass pill around the place is frame enough.
+            Text(score.toString(), color = scoreColor(score), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         }
     }
 }
