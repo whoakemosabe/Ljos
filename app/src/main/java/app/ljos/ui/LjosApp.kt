@@ -827,10 +827,18 @@ private fun SettingsSheet(
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(L.t("Settings", "Stillingar"), color = Ink, fontSize = 22.sp, fontWeight = FontWeight.Light)
                     Spacer(Modifier.weight(1f))
-                    Text(
-                        L.t("Done", "Lokið"), color = Green, fontSize = 15.sp, fontWeight = FontWeight.Medium,
-                        modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable(onClick = onClose).padding(horizontal = 8.dp, vertical = 4.dp),
-                    )
+                    // Liquid glass pill, refracting the settings scrolling under the header.
+                    val doneAngle = rememberGlassLightAngle()
+                    Box(
+                        Modifier
+                            .glassControl(layer, CircleShape, doneAngle, lensHeight = 8.dp, lensAmount = 14.dp)
+                            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { onClose() }
+                            .height(34.dp)
+                            .padding(horizontal = 16.dp),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Text(L.t("Done", "Lokið"), color = Green, fontSize = 15.sp, fontWeight = FontWeight.Medium)
+                    }
                 }
             }
         }
