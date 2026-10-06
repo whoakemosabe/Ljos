@@ -226,7 +226,6 @@ internal fun MadeWithLove(errors: List<String>) {
                 }
                 val a = lerp(Green, Violet, drift)
                 val b = lerp(Violet, Green, drift)
-                drawCircle(a.copy(alpha = 0.16f), w * 0.95f, Offset(w / 2f, h / 2f))
                 drawPath(heart, Brush.linearGradient(listOf(a, b), Offset(0f, h), Offset(w, 0f)))
             }
             Spacer(Modifier.width(8.dp))
