@@ -233,15 +233,18 @@ fun LjosApp() {
         val placeRange = with(density) { 110.dp.toPx() }
         // Long runway so the number drifts up gently rather than snapping into the header.
         val flightRange = with(density) { 340.dp.toPx() }
+        val flightLead = with(density) { 200.dp.toPx() }
         val headerOrigin = with(density) { Offset(20.dp.toPx(), statusTop.toPx() + 12.dp.toPx()) }
         val placeMorph: () -> Float = { (scroll.value / placeRange).coerceIn(0f, 1f) }
         val scoreMorph: () -> Float = {
             if (!heroBase.isSpecified || !pillTarget.isSpecified) 0f
             else {
-                val heroCenterY = heroBase.y - scroll.value + heroSize.height / 2f
+                // Never in flight at rest: the flight starts only after you've scrolled, once the
+                // number is within flightLead of the header, then takes flightRange of scrolling.
+                val restCenterY = heroBase.y + heroSize.height / 2f
                 val landY = headerOrigin.y + pillTarget.y
-                val startY = landY + flightRange
-                ((startY - heroCenterY) / (startY - landY)).coerceIn(0f, 1f)
+                val startScroll = (restCenterY - landY - flightLead).coerceAtLeast(0f)
+                ((scroll.value - startScroll) / flightRange).coerceIn(0f, 1f)
             }
         }
         val headerHeightPx: () -> Float = {

@@ -77,7 +77,7 @@ internal fun NightDial(
 
     Box(
         modifier.pointerInput(hours) {
-            val ringR = min(size.width, size.height) / 2f - 22.dp.toPx()
+            val ringR = min(size.width, size.height) / 2f - 34.dp.toPx()
             val c = Offset(size.width / 2f, size.height / 2f)
             fun fracAt(p: Offset): Float {
                 var deg = Math.toDegrees(atan2((p.y - c.y).toDouble(), (p.x - c.x).toDouble())).toFloat()
@@ -121,7 +121,7 @@ internal fun NightDial(
         contentAlignment = Alignment.Center,
     ) {
         Canvas(Modifier.fillMaxSize()) {
-            val ringR = min(size.width, size.height) / 2f - 22.dp.toPx()
+            val ringR = min(size.width, size.height) / 2f - 34.dp.toPx()
             val c = Offset(size.width / 2f, size.height / 2f)
             val topLeft = Offset(c.x - ringR, c.y - ringR)
             val arcSize = Size(ringR * 2, ringR * 2)
@@ -144,12 +144,12 @@ internal fun NightDial(
                 )
             }
 
-            // Moon up: thin gold arc just outside the ring
+            // Moon up: thin gold arc just inside the ring
             if (moon != null) moon.upSegments.forEach { (a, b) ->
                 val f0 = ((a - start).toFloat() / (end - start)).coerceIn(0f, 1f)
                 val f1 = ((b - start).toFloat() / (end - start)).coerceIn(0f, 1f)
                 if (f1 - f0 > 0.005f) {
-                    val mr = ringR + stroke / 2f + 7.dp.toPx()
+                    val mr = ringR - stroke / 2f - 6.dp.toPx()
                     drawArc(
                         Color(0xFFF3E7C1).copy(alpha = 0.35f + 0.55f * moon.illumination.toFloat()),
                         START_DEG + SWEEP_DEG * f0, SWEEP_DEG * (f1 - f0), false,
@@ -159,12 +159,12 @@ internal fun NightDial(
                 }
             }
 
-            // Hour labels every 3 hours, just inside the ring
+            // Hour labels every 3 hours, outside the ring so the centre stays clear
             val labelStyle = TextStyle(color = Faint, fontSize = 10.sp)
             hours.forEachIndexed { i, h ->
                 if (i % 3 != 0) return@forEachIndexed
                 val ang = Math.toRadians((START_DEG + per * (i + 0.5f)).toDouble())
-                val lr = ringR - stroke - 10.dp.toPx()
+                val lr = ringR + stroke / 2f + 12.dp.toPx()
                 val tl = measurer.measure(Fmt.hour(h.time), labelStyle)
                 drawText(
                     tl,
