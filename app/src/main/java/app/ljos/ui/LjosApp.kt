@@ -450,7 +450,12 @@ fun LjosApp() {
             }
 
             val headerBodyPx = with(density) { (statusTop + HeaderBody).toPx() }
-            GlassHeader(pageLayer, bodyPx = { headerBodyPx }, fade = HeaderFade, tint = NightBg.copy(alpha = 0.34f))
+            // Like iOS: no glass at the top of the page; it materialises over the first 24dp of scroll.
+            val glassIn = with(density) { 24.dp.toPx() }
+            GlassHeader(
+                pageLayer, bodyPx = { headerBodyPx }, fade = HeaderFade, tint = NightBg.copy(alpha = 0.34f),
+                visible = { scroll.value / glassIn },
+            )
             PullHint(
                 pullFraction = pullFraction,
                 loading = loading,
@@ -720,7 +725,7 @@ private fun SettingsSheet(
                 backdrop,
                 cornerRadius = 32.dp,
                 tint = tint,
-                frost = 22.dp,
+                frost = 12.dp,
                 rim = 22.dp,
                 modifier = Modifier
                     .matchParentSize()
@@ -747,7 +752,11 @@ private fun SettingsSheet(
             ) { content() }
 
             val sheetBodyPx = with(LocalDensity.current) { SheetHeader.toPx() }
-            GlassHeader(layer, bodyPx = { sheetBodyPx }, fade = SheetFade, tint = Color(0x8C0A1022))
+            val sheetGlassIn = with(LocalDensity.current) { 24.dp.toPx() }
+            GlassHeader(
+                layer, bodyPx = { sheetBodyPx }, fade = SheetFade, tint = Color(0x8C0A1022),
+                visible = { inner.value / sheetGlassIn },
+            )
 
             Column(
                 Modifier
