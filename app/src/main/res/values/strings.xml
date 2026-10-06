@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Ljós</string>
+    <string name="widget_small_name">Ljós · tonight</string>
+    <string name="widget_wide_name">Ljós · hour by hour</string>
+    <string name="widget_small_desc">Tonight\'s aurora score and peak time</string>
+    <string name="widget_wide_desc">Tonight\'s score with an hour-by-hour strip</string>
+</resources>
