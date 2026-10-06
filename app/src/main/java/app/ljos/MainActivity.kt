@@ -10,6 +10,9 @@ import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.LocalOverscrollConfiguration
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.Density
 import androidx.compose.animation.core.tween
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,7 +39,15 @@ class MainActivity : ComponentActivity() {
         setContent {
             // No Android 12+ "stretch" overscroll: inside the recorded blur layer its spring-back
             // never fires, leaving the page stretched and swallowing swipes at the bottom.
-            CompositionLocalProvider(LocalOverscrollConfiguration provides null) {
+            // Scale everything on narrow phones: the layout is designed for ~410dp wide, so a
+            // 360dp phone sees the same layout at 88% instead of wrapping. Never below 85%, so
+            // text and buttons stay comfortable; and the system text size is capped at 115% so
+            // very large text can't push rows onto two lines either.
+            val base = LocalDensity.current
+            val widthDp = LocalConfiguration.current.screenWidthDp
+            val scale = (widthDp / 410f).coerceIn(0.85f, 1f)
+            val scaled = Density(base.density * scale, base.fontScale.coerceAtMost(1.15f))
+            CompositionLocalProvider(LocalOverscrollConfiguration provides null, LocalDensity provides scaled) {
             LjosTheme {
                 var onboarded by remember { mutableStateOf(prefs.onboarded) }
                 Crossfade(onboarded, animationSpec = tween(600), label = "start") { done ->

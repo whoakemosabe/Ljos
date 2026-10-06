@@ -181,10 +181,11 @@ private fun AlertSettings() {
         exit = androidx.compose.animation.shrinkVertically(spring(dampingRatio = 0.9f, stiffness = 400f)) +
             androidx.compose.animation.fadeOut(tween(180)),
     ) {
-        Row(Modifier.padding(bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            HourStepper(L.t("From", "Frá"), quietFrom) { quietFrom = it; prefs.quietFrom = it }
-            Spacer(Modifier.width(18.dp))
-            HourStepper(L.t("To", "Til"), quietTo) { quietTo = it; prefs.quietTo = it }
+        // Two equal halves, so the pickers shrink with the screen instead of wrapping.
+        Row(Modifier.fillMaxWidth().padding(bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            HourStepper(L.t("From", "Frá"), quietFrom, Modifier.weight(1f)) { quietFrom = it; prefs.quietFrom = it }
+            Spacer(Modifier.width(12.dp))
+            HourStepper(L.t("To", "Til"), quietTo, Modifier.weight(1f)) { quietTo = it; prefs.quietTo = it }
         }
     }
     Spacer(Modifier.height(8.dp))
@@ -583,9 +584,9 @@ internal fun SlidingSegments(options: List<String>, selected: Int, modifier: Mod
 
 /** "From ‹ 01:00 ›" style hour picker. */
 @Composable
-private fun HourStepper(label: String, hour: Int, onChange: (Int) -> Unit) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(label, color = Faint, fontSize = 12.sp)
+private fun HourStepper(label: String, hour: Int, modifier: Modifier = Modifier, onChange: (Int) -> Unit) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically) {
+        Text(label, color = Faint, fontSize = 12.sp, maxLines = 1, softWrap = false)
         Spacer(Modifier.width(8.dp))
         Text(
             "‹", color = Ink, fontSize = 18.sp,
@@ -593,7 +594,10 @@ private fun HourStepper(label: String, hour: Int, onChange: (Int) -> Unit) {
         )
         val label24 = String.format(Locale.US, "%02d:00", hour)
         val label12 = "${if (hour % 12 == 0) 12 else hour % 12}${if (hour < 12) "am" else "pm"}"
-        Text(if (L.clock24) label24 else label12, color = Ink, fontSize = 15.sp, modifier = Modifier.width(48.dp))
+        Text(
+            if (L.clock24) label24 else label12, color = Ink, fontSize = 15.sp, maxLines = 1, softWrap = false,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center, modifier = Modifier.width(50.dp),
+        )
         Text(
             "›", color = Ink, fontSize = 18.sp,
             modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { onChange((hour + 1) % 24) }.padding(horizontal = 8.dp),
