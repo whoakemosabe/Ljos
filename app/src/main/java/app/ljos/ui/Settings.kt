@@ -161,8 +161,9 @@ private fun SpotsMap(home: Spot, spots: List<Spot>, modifier: Modifier) {
                 ((wy - (cy - hDp / 2)) * px).toFloat(),
             )
             images.forEach { (t, img) ->
-                val o = toScreen(t.x * 256.0, t.y * 256.0)
-                val side = (256 * px).roundToInt() + 1
+                val tw = 256.0 / (1 shl (t.zoom - zoom))
+                val o = toScreen(t.x * tw, t.y * tw)
+                val side = (tw * px).roundToInt() + 1
                 drawImage(
                     img,
                     dstOffset = IntOffset(o.x.roundToInt(), o.y.roundToInt()),
@@ -172,7 +173,7 @@ private fun SpotsMap(home: Spot, spots: List<Spot>, modifier: Modifier) {
                 )
             }
             // Cool night tint so the map sits inside the app's palette
-            drawRect(Color(0x330A1A3A))
+            drawRect(Color(0x260A1A3A))
             drawRect(Brush.radialGradient(listOf(Color.Transparent, Color(0x99050812)), radius = size.maxDimension * 0.75f))
 
             spots.drop(1).forEach { s ->
@@ -198,7 +199,7 @@ private fun SpotsMap(home: Spot, spots: List<Spot>, modifier: Modifier) {
             drawCircle(Color(0xFF0A1322), 3.2.dp.toPx(), head)
         }
         Text(
-            MapTiles.ATTRIBUTION, color = Color(0x80E8F1FF), fontSize = 9.sp,
+            MapTiles.attribution, color = Color(0x80E8F1FF), fontSize = 9.sp,
             modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp),
         )
     }

@@ -1,9 +1,9 @@
 package app.ljos.ui
 
 import android.os.Build
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -19,11 +19,12 @@ import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import kotlin.math.pow
 
 /**
  * Records whatever this node draws into [layer] (a GPU display list) and then draws it normally.
- * A [ProgressiveBlurHeader] elsewhere can then redraw the same pixels, blurred, without composing
- * the content twice. The display list is shared, so the header stays in sync while scrolling.
+ * A [ProgressiveBlurHeader] can then redraw the same pixels, blurred, without composing the
+ * content twice. The display list is shared, so the header stays in sync while scrolling.
  */
 fun Modifier.backdropSource(layer: GraphicsLayer): Modifier = drawWithContent {
     layer.record { this@drawWithContent.drawContent() }
@@ -31,45 +32,64 @@ fun Modifier.backdropSource(layer: GraphicsLayer): Modifier = drawWithContent {
 }
 
 /**
- * Oppo-weather style header: the content behind is blurred hardest at the top and fades to sharp
- * towards the bottom edge, with no visible line. Must share its top-left corner with the source.
- * Android 12+ blurs; older phones just get the tint.
+ * Oppo Weather style header. Blur strength climbs smoothly towards the top instead of a blurred
+ * copy simply fading out, so there's no "double image" halfway down.
+ *
+ * Built from [bands] stacked blur layers: the gentlest reaches all the way to the bottom edge,
+ * each stronger one covers a little less, and every band has a long soft mask so neighbours blend.
+ * A tint goes on top for legibility, dissolving to nothing at the bottom. Android 12+ blurs;
+ * older phones keep just the tint.
  */
 @Composable
 fun ProgressiveBlurHeader(
     layer: GraphicsLayer,
     height: Dp,
     modifier: Modifier = Modifier,
-    radius: Dp = 22.dp,
-    tint: Color = Color(0x99050812),
+    maxRadius: Dp = 36.dp,
+    tint: Color = Color(0xB3050812),
+    bands: Int = 5,
 ) {
     if (Build.VERSION.SDK_INT >= 31) {
-        Box(
-            modifier
-                .fillMaxWidth()
-                .height(height)
-                .clipToBounds()
-                .graphicsLayer {
-                    val r = radius.toPx()
-                    renderEffect = BlurEffect(r, r, TileMode.Clamp)
-                    compositingStrategy = CompositingStrategy.Offscreen
-                }
-                .drawWithContent {
-                    drawLayer(layer)
-                    // Keep the blurred copy at the top, fade it out downward.
-                    drawRect(
-                        Brush.verticalGradient(0f to Color.Black, 0.55f to Color.Black, 1f to Color.Transparent),
-                        blendMode = BlendMode.DstIn,
-                    )
-                }
-        )
+        for (i in 0 until bands) {
+            val t = if (bands == 1) 1f else i / (bands - 1f)
+            val radius = maxRadius * (0.12f + 0.88f * t.pow(1.6f))
+            val end = 1f - 0.5f * t          // where this band has fully faded out
+            val solid = (end - 0.42f).coerceAtLeast(0f)
+            Box(
+                modifier
+                    .fillMaxWidth()
+                    .height(height)
+                    .clipToBounds()
+                    .graphicsLayer {
+                        val r = radius.toPx()
+                        renderEffect = BlurEffect(r, r, TileMode.Clamp)
+                        compositingStrategy = CompositingStrategy.Offscreen
+                    }
+                    .drawWithContent {
+                        drawLayer(layer)
+                        drawRect(
+                            Brush.verticalGradient(0f to Color.Black, solid to Color.Black, end to Color.Transparent),
+                            blendMode = BlendMode.DstIn,
+                        )
+                    }
+            )
+        }
     }
+    // Tint: strongest behind the status bar and title, then a long, eased dissolve.
     Box(
         modifier
             .fillMaxWidth()
             .height(height)
             .drawWithContent {
-                drawRect(Brush.verticalGradient(0f to tint, 0.6f to tint.copy(alpha = tint.alpha * 0.45f), 1f to Color.Transparent))
+                drawRect(
+                    Brush.verticalGradient(
+                        0f to tint,
+                        0.35f to tint.copy(alpha = tint.alpha * 0.72f),
+                        0.65f to tint.copy(alpha = tint.alpha * 0.3f),
+                        0.85f to tint.copy(alpha = tint.alpha * 0.08f),
+                        1f to Color.Transparent,
+                    )
+                )
             }
     )
 }

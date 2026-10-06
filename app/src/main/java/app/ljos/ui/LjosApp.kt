@@ -112,7 +112,7 @@ import kotlin.math.roundToInt
 
 private val HeaderExpanded = 82.dp
 private val HeaderCollapsed = 56.dp
-private val HeaderFade = 40.dp
+private val HeaderFade = 56.dp
 
 @Composable
 fun LjosApp() {
@@ -545,7 +545,7 @@ private fun SettingsSheet(
                     .padding(top = SheetHeader + 4.dp, bottom = 18.dp)
             ) { content() }
 
-            ProgressiveBlurHeader(layer, SheetHeader + 26.dp, radius = 18.dp, tint = Color(0x8C0A1022))
+            ProgressiveBlurHeader(layer, SheetHeader + 44.dp, tint = Color(0xB30A1022))
             Column(
                 Modifier
                     .fillMaxWidth()
