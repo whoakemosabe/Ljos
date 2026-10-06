@@ -51,6 +51,8 @@ import app.ljos.model.Model
 import app.ljos.model.Night
 import app.ljos.model.NowState
 import app.ljos.model.SpotScore
+import app.ljos.data.SwPoint
+import app.ljos.data.HOUR_MS
 import kotlin.math.roundToInt
 
 internal val Glow = Shadow(color = Color(0x99000000), blurRadius = 24f)
@@ -66,6 +68,7 @@ internal fun Hero(
     night: Night?,
     inp: Inputs?,
     loading: Boolean,
+    now: Long = System.currentTimeMillis(),
     scoreAlpha: () -> Float = { 1f },
     onScorePlaced: (Offset, IntSize) -> Unit = { _, _ -> },
 ) {
@@ -87,21 +90,17 @@ internal fun Hero(
             else -> "—"
         }
         Text(headline, style = TextStyle(color = Ink, fontSize = 26.sp, fontWeight = FontWeight.Light, shadow = Glow))
-        if (peak != null) {
+        // What happens next: "Dark in 4h 52m · peak around 21:00", then "Peak in 40m", then "Dark until 07:00".
+        val next = night?.let { countdownLine(it, now) }
+        if (next != null) {
             Spacer(Modifier.height(6.dp))
-            Text(
-                L.t("Peak around ", "Hámark um ") + "${Fmt.hhmm(peak.time)} · Kp ${Fmt.one(peak.kp)} · ${Fmt.cloud(peak.cloud)}",
-                color = Muted, fontSize = 14.sp,
-            )
-        }
-        if (night?.darkFrom != null && night.darkUntil != null) {
-            Text(L.t("Dark ", "Myrkur ") + "${Fmt.hhmm(night.darkFrom)}–${Fmt.hhmm(night.darkUntil)}", color = Faint, fontSize = 13.sp)
+            Text(next, color = Muted, fontSize = 14.sp)
         }
     }
 }
 
 @Composable
-internal fun NowCard(st: NowState) {
+internal fun NowCard(st: NowState, solarWind: List<SwPoint> = emptyList(), now: Long = System.currentTimeMillis()) {
     val accent = if (st.lookUp) Green else Ink
     Column(
         Modifier
@@ -146,14 +145,28 @@ internal fun NowCard(st: NowState) {
             }
             Text(st.score.toString(), color = Color.White, fontSize = 44.sp, fontWeight = FontWeight.Light)
         }
+        val recent = solarWind.filter { now - it.time <= 2 * HOUR_MS }
+        if (recent.size > 20) {
+            Spacer(Modifier.height(12.dp))
+            BzSparkline(recent, now, Modifier.fillMaxWidth().height(46.dp))
+            Text(
+                L.t("Bz at the satellite, last 2 h · shaded = south (good)", "Bz við gervitunglið, síðustu 2 klst · skyggt = suður (gott)") +
+                    (st.etaMinutes?.let { L.t(" · reaches us in ~$it min", " · nær okkur eftir ~$it mín") } ?: ""),
+                color = Faint, fontSize = 11.sp, modifier = Modifier.padding(top = 4.dp),
+            )
+        }
     }
 }
 
 @Composable
-internal fun WhyCard(h: HourScore) {
-    Column(Modifier.glass()) {
-        CardTitle(L.t("Why ${Fmt.hhmm(h.time)} scores ${h.score}", "Af hverju ${Fmt.hhmm(h.time)} fær ${h.score}"), L.t("Each one multiplies the score", "Hver þáttur margfaldar einkunnina"))
-        Spacer(Modifier.height(14.dp))
+internal fun WhyPanel(h: HourScore) {
+    Column(Modifier.fillMaxWidth().padding(top = 16.dp)) {
+        Text(
+            L.t("Why ${Fmt.hhmm(h.time)} scores ${h.score}", "Af hverju ${Fmt.hhmm(h.time)} fær ${h.score}"),
+            color = Ink, fontSize = 15.sp, fontWeight = FontWeight.Medium,
+        )
+        Text(L.t("Each one multiplies the score", "Hver þáttur margfaldar einkunnina"), color = Faint, fontSize = 12.sp)
+        Spacer(Modifier.height(12.dp))
         FactorRow(
             L.t("Solar activity", "Sólvirkni"),
             "Kp ${Fmt.one(h.kp)}" + if (h.live) L.t(" · live boost", " · lifandi uppfærsla") else "",
@@ -210,7 +223,14 @@ internal fun FactorRow(name: String, value: String, f: Double, last: Boolean = f
 }
 
 @Composable
-internal fun WhereCard(spots: List<SpotScore>, sel: HourScore) {
+internal fun WhereCard(
+    spots: List<SpotScore>,
+    sel: HourScore,
+    collapsed: Boolean,
+    onToggle: () -> Unit,
+    tomorrow: Boolean = false,
+    modifier: Modifier = Modifier,
+) {
     val context = LocalContext.current
     val view = LocalView.current
     val home = spots.firstOrNull { it.spot.id == "home" } ?: spots.first()
@@ -221,16 +241,24 @@ internal fun WhereCard(spots: List<SpotScore>, sel: HourScore) {
     var picked by remember(sel.time) { mutableStateOf(best?.spot?.id) }
     val pickedSpot = spots.firstOrNull { it.spot.id == picked }
 
-    Column(Modifier.glass()) {
-        CardTitle(
-            L.t("Where to go at ", "Hvert á að fara kl. ") + Fmt.hhmm(sel.time),
-            when {
-                top == null -> L.t("No clear, dark spot nearby at this hour", "Enginn heiðskír, dimmur staður nálægt á þessum tíma")
-                stayPut -> L.t("Best right where you are", "Best þar sem þú ert")
-                else -> L.t("Same scores as above. Dark spots win ties with town lights.", "Sömu einkunnir og ofar. Dimmir staðir vinna bæjarljós á jöfnu.")
-            },
-        )
-        Spacer(Modifier.height(12.dp))
+    CollapsibleCard(
+        title = L.t("Where to go ", "Hvert á að fara ") + (if (tomorrow) L.t("tomorrow ", "á morgun ") else "") +
+            L.t("at ", "kl. ") + Fmt.hhmm(sel.time),
+        subtitle = when {
+            top == null -> L.t("No clear, dark spot nearby at this hour", "Enginn heiðskír, dimmur staður nálægt á þessum tíma")
+            stayPut -> L.t("Best right where you are", "Best þar sem þú ert")
+            else -> L.t("Same scores as above. Dark spots win ties with town lights.", "Sömu einkunnir og ofar. Dimmir staðir vinna bæjarljós á jöfnu.")
+        },
+        summary = when {
+            top == null -> L.t("Nothing clear nearby", "Ekkert heiðskírt nálægt")
+            stayPut -> L.t("Best right here · ", "Best hér · ") + top.score
+            else -> "${top.spot.name} · ${top.score} · ≈ ${driveMinutes(top.distanceKm)} " + L.t("min", "mín")
+        },
+        collapsed = collapsed,
+        onToggle = onToggle,
+        modifier = modifier,
+    ) {
+        Spacer(Modifier.height(10.dp))
         SpotMap(
             home = home.spot,
             spots = listOf(home.spot) + spots.filter { it !== home }.map { it.spot },

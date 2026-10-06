@@ -20,6 +20,7 @@ object Feeds {
         val lons = spots.joinToString(",") { String.format(Locale.US, "%.4f", it.lon) }
         return "https://api.open-meteo.com/v1/forecast?latitude=$lats&longitude=$lons" +
             "&hourly=cloud_cover,cloud_cover_low,cloud_cover_mid,cloud_cover_high" +
+            ",temperature_2m,apparent_temperature,wind_speed_10m&wind_speed_unit=ms" +
             "&timeformat=unixtime&timezone=GMT&past_days=1&forecast_days=3" +
             // DMI HARMONIE: 2 km model covering Iceland, blended with ECMWF beyond ~2.5 days.
             "&models=dmi_seamless"
@@ -116,6 +117,9 @@ object Feeds {
                 ints(hourly, "cloud_cover_low", n),
                 ints(hourly, "cloud_cover_mid", n),
                 ints(hourly, "cloud_cover_high", n),
+                floats(hourly, "temperature_2m", n),
+                floats(hourly, "apparent_temperature", n),
+                floats(hourly, "wind_speed_10m", n),
             )
         }
         return out
@@ -170,6 +174,13 @@ object Feeds {
         }
         return mag.entries.sortedBy { it.key }.map { (t, m) ->
             SwPoint(t, m.bz, m.by, m.bt, speed[t]?.first ?: Double.NaN)
+        }
+    }
+
+    private fun floats(hourly: JSONObject, key: String, n: Int): FloatArray {
+        val a = hourly.optJSONArray(key)
+        return FloatArray(n) { idx ->
+            if (a == null || idx >= a.length() || a.isNull(idx)) Float.NaN else a.optDouble(idx, Double.NaN).toFloat()
         }
     }
 

@@ -7,6 +7,9 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Animatable
+import androidx.compose.ui.layout.LayoutCoordinates
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.animate
 import androidx.compose.runtime.mutableFloatStateOf
@@ -205,19 +208,36 @@ fun LjosApp() {
     val inp = inputs
     val night = remember(inp, now) { inp?.takeUnless { it.isEmpty }?.let { Model.night(now, it) } }
     val nowState = remember(inp, now) { inp?.takeUnless { it.isEmpty }?.let { Model.nowState(now, it) } }
-    val sel: HourScore? = night?.let { n ->
+    // Tomorrow, for the "looks better" nudge and the Tonight/Tomorrow switch in the hour card.
+    val tomorrowNight = remember(inp, now) { inp?.takeUnless { it.isEmpty }?.let { Model.tomorrow(now, it) } }
+    var showTomorrow by remember { mutableStateOf(false) }
+    val shownNight = if (showTomorrow && tomorrowNight != null) tomorrowNight else night
+    val sel: HourScore? = shownNight?.let { n ->
         n.hours.firstOrNull { it.time == selected }
             ?: n.hours.firstOrNull { now >= it.time && now < it.time + HOUR_MS && it.factors.dark > 0 }
             ?: n.peak
     }
+    val explicitSelection = shownNight?.hours?.any { it.time == selected } == true
     val spotScores = remember(inp, sel?.time, now) {
         if (inp != null && sel != null) Model.spotsAt(sel.time, inp, now) else emptyList()
     }
-    val moon = remember(night, inp) {
-        val n = night
+    val moon = remember(shownNight, inp) {
+        val n = shownNight
         if (n == null || n.hours.isEmpty() || inp == null) null
         else Model.moonTimeline(n.hours.first().time, n.hours.last().time + HOUR_MS, inp.home)
     }
+    val weather = remember(inp, sel?.time) { if (inp != null && sel != null) Model.weatherAt(inp, inp.home, sel.time) else null }
+    val isNight = nowState?.isDark == true
+
+    // Folded cards, remembered between launches.
+    var collapsed by remember { mutableStateOf(prefs.collapsedCards) }
+    fun toggle(id: String) {
+        collapsed = if (id in collapsed) collapsed - id else collapsed + id
+        prefs.collapsedCards = collapsed
+    }
+    // Where each card is on screen, so chips can scroll to the right one.
+    val cardSpots = remember { HashMap<String, LayoutCoordinates>() }
+    fun Modifier.cardAnchor(id: String) = onGloballyPositioned { cardSpots[id] = it }
     val kpDays = remember(inp, now) { inp?.takeIf { it.kp.isNotEmpty() }?.let { Model.kpOutlook(it.kp, now) } }
     val intensity by animateFloatAsState((night?.peak?.score ?: 0) / 100f, tween(1800), label = "intensity")
 
@@ -329,31 +349,82 @@ fun LjosApp() {
                         .padding(horizontal = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
+                    // At night the live card leads; by day it's hidden and the forecast leads.
+                    SoftReveal(isNight) { nowState?.let { NowCard(it, inp?.solarWind.orEmpty(), now) } }
                     Hero(
                         night, inp, loading,
+                        now = now,
                         scoreAlpha = { if (scoreMorph() > 0f) 0f else 1f },
                         // Store the position as if unscrolled: identical every frame, so no recomposition.
                         onScorePlaced = { pos, size -> heroBase = pos + Offset(0f, scroll.value.toFloat()); heroSize = size },
                     )
-                    SoftReveal(nowState != null && nowState.isDark) { nowState?.let { NowCard(it) } }
-                    if (night != null && night.hours.isNotEmpty()) {
-                        Column(Modifier.glass()) {
-                            CardTitle(L.t("Hour by hour", "Klukkustund fyrir klukkustund"), L.t("Tap or drag a bar · tap it again to go back", "Ýttu á eða dragðu súlu · ýttu aftur til að fara til baka"))
-                            Spacer(Modifier.height(12.dp))
-                            HourStrip(
-                                night.hours, sel?.time, now,
-                                onSelect = { t -> selected = t },
-                                onTapSelected = { selected = null },
-                            )
-                            if (moon != null) {
-                                Spacer(Modifier.height(10.dp))
-                                MoonLine(night.hours, moon)
+                    val peak = night?.peak
+                    if (night != null && peak != null) {
+                        ConditionChips(peak, night, now) { id ->
+                            val target = when (id) {
+                                "kp" -> "days"
+                                "cloud" -> "where"
+                                else -> "hours"
+                            }
+                            if (target in collapsed) toggle(target)
+                            val coords = cardSpots[target]
+                            if (coords != null && coords.isAttached) {
+                                val headerBottom = with(density) { (statusTop + HeaderCollapsed + 12.dp).toPx() }
+                                val y = coords.positionInRoot().y
+                                scope.launch {
+                                    scroll.animateScrollTo(
+                                        (scroll.value + y - headerBottom).toInt().coerceAtLeast(0),
+                                        spring(dampingRatio = 0.9f, stiffness = 120f),
+                                    )
+                                }
                             }
                         }
                     }
-                    SoftReveal(sel != null) { sel?.let { WhyCard(it) } }
-                    SoftReveal(spotScores.isNotEmpty() && sel != null) { sel?.let { WhereCard(spotScores, it) } }
-                    SoftReveal(kpDays != null) { kpDays?.let { KpOutlookCard(it, now) } }
+                    val tomorrowPeak = tomorrowNight?.peak?.score
+                    SoftReveal(tomorrowPeak != null && peak != null && tomorrowPeak >= 40 && tomorrowPeak >= peak.score + 15 && !showTomorrow) {
+                        TomorrowNudge(tomorrowPeak ?: 0) {
+                            showTomorrow = true
+                            selected = null
+                            if ("hours" in collapsed) toggle("hours")
+                        }
+                    }
+                    SoftReveal(shownNight != null && shownNight.hours.isNotEmpty()) {
+                        shownNight?.let { n ->
+                            HourCard(
+                                night = n, sel = sel, explicitSelection = explicitSelection, now = now, moon = moon,
+                                tomorrow = showTomorrow, hasTomorrow = tomorrowNight?.hours?.isNotEmpty() == true,
+                                onTomorrow = { showTomorrow = it; selected = null },
+                                onSelect = { t -> selected = t },
+                                onClearSelection = { selected = null },
+                                collapsed = "hours" in collapsed, onToggle = { toggle("hours") },
+                                modifier = Modifier.cardAnchor("hours"),
+                            )
+                        }
+                    }
+                    val photoScore = maxOf(nowState?.score ?: 0, if (isNight) peak?.score ?: 0 else 0)
+                    SoftReveal(isNight && photoScore >= 40) {
+                        PhotoTipsCard(
+                            score = photoScore,
+                            moonBright = (sel?.moonIllum ?: 0.0) > 0.5 && (sel?.moonAlt ?: 0.0) > 0,
+                            collapsed = "photo" in collapsed, onToggle = { toggle("photo") },
+                        )
+                    }
+                    SoftReveal(weather != null && sel != null) {
+                        if (weather != null && sel != null) {
+                            DressCard(weather, sel.time, home.name, "dress" in collapsed, { toggle("dress") })
+                        }
+                    }
+                    SoftReveal(spotScores.isNotEmpty() && sel != null) {
+                        sel?.let {
+                            WhereCard(
+                                spotScores, it, "where" in collapsed, { toggle("where") },
+                                tomorrow = showTomorrow, modifier = Modifier.cardAnchor("where"),
+                            )
+                        }
+                    }
+                    SoftReveal(kpDays != null) {
+                        kpDays?.let { KpOutlookCard(it, now, "days" in collapsed, { toggle("days") }, Modifier.cardAnchor("days")) }
+                    }
                     MadeWithLove(errors)
                     Spacer(Modifier.height(16.dp))
                 }

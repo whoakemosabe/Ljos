@@ -296,6 +296,23 @@ object Model {
         return MoonTimeline(segments, rise, set, Astro.moonIllumination(mid), waxing = Astro.moonIllumination(mid + 6 * HOUR_MS) > Astro.moonIllumination(mid))
     }
 
+    /** Temperature, feels-like and wind at [spot] for the hour containing [t], if available. */
+    fun weatherAt(inp: Inputs, spot: Spot, t: Long): Weather? {
+        val cs = inp.clouds[spot.id] ?: return null
+        val i = cs.indexAt(t)
+        if (i < 0 || i >= cs.temp.size) return null
+        val temp = cs.temp[i]
+        if (temp.isNaN()) return null
+        return Weather(temp, cs.feels.getOrElse(i) { temp }.let { if (it.isNaN()) temp else it }, cs.wind.getOrElse(i) { Float.NaN })
+    }
+
+    /** The night after tonight, scored the same way (no live data reaches that far). */
+    fun tomorrow(now: Long, inp: Inputs, zone: ZoneId = ZoneId.systemDefault()): Night =
+        night(nightWindow(now, zone).second + 6 * HOUR_MS, inp, zone).let { n ->
+            // night() picks the peak among hours after its 'now'; recompute against the whole night.
+            n.copy(peak = n.hours.filter { it.factors.dark > 0 }.maxByOrNull { it.score })
+        }
+
     /** Kp forecast grouped into today and the next two days, local time. */
     fun kpOutlook(kp: List<KpPoint>, now: Long, zone: ZoneId = ZoneId.systemDefault()): List<KpDay> {
         val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
@@ -318,4 +335,7 @@ data class MoonTimeline(
 )
 
 data class KpDay(val dayStart: Long, val blocks: List<KpPoint>, val maxKp: Double?)
+
+/** Conditions on the ground for going outside. */
+data class Weather(val temp: Float, val feels: Float, val wind: Float)
 

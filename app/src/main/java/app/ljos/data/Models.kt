@@ -29,6 +29,11 @@ class CloudSeries(
     val low: IntArray,
     val mid: IntArray,
     val high: IntArray,
+    /** °C, NaN if missing. Same request as the clouds, used for "dress for it". */
+    val temp: FloatArray = FloatArray(0),
+    val feels: FloatArray = FloatArray(0),
+    /** m/s */
+    val wind: FloatArray = FloatArray(0),
 ) {
     /** Index of the hour that contains [t], else the nearest hour within 3h, else -1. */
     fun indexAt(t: Long): Int {

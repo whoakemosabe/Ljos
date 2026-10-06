@@ -120,10 +120,20 @@ private fun MoonPhase(illumination: Double, waxing: Boolean, modifier: Modifier)
 
 /** Three slim rows of Kp bars: today, tomorrow and the day after. */
 @Composable
-internal fun KpOutlookCard(days: List<KpDay>, now: Long) {
-    Column(Modifier.glass()) {
-        CardTitle(L.t("Next 3 days", "Næstu 3 dagar"), L.t("Solar activity forecast, 3-hour blocks", "Spá um sólvirkni, 3 tíma bil"))
-        Spacer(Modifier.height(12.dp))
+internal fun KpOutlookCard(days: List<KpDay>, now: Long, collapsed: Boolean, onToggle: () -> Unit, modifier: Modifier = Modifier) {
+    val best = days.withIndex().filter { it.value.maxKp != null }.maxByOrNull { it.value.maxKp!! }
+    CollapsibleCard(
+        title = L.t("Next 3 days", "Næstu 3 dagar"),
+        subtitle = L.t("Solar activity forecast, 3-hour blocks", "Spá um sólvirkni, 3 tíma bil"),
+        summary = best?.let { (i, d) ->
+            val day = when (i) { 0 -> L.t("today", "í dag"); 1 -> L.t("tomorrow", "á morgun"); else -> Fmt.weekday(d.dayStart) }
+            L.t("Highest Kp ${Fmt.one(d.maxKp!!)} $day", "Hæst Kp ${Fmt.one(d.maxKp!!)} $day")
+        } ?: "—",
+        collapsed = collapsed,
+        onToggle = onToggle,
+        modifier = modifier,
+    ) {
+        Spacer(Modifier.height(8.dp))
         days.forEachIndexed { i, d ->
             val name = when (i) {
                 0 -> L.t("Today", "Í dag")

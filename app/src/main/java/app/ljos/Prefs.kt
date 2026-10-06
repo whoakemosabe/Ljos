@@ -109,4 +109,9 @@ class Prefs(context: Context) {
     var pullHintCount: Int
         get() = p.getInt("pull_hint_count", 0)
         set(v) = p.edit().putInt("pull_hint_count", v).apply()
+
+    /** Cards the user folded to one line. */
+    var collapsedCards: Set<String>
+        get() = p.getStringSet("collapsed_cards", emptySet())?.toSet() ?: emptySet()
+        set(v) = p.edit().putStringSet("collapsed_cards", v.toSet()).apply()
 }
