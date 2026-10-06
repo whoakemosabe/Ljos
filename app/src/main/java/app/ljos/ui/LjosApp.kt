@@ -861,7 +861,7 @@ private fun SettingsSheet(
                     // The sheet's content has a see-through background, so the sharp copy fades
                     // out under the glass header (as the glass fades in), and the glass shows a
                     // frosted copy recorded before this mask.
-                    .fadeUnderHeader(SheetHeader, SheetHeader + SheetFade)
+                    .fadeUnderHeader(SheetHeader, SheetHeader + SheetFade, eased = true)
                     .layerBackdrop(layer)
                     .nestedScroll(connection)
                     .verticalScroll(inner)

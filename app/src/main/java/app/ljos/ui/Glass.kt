@@ -1,10 +1,6 @@
 package app.ljos.ui
 
 import android.graphics.RenderEffect
-import android.hardware.Sensor
-import android.hardware.SensorEvent
-import android.hardware.SensorEventListener
-import android.hardware.SensorManager
 import android.os.Build
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -27,9 +23,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.Lifecycle
-import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.kyant.backdrop.BackdropEffectScope
 import com.kyant.backdrop.backdrops.LayerBackdrop
 import com.kyant.backdrop.drawBackdrop
@@ -110,7 +103,6 @@ fun GlassHeader(
     // Screen width in px, kept from layout for the mirror below (the backdrop is drawn into a
     // padded layer, so its own size isn't the pane's).
     val screenW = remember { floatArrayOf(0f) }
-    val light = rememberTiltLight()
     val glass = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
     val shownTint = if (glass) tint.copy(alpha = tint.alpha * 0.22f) else tint
     Box(
@@ -160,59 +152,10 @@ fun GlassHeader(
                         val h = size.height
                         val k = ((h - fadePx) / h).coerceIn(0f, 1f)
                         drawRect(Brush.verticalGradient(0f to shownTint, k to shownTint.copy(alpha = shownTint.alpha * 0.6f), 1f to Color.Transparent))
-                        if (glass) {
-                            // The glint fades out with the pane: drawn in its own layer, then
-                            // masked by the same dissolve, so it can't be cut off at the bottom.
-                            val canvas = drawContext.canvas
-                            canvas.saveLayer(androidx.compose.ui.geometry.Rect(Offset.Zero, size), androidx.compose.ui.graphics.Paint())
-                            drawGlint(light.value, k, margin.toFloat())
-                            fun at(x: Float) = k + (1f - k) * x
-                            drawRect(
-                                Brush.verticalGradient(
-                                    0f to Color.Black,
-                                    k to Color.Black,
-                                    at(0.25f) to Color.Black.copy(alpha = 0.56f),
-                                    at(0.5f) to Color.Black.copy(alpha = 0.25f),
-                                    at(0.75f) to Color.Black.copy(alpha = 0.06f),
-                                    1f to Color.Transparent,
-                                ),
-                                blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
-                            )
-                            canvas.restore()
-                        }
                     },
                 )
         )
     }
-}
-
-/**
- * A broad, soft glint plus a slim angled streak that move as you tilt the phone, like light
- * sliding across a sheet of glass. Faint and fading out with the pane.
- */
-private fun DrawScope.drawGlint(l: Offset, k: Float, margin: Float) {
-    val w = size.width - margin * 2
-    val bodyH = k * size.height
-    val c = Offset(margin + w * l.x, margin + (bodyH - margin) * l.y)
-    drawRect(
-        Brush.radialGradient(
-            0f to Color.White.copy(alpha = 0.12f),
-            0.45f to Color.White.copy(alpha = 0.045f),
-            1f to Color.Transparent,
-            center = c,
-            radius = w * 0.62f,
-        )
-    )
-    val sx = margin + w * (l.x + 0.18f)
-    drawRect(
-        Brush.linearGradient(
-            0f to Color.Transparent,
-            0.5f to Color.White.copy(alpha = 0.06f),
-            1f to Color.Transparent,
-            start = Offset(sx - 40.dp.toPx(), 0f),
-            end = Offset(sx + 40.dp.toPx(), 26.dp.toPx()),
-        )
-    )
 }
 
 /** Pages and cards that want glass controls read the backdrop to refract from here. */
@@ -248,15 +191,9 @@ fun Modifier.glassCard(
     },
 )
 
-/**
- * The angle light catches the glass rims at, following the phone's tilt: 45° (top left) held
- * normally, swinging as you roll the phone.
- */
+/** Light catches the glass rims from the top left, as on iOS. (Fixed; no tilt sensor.) */
 @Composable
-fun rememberGlassLightAngle(): State<Float> {
-    val light = rememberTiltLight()
-    return remember { androidx.compose.runtime.derivedStateOf { 45f + (light.value.x - 0.3f) * 140f } }
-}
+fun rememberGlassLightAngle(): State<Float> = remember { mutableStateOf(45f) }
 
 /**
  * True liquid glass for a floating control (button, pill, chip), as on iOS 26: barely frosted,
@@ -310,42 +247,3 @@ fun Modifier.glassSheet(backdrop: LayerBackdrop, cornerRadius: Dp, tint: Color):
             drawRect(Brush.verticalGradient(listOf(Color(0x1AFFFFFF), Color(0x05FFFFFF))))
         },
     )
-
-@Composable
-private fun rememberTiltLight(): State<Offset> {
-    val context = LocalContext.current
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
-    val light = remember { mutableStateOf(Offset(0.3f, 0.2f)) }
-    DisposableEffect(lifecycle) {
-        val sm = context.getSystemService(SensorManager::class.java)
-        val sensor = sm?.getDefaultSensor(Sensor.TYPE_GRAVITY) ?: sm?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-        var sx = 0.3f
-        var sy = 0.2f
-        val listener = object : SensorEventListener {
-            override fun onSensorChanged(e: SensorEvent) {
-                val g = 9.81f
-                // x: roll (gravity across the screen); y: pitch (gravity into the screen).
-                val tx = (0.3f - e.values[0] / g * 1.4f).coerceIn(-0.1f, 1.1f)
-                val ty = (0.2f + (e.values[2] / g - 0.55f) * 1.6f).coerceIn(-0.2f, 1.2f)
-                sx += (tx - sx) * 0.2f
-                sy += (ty - sy) * 0.2f
-                val cur = light.value
-                if (kotlin.math.abs(sx - cur.x) > 0.003f || kotlin.math.abs(sy - cur.y) > 0.003f) light.value = Offset(sx, sy)
-            }
-            override fun onAccuracyChanged(s: Sensor?, accuracy: Int) {}
-        }
-        val observer = LifecycleEventObserver { _, event ->
-            when (event) {
-                Lifecycle.Event.ON_RESUME -> if (sensor != null) sm.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_GAME)
-                Lifecycle.Event.ON_PAUSE -> sm?.unregisterListener(listener)
-                else -> {}
-            }
-        }
-        lifecycle.addObserver(observer)
-        onDispose {
-            lifecycle.removeObserver(observer)
-            sm?.unregisterListener(listener)
-        }
-    }
-    return light
-}
