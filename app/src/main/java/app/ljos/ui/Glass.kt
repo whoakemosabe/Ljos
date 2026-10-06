@@ -32,7 +32,11 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.kyant.backdrop.BackdropEffectScope
 import com.kyant.backdrop.backdrops.LayerBackdrop
+import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.drawPlainBackdrop
+import com.kyant.backdrop.highlight.Highlight
+import com.kyant.backdrop.highlight.HighlightStyle
+import com.kyant.backdrop.shadow.Shadow
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.colorControls
 import com.kyant.backdrop.effects.effect
@@ -133,7 +137,10 @@ fun GlassHeader(
                     shape = { RoundedCornerShape(0.dp) },
                     effects = {
                         if (glass) {
-                            liquidGlass(frost.toPx(), lensHeight = 18.dp.toPx(), lensAmount = 26.dp.toPx())
+                            // The Apple way for a top bar: frost and colour, no lens. A bar that
+                            // fades out has no real edge, so bending one would only draw a line.
+                            colorControls(saturation = 1.15f)
+                            blur(frost.toPx())
                             val bottom = size.height
                             dissolve(bottom - fadePx, bottom)
                         }
@@ -188,6 +195,51 @@ private fun DrawScope.drawGlint(l: Offset, k: Float, margin: Float) {
         )
     )
 }
+
+/** Pages and cards that want glass controls read the backdrop to refract from here. */
+val LocalGlassBackdrop = androidx.compose.runtime.staticCompositionLocalOf<LayerBackdrop?> { null }
+
+/**
+ * The angle light catches the glass rims at, following the phone's tilt: 45° (top left) held
+ * normally, swinging as you roll the phone.
+ */
+@Composable
+fun rememberGlassLightAngle(): State<Float> {
+    val light = rememberTiltLight()
+    return remember { androidx.compose.runtime.derivedStateOf { 45f + (light.value.x - 0.3f) * 140f } }
+}
+
+/**
+ * True liquid glass for a floating control (button, pill, chip), as on iOS 26: barely frosted,
+ * the lens bending its whole rounded edge with colour fringing, a rim highlight that moves with
+ * the phone's tilt, and a soft shadow. [shape] must be a rounded shape (RoundedCornerShape,
+ * CircleShape). Phones before Android 13 get a plain translucent fill.
+ */
+fun Modifier.glassControl(
+    backdrop: LayerBackdrop,
+    shape: androidx.compose.foundation.shape.CornerBasedShape,
+    lightAngle: State<Float>? = null,
+    lensHeight: Dp = 10.dp,
+    lensAmount: Dp = 18.dp,
+): Modifier = drawBackdrop(
+    backdrop = backdrop,
+    shape = { shape },
+    effects = {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            colorControls(saturation = 1.25f)
+            blur(2.dp.toPx())
+            lens(lensHeight.toPx(), lensAmount.toPx(), chromaticAberration = true)
+        }
+    },
+    highlight = {
+        Highlight(style = HighlightStyle.Default(angle = lightAngle?.value ?: 45f))
+    },
+    shadow = { Shadow(radius = 14.dp, color = Color.Black.copy(alpha = 0.22f)) },
+    onDrawSurface = {
+        // A faint dark wash so white text and icons read over bright things behind.
+        drawRect(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Color(0x2605080F) else Color(0x33FFFFFF))
+    },
+)
 
 /**
  * The settings sheet's body: one big piece of liquid glass showing the screen behind it,

@@ -131,12 +131,18 @@ internal fun ConditionChips(peak: HourScore, night: Night, now: Long, onChip: (S
         night.darkUntil != null && now < night.darkUntil -> time(night.darkUntil)
         else -> time(night.darkFrom)
     }
+    val angle = rememberGlassLightAngle()
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         val m = Modifier.weight(1f)
-        Chip("kp", "Kp ${Fmt.one(peak.kp)}", onChip, m) { KpIcon(it) }
-        Chip("cloud", if (peak.cloud < 0) "—" else "${peak.cloud}%", onChip, m) { CloudIcon(it) }
-        Chip("moon", "${(peak.moonIllum * 100).roundToInt()}%", onChip, m) { MoonIcon(it, peak.moonIllum.toFloat()) }
-        Chip("dark", darkText, onChip, m) { DarkIcon(it) }
+        val backdrop = LocalGlassBackdrop.current
+        val glass: Modifier.() -> Modifier = {
+            if (backdrop != null) glassControl(backdrop, RoundedCornerShape(14.dp), angle, lensHeight = 7.dp, lensAmount = 12.dp)
+            else this.clip(RoundedCornerShape(14.dp)).background(Color(0x1AFFFFFF)).border(1.dp, Color(0x14FFFFFF), RoundedCornerShape(14.dp))
+        }
+        Chip("kp", "Kp ${Fmt.one(peak.kp)}", onChip, m.glass()) { KpIcon(it) }
+        Chip("cloud", if (peak.cloud < 0) "—" else "${peak.cloud}%", onChip, m.glass()) { CloudIcon(it) }
+        Chip("moon", "${(peak.moonIllum * 100).roundToInt()}%", onChip, m.glass()) { MoonIcon(it, peak.moonIllum.toFloat()) }
+        Chip("dark", darkText, onChip, m.glass()) { DarkIcon(it) }
     }
 }
 
@@ -145,10 +151,7 @@ private fun Chip(id: String, text: String, onChip: (String) -> Unit, modifier: M
     val view = LocalView.current
     Row(
         modifier
-            .clip(RoundedCornerShape(14.dp))
-            .background(Color(0x1AFFFFFF))
-            .border(1.dp, Color(0x14FFFFFF), RoundedCornerShape(14.dp))
-            .clickable { Haptics.tap(view); onChip(id) }
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { Haptics.tap(view); onChip(id) }
             .padding(horizontal = 6.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.Center,

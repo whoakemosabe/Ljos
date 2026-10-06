@@ -21,6 +21,7 @@ import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import com.kyant.backdrop.backdrops.LayerBackdrop
+import androidx.compose.runtime.State
 import com.kyant.backdrop.backdrops.layerBackdrop
 import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import androidx.compose.animation.core.animateFloatAsState
@@ -256,6 +257,9 @@ fun LjosApp() {
 
     // Recorded once per frame and reused (blurred) by the header, so the page is only composed once.
     val pageBackdrop = rememberLayerBackdrop()
+    // The sky alone, for glass controls that sit on the page itself (they can't refract a
+    // recording of the page they're part of).
+    val skyBackdrop = rememberLayerBackdrop()
 
     BoxWithConstraints(Modifier.fillMaxSize().background(NightBg)) {
         val screenH = maxHeight
@@ -361,7 +365,7 @@ fun LjosApp() {
                 }
         ) {
             Box(Modifier.fillMaxSize().layerBackdrop(pageBackdrop)) {
-                AuroraBackground(intensity, Modifier.fillMaxSize(), sky = skyState, pull = { pullFraction().coerceIn(0f, 1.4f) })
+                AuroraBackground(intensity, Modifier.fillMaxSize().layerBackdrop(skyBackdrop), sky = skyState, pull = { pullFraction().coerceIn(0f, 1.4f) })
                 Column(
                     Modifier
                         .fillMaxSize()
@@ -373,6 +377,7 @@ fun LjosApp() {
                         .padding(horizontal = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
+                    androidx.compose.runtime.CompositionLocalProvider(LocalGlassBackdrop provides skyBackdrop) {
                     // Order follows the questions people ask: will I see it → when → where →
                     // what to wear → this week.
                     val tonightSummary: @Composable ColumnScope.() -> Unit = {
@@ -465,6 +470,7 @@ fun LjosApp() {
                         }
                     }
                     tonightSummary(); hourByHour(); whereToGo(); dressForIt(); nextDays()
+                    }
                     MadeWithLove(errors)
                     Spacer(Modifier.height(16.dp))
                 }
@@ -484,6 +490,7 @@ fun LjosApp() {
                 intro = { pullIntro.value },
             )
             Header(
+                backdrop = pageBackdrop,
                 placeName = home.name,
                 score = heroHour?.score,
                 scoreMorph = scoreMorph,
@@ -572,6 +579,7 @@ fun LjosApp() {
  */
 @Composable
 private fun Header(
+    backdrop: LayerBackdrop,
     placeName: String,
     score: Int?,
     scoreMorph: () -> Float,
@@ -582,6 +590,7 @@ private fun Header(
     pull: () -> Float = { 0f },
 ) {
     val view = LocalView.current
+    val angle = rememberGlassLightAngle()
     Row(
         Modifier
             .fillMaxWidth()
@@ -591,35 +600,65 @@ private fun Header(
             .height(HeaderRow),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Row(
-            Modifier
-                .weight(1f)
-                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
-                    Haptics.tap(view); onSettings()
-                },
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            // A soft shadow behind the header text (as iOS does on its glass bars) keeps it
-            // readable over bright things sliding under the clear glass, without darkening it.
-            Text("Ljós", color = Ink, fontSize = 20.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp, style = HeaderTextShadow)
-            Spacer(Modifier.width(12.dp))
-            PinIcon(Modifier.size(width = 10.dp, height = 13.dp))
-            Spacer(Modifier.width(6.dp))
-            Text(
-                placeName, maxLines = 1, fontSize = 13.sp, color = Ink.copy(alpha = 0.85f), style = HeaderTextShadow,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f, fill = false),
-            )
-            if (score != null) ScoreSlot(score, scoreMorph, onPillTarget)
-        }
+        // A soft shadow behind the title (as iOS does on its bars) keeps it readable over bright
+        // things sliding under the clear header, without darkening it.
+        Text("Ljós", color = Ink, fontSize = 20.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp, style = HeaderTextShadow)
         Spacer(Modifier.width(10.dp))
-        RoundButton(onClick = onRefresh, enabled = !loading) {
+        // The place, in a liquid-glass pill. Tap for settings. Once the hero has scrolled away
+        // the score flies in and the pill grows to hold it.
+        Box(Modifier.weight(3f, fill = false)) {
+            Row(
+                Modifier
+                    .glassControl(backdrop, CircleShape, angle)
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
+                        Haptics.tap(view); onSettings()
+                    }
+                    .height(34.dp)
+                    .padding(start = 11.dp, end = 12.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                PinIcon(Modifier.size(width = 10.dp, height = 13.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(
+                    placeName, maxLines = 1, fontSize = 13.sp, color = Ink.copy(alpha = 0.9f),
+                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f, fill = false),
+                )
+                if (score != null) ScoreSlot(score, scoreMorph, onPillTarget)
+            }
+        }
+        Spacer(Modifier.weight(1f).widthIn(min = 10.dp))
+        GlassButton(backdrop, angle, onClick = onRefresh, enabled = !loading) {
             if (loading) CircularProgressIndicator(Modifier.size(16.dp), color = Ink, strokeWidth = 2.dp)
             else RefreshIcon(Modifier.graphicsLayer { rotationZ = pull().coerceIn(0f, 1.5f) * 300f })
         }
-        Spacer(Modifier.width(8.dp))
-        RoundButton(onClick = onSettings) { TuneIcon() }
+        Spacer(Modifier.width(10.dp))
+        GlassButton(backdrop, angle, onClick = onSettings) { TuneIcon() }
     }
+}
+
+/** A round liquid-glass button that squishes a little when pressed. */
+@Composable
+private fun GlassButton(
+    backdrop: LayerBackdrop,
+    angle: State<Float>,
+    onClick: () -> Unit,
+    enabled: Boolean = true,
+    content: @Composable () -> Unit,
+) {
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (pressed) 1.1f else 1f, spring(dampingRatio = 0.5f, stiffness = 500f), label = "press")
+    val view = LocalView.current
+    Box(
+        Modifier
+            // requiredSize: never squeezed by a crowded row, so it stays a true circle
+            .requiredSize(40.dp)
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .glassControl(backdrop, CircleShape, angle)
+            .clickable(interactionSource = interaction, indication = null, enabled = enabled) { Haptics.tap(view); onClick() },
+        contentAlignment = Alignment.Center,
+    ) { content() }
 }
 
 /**
