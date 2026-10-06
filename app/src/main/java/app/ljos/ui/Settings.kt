@@ -278,8 +278,6 @@ private fun UpdateSettings() {
     val scope = rememberCoroutineScope()
     var state by remember { mutableStateOf<UpdateUi>(UpdateUi.Idle) }
     var progress by remember { mutableFloatStateOf(0f) }
-    var token by remember { mutableStateOf(prefs.githubToken) }
-    var showToken by remember { mutableStateOf(prefs.githubToken.isBlank()) }
     val version = remember { Updater.installedVersion(context) }
 
     SectionLabel(L.t("UPDATES", "UPPFÆRSLUR"))
@@ -303,7 +301,7 @@ private fun UpdateSettings() {
                 progress = 0f
                 scope.launch {
                     state = try {
-                        UpdateUi.Ready(Updater.download(context, s.release, prefs.githubToken) { progress = it })
+                        UpdateUi.Ready(Updater.download(context, s.release, "") { progress = it })
                     } catch (e: Exception) {
                         UpdateUi.Error(e.message ?: L.t("Download failed", "Niðurhal mistókst"))
                     }
@@ -322,13 +320,10 @@ private fun UpdateSettings() {
                 if (state == UpdateUi.Checking || state is UpdateUi.Downloading) return@Pill
                 state = UpdateUi.Checking
                 scope.launch {
-                    state = when (val r = Updater.check(context, prefs.githubToken)) {
+                    state = when (val r = Updater.check(context, "")) {
                         Updater.Check.UpToDate -> UpdateUi.UpToDate
                         is Updater.Check.Available -> UpdateUi.Available(r.release)
-                        is Updater.Check.Failed -> {
-                            if (prefs.githubToken.isBlank()) showToken = true
-                            UpdateUi.Error(r.message)
-                        }
+                        is Updater.Check.Failed -> UpdateUi.Error(r.message)
                     }
                 }
             }
@@ -356,40 +351,6 @@ private fun UpdateSettings() {
         }
     }
 
-    Spacer(Modifier.height(10.dp))
-    if (showToken) {
-        Text(L.t("GitHub token", "GitHub lykill"), color = Ink, fontSize = 14.sp)
-        Text(
-            L.t("The repo is private, so checking needs a read-only token: Contents → Read, Ljos only.",
-                "Safnið er lokað, svo það þarf lesaðgangslykil: Contents → Read, aðeins Ljos."),
-            color = Faint, fontSize = 12.sp,
-        )
-        Spacer(Modifier.height(6.dp))
-        BasicTextField(
-            value = token,
-            onValueChange = { token = it; prefs.githubToken = it },
-            singleLine = true,
-            textStyle = TextStyle(color = Ink, fontSize = 14.sp),
-            cursorBrush = SolidColor(Green),
-            visualTransformation = PasswordVisualTransformation(),
-            modifier = Modifier
-                .fillMaxWidth()
-                .clip(RoundedCornerShape(12.dp))
-                .background(Color(0x14FFFFFF))
-                .border(1.dp, Color(0x1FFFFFFF), RoundedCornerShape(12.dp))
-                .padding(horizontal = 14.dp, vertical = 12.dp),
-            decorationBox = { inner ->
-                if (token.isEmpty()) Text("github_pat_…", color = Faint, fontSize = 14.sp)
-                inner()
-            },
-        )
-    } else {
-        Text(
-            L.t("GitHub token saved · change", "GitHub lykill vistaður · breyta"),
-            color = Faint, fontSize = 12.sp,
-            modifier = Modifier.clip(RoundedCornerShape(8.dp)).clickable { showToken = true }.padding(vertical = 4.dp),
-        )
-    }
 }
 
 @Composable

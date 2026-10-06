@@ -25,6 +25,23 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
+      - name: Signing key
+        env:
+          KEYSTORE_B64: ${{ secrets.KEYSTORE_B64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ] || [ -z "$KEYSTORE_PASSWORD" ]; then
+            if [ "$GITHUB_REF" = "refs/heads/main" ]; then
+              echo "::error::KEYSTORE_B64 / KEYSTORE_PASSWORD secrets are missing; refusing to publish a build with the wrong key."
+              exit 1
+            fi
+            echo "No signing secrets: debug-signed check build."
+            exit 0
+          fi
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/ljos-release.p12"
+          echo "KEYSTORE_FILE=$RUNNER_TEMP/ljos-release.p12" >> "$GITHUB_ENV"
+          echo "KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
+
       - name: Test and build
         run: |
           chmod +x gradlew

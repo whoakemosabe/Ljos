@@ -16,7 +16,7 @@ import java.net.URL
 
 /**
  * Checks GitHub Releases for a newer ljos.apk, downloads it and hands it to the system installer.
- * The repo is private, so a read-only token (saved in Settings) is sent when present.
+ * The repo is public, so no token is needed (one is still sent if passed, e.g. for a fork).
  */
 object Updater {
     private const val REPO = "whoakemosabe/Ljos"
@@ -53,7 +53,7 @@ object Updater {
             if (code == 404 || code == 401) {
                 c.disconnect()
                 return@withContext Check.Failed(
-                    if (token.isBlank()) L.t("The repo is private. Add a GitHub token below.", "Safnið er lokað. Bættu við GitHub lykli hér fyrir neðan.") else L.t("GitHub didn't accept the token.", "GitHub samþykkti ekki lykilinn.")
+                    L.t("GitHub refused the request. Try again in a bit.", "GitHub hafnaði beiðninni. Reyndu aftur eftir smá stund.")
                 )
             }
             if (code !in 200..299) throw IOException("GitHub returned $code")

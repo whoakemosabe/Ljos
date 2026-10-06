@@ -7,15 +7,12 @@ plugins {
     id("org.jetbrains.kotlin.plugin.compose")
 }
 
-// One fixed signing key so every CI build installs over the previous one.
-// It lives in signing/ (this repo is private). KEYSTORE_PASSWORD in the environment overrides the file.
-val releaseKeystore = rootProject.file("signing/ljos-release.p12")
-val signingProps = Properties().apply {
-    val f = rootProject.file("signing/release.properties")
-    if (f.exists()) f.inputStream().use { load(it) }
-}
+// One fixed signing key so every CI build installs over the previous one. It is never in the
+// repo: CI decodes it from the KEYSTORE_B64 secret to a temp file (KEYSTORE_FILE) and reads the
+// password from the KEYSTORE_PASSWORD secret. Without them the build falls back to debug signing.
+val releaseKeystore = System.getenv("KEYSTORE_FILE")?.takeIf { it.isNotBlank() }?.let { file(it) }
+    ?: rootProject.file("signing/ljos-release.p12") // local builds only; signing/ is gitignored
 val storePass: String? = System.getenv("KEYSTORE_PASSWORD")?.takeIf { it.isNotBlank() }
-    ?: signingProps.getProperty("storePassword")
 val runNumber = (System.getenv("GITHUB_RUN_NUMBER") ?: "1").toInt()
 
 android {
@@ -36,7 +33,7 @@ android {
                 storeFile = releaseKeystore
                 storeType = "PKCS12"
                 storePassword = storePass
-                keyAlias = signingProps.getProperty("keyAlias") ?: "ljos"
+                keyAlias = "ljos"
                 keyPassword = storePass
             }
         }

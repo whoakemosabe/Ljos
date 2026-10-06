@@ -22,7 +22,7 @@ No server. The phone pulls the feeds itself about every 15 minutes.
 
 ## Install
 
-Every push to `main` builds a signed APK and publishes it as a GitHub Release. Open the latest release on your phone and tap `ljos.apk`. Builds are signed with the same key (stored in repo secrets), so new versions install over the old one.
+Every push to `main` builds a signed APK and publishes it as a GitHub Release. Open the latest release on your phone and tap `ljos.apk`. Builds are signed with one key kept in the repo's Actions secrets (`KEYSTORE_B64`, `KEYSTORE_PASSWORD`), never in the code, so new versions install over the old one.
 
 ## Layout
 
