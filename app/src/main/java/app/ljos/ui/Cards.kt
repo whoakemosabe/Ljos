@@ -54,9 +54,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.foundation.layout.fillMaxSize
 import app.ljos.Fmt
-import com.kyant.backdrop.backdrops.layerBackdrop
 import app.ljos.L
 import app.ljos.data.Inputs
 import app.ljos.model.HourScore
@@ -399,66 +397,37 @@ internal fun WhereCard(
         modifier = modifier,
     ) {
         Spacer(Modifier.height(10.dp))
-        // The map, with the picked place floating on it in a liquid-glass panel (as in iOS 26
-        // Maps): the map shows through, bent at the edges; Go is a green glass pill.
-        val mapB = com.kyant.backdrop.backdrops.rememberLayerBackdrop()
-        val glassOk = android.os.Build.VERSION.SDK_INT >= 33
-        Box(Modifier.fillMaxWidth().height(230.dp).clip(RoundedCornerShape(18.dp))) {
-            Box(Modifier.matchParentSize().then(if (glassOk) Modifier.layerBackdrop(mapB) else Modifier)) {
-                SpotMap(
-                    home = home.spot,
-                    spots = listOf(home.spot) + spots.filter { it !== home }.map { it.spot },
-                    modifier = Modifier.fillMaxSize(),
-                    scores = spots.associate { it.spot.id to it.score },
-                    bestId = best?.spot?.id,
-                    selectedId = picked,
-                    onSelect = { picked = it.id },
-                )
-            }
-            androidx.compose.animation.AnimatedContent(
-                targetState = pickedSpot,
-                transitionSpec = {
-                    (androidx.compose.animation.fadeIn(tween(220)) + androidx.compose.animation.slideInVertically { it / 3 }) togetherWith
-                        androidx.compose.animation.fadeOut(tween(160))
-                },
-                label = "picked",
-                modifier = Modifier.align(Alignment.BottomCenter).padding(10.dp),
-            ) { s ->
-                if (s != null) {
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .then(
-                                if (glassOk) Modifier.glassControl(mapB, RoundedCornerShape(18.dp), lensHeight = 12.dp, lensAmount = 20.dp, surface = Color(0x8C070B16))
-                                else Modifier.clip(RoundedCornerShape(18.dp)).background(Color(0xCC070B16))
-                            )
-                            .padding(horizontal = 14.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Column(Modifier.weight(1f)) {
-                            Text(s.spot.name, color = Ink, fontSize = 15.sp, maxLines = 1)
-                            Text(
-                                L.t("≈ ${driveMinutes(s.distanceKm)} min drive · ", "≈ ${driveMinutes(s.distanceKm)} mín akstur · ") +
-                                    Fmt.distance(s.distanceKm) + " · " + Fmt.cloud(s.cloud),
-                                color = Muted, fontSize = 11.sp, maxLines = 1,
-                            )
-                        }
-                        Text(s.score.toString(), color = scoreColor(s.score), fontSize = 22.sp, fontWeight = FontWeight.Light)
-                        Spacer(Modifier.width(10.dp))
-                        Box(
-                            Modifier
-                                .then(
-                                    if (glassOk) Modifier.glassControl(mapB, RoundedCornerShape(50), lensHeight = 8.dp, lensAmount = 14.dp, surface = Color(0xB33DFFA0))
-                                    else Modifier.clip(RoundedCornerShape(50)).background(Green)
-                                )
-                                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
-                                    Haptics.tap(view); openDirections(context, s.spot.lat, s.spot.lon, s.spot.name)
-                                }
-                                .padding(horizontal = 16.dp, vertical = 8.dp),
-                        ) {
-                            Text(L.t("Go", "Fara"), color = Color(0xFF03130B), fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
-                        }
+        SpotMap(
+            home = home.spot,
+            spots = listOf(home.spot) + spots.filter { it !== home }.map { it.spot },
+            modifier = Modifier.fillMaxWidth().height(200.dp),
+            scores = spots.associate { it.spot.id to it.score },
+            bestId = best?.spot?.id,
+            selectedId = picked,
+            onSelect = { picked = it.id },
+        )
+        // Selected pin: score, drive time and a Directions button.
+        androidx.compose.animation.AnimatedContent(
+            targetState = pickedSpot,
+            transitionSpec = {
+                (androidx.compose.animation.fadeIn(tween(220)) + androidx.compose.animation.slideInVertically { it / 4 }) togetherWith
+                    androidx.compose.animation.fadeOut(tween(160))
+            },
+            label = "picked",
+        ) { s ->
+            if (s != null) {
+                Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(s.spot.name, color = Ink, fontSize = 16.sp)
+                        Text(
+                            L.t("≈ ${driveMinutes(s.distanceKm)} min drive · ", "≈ ${driveMinutes(s.distanceKm)} mín akstur · ") +
+                                Fmt.distance(s.distanceKm) + " · " + Fmt.cloud(s.cloud),
+                            color = Faint, fontSize = 12.sp,
+                        )
                     }
+                    Text(s.score.toString(), color = scoreColor(s.score), fontSize = 24.sp, fontWeight = FontWeight.Light)
+                    Spacer(Modifier.width(10.dp))
+                    Pill(L.t("Go", "Fara"), primary = true) { openDirections(context, s.spot.lat, s.spot.lon, s.spot.name) }
                 }
             }
         }

@@ -1,12 +1,6 @@
 package app.ljos.ui
 
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.layout.offset
-import androidx.compose.foundation.layout.size
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import com.kyant.backdrop.backdrops.layerBackdrop
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -59,36 +53,17 @@ fun HourStrip(
         }
     }
 
-    // While you scrub, a liquid-glass loupe rides above your finger and magnifies the bars,
-    // like the iOS 26 slider thumb. (Android 13+.)
-    val glass = android.os.Build.VERSION.SDK_INT >= 33
-    val strip = com.kyant.backdrop.backdrops.rememberLayerBackdrop()
-    var dragX by remember { androidx.compose.runtime.mutableFloatStateOf(-1f) }
-    val loupe by androidx.compose.animation.core.animateFloatAsState(
-        if (dragX >= 0f) 1f else 0f,
-        androidx.compose.animation.core.spring(dampingRatio = 0.7f, stiffness = 500f),
-        label = "loupe",
-    )
-    androidx.compose.foundation.layout.Box(modifier.fillMaxWidth()) {
     Canvas(
-        Modifier
+        modifier
             .fillMaxWidth()
             .height(156.dp)
-            .then(if (glass) Modifier.layerBackdrop(strip) else Modifier)
             .then(
                 if (onSelect == null) Modifier else Modifier
                     .pointerInput(hours) {
                         detectTapGestures { o -> pick(o.x, size.width.toFloat(), true) }
                     }
                     .pointerInput(hours) {
-                        detectHorizontalDragGestures(
-                            onDragStart = { o -> dragX = o.x },
-                            onDragEnd = { dragX = -1f },
-                            onDragCancel = { dragX = -1f },
-                        ) { change, _ ->
-                            dragX = change.position.x.coerceIn(0f, size.width.toFloat())
-                            pick(change.position.x, size.width.toFloat(), false)
-                        }
+                        detectHorizontalDragGestures { change, _ -> pick(change.position.x, size.width.toFloat(), false) }
                     }
             )
     ) {
@@ -137,24 +112,5 @@ fun HourStrip(
                 drawText(tl, topLeft = Offset(x + barW / 2f - tl.size.width / 2f, chartH + 11.dp.toPx()))
             }
         }
-    }
-    if (glass && loupe > 0.01f) {
-        val loupeSize = 60.dp
-        androidx.compose.foundation.layout.Box(
-            Modifier
-                // Placed by layout (not a graphics transform) so the glass knows exactly what's under it.
-                .offset {
-                    val half = loupeSize.roundToPx() / 2
-                    androidx.compose.ui.unit.IntOffset((if (dragX >= 0f) dragX.toInt() else 0) - half, 30.dp.roundToPx() - half)
-                }
-                .graphicsLayer { alpha = loupe }
-                .size(loupeSize)
-                .glassControl(
-                    strip, androidx.compose.foundation.shape.CircleShape, lensHeight = 14.dp, lensAmount = 22.dp,
-                    surface = Color(0x0FFFFFFF), magnify = 1.5f,
-                    magnifyPivot = androidx.compose.ui.unit.DpOffset(loupeSize / 2, loupeSize / 2),
-                )
-        )
-    }
     }
 }

@@ -28,8 +28,6 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.interaction.collectIsPressedAsState
-import com.kyant.backdrop.backdrops.layerBackdrop
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -98,8 +96,7 @@ fun Onboarding(onDone: () -> Unit) {
     )
 
     Box(Modifier.fillMaxSize().background(NightBg)) {
-        val sky = com.kyant.backdrop.backdrops.rememberLayerBackdrop()
-        AuroraBackground(glow, Modifier.fillMaxSize().then(if (android.os.Build.VERSION.SDK_INT >= 33) Modifier.layerBackdrop(sky) else Modifier))
+        AuroraBackground(glow, Modifier.fillMaxSize())
         Column(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.systemBars)) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 Spacer(Modifier.weight(1f))
@@ -146,28 +143,8 @@ fun Onboarding(onDone: () -> Unit) {
                 }
                 Spacer(Modifier.weight(1f))
                 val last = pager.currentPage == 2
-                // A green liquid-glass button over the aurora (plain green pill before Android 13).
-                val glassOk = android.os.Build.VERSION.SDK_INT >= 33
-                val interaction = remember { MutableInteractionSource() }
-                val pressed by interaction.collectIsPressedAsState()
-                val press by animateFloatAsState(if (pressed) 1.06f else 1f, spring(dampingRatio = 0.5f, stiffness = 500f), label = "next")
-                Box(
-                    Modifier
-                        .graphicsLayer { scaleX = press; scaleY = press }
-                        .then(
-                            if (glassOk) Modifier.glassControl(sky, RoundedCornerShape(50), lensHeight = 10.dp, lensAmount = 18.dp, surface = Color(0xB33DFFA0))
-                            else Modifier.clip(RoundedCornerShape(50)).background(Green)
-                        )
-                        .clickable(interactionSource = interaction, indication = null) {
-                            Haptics.tap(view)
-                            if (last) onDone() else scope.launch { pager.animateScrollToPage(pager.currentPage + 1) }
-                        }
-                        .padding(horizontal = 22.dp, vertical = 11.dp),
-                ) {
-                    Text(
-                        if (last) L.t("Let's go", "Byrjum") else L.t("Next", "Áfram"),
-                        color = Color(0xFF03130B), fontSize = 14.sp, fontWeight = FontWeight.SemiBold,
-                    )
+                Pill(if (last) L.t("Let's go", "Byrjum") else L.t("Next", "Áfram"), primary = true) {
+                    if (last) onDone() else scope.launch { pager.animateScrollToPage(pager.currentPage + 1) }
                 }
             }
         }

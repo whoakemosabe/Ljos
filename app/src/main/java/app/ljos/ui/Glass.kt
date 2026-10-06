@@ -207,12 +207,6 @@ fun Modifier.glassControl(
     lightAngle: State<Float>? = null,
     lensHeight: Dp = 10.dp,
     lensAmount: Dp = 18.dp,
-    /** Replaces the faint dark wash, e.g. a green tint for a primary button. */
-    surface: Color? = null,
-    /** > 1 magnifies what's behind, around [magnifyPivot] (in the control's own coordinates). */
-    magnify: Float = 1f,
-    magnifyPivot: androidx.compose.ui.unit.DpOffset = androidx.compose.ui.unit.DpOffset.Zero,
-    shadow: Boolean = true,
 ): Modifier = drawBackdrop(
     backdrop = backdrop,
     shape = { shape },
@@ -226,18 +220,10 @@ fun Modifier.glassControl(
     highlight = {
         Highlight(style = HighlightStyle.Default(angle = lightAngle?.value ?: 45f))
     },
-    shadow = if (shadow) ({ Shadow(radius = 14.dp, color = Color.Black.copy(alpha = 0.22f)) }) else null,
-    onDrawBackdrop = { draw ->
-        if (magnify == 1f) draw()
-        else withTransform({
-            scale(magnify, magnify, pivot = Offset(magnifyPivot.x.toPx(), magnifyPivot.y.toPx()))
-        }) { draw() }
-    },
+    shadow = { Shadow(radius = 14.dp, color = Color.Black.copy(alpha = 0.22f)) },
     onDrawSurface = {
         // A faint dark wash so white text and icons read over bright things behind.
-        drawRect(
-            surface ?: if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Color(0x2605080F) else Color(0x33FFFFFF)
-        )
+        drawRect(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Color(0x2605080F) else Color(0x33FFFFFF))
     },
 )
 
