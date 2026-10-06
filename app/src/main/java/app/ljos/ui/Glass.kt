@@ -24,12 +24,10 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.BlurEffect
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.CompositingStrategy
-import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.asComposeRenderEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
@@ -62,12 +60,25 @@ object Glass {
     val Tint = Color(0x5C0A1022)
 }
 
+/*
+ * What makes it read as Apple's Liquid Glass rather than plain frosted glass:
+ *  - vibrancy: what's behind is frosted only lightly and its colours are boosted, so the glass
+ *    looks lit from within instead of grey;
+ *  - a convex bevel: the bend is gentle across most of the rim and steepens right at the edge,
+ *    the way a rounded glass edge refracts (a circular profile, not a straight ramp);
+ *  - dispersion: red, green and blue bend by slightly different amounts, leaving a faint
+ *    colour fringe where the bend is strongest;
+ *  - a specular rim: light from the top left catches the curved edge as a soft highlight.
+ */
+
 private const val REFRACT = """
 uniform shader content;
 uniform float2 size;
 uniform float radius;
 uniform float rim;
 uniform float strength;
+uniform float dispersion;
+uniform float spec;
 
 half4 main(float2 p) {
     float2 c = p - size * 0.5;
@@ -80,28 +91,55 @@ half4 main(float2 p) {
     if (q.x > 0.0 && q.y > 0.0) n = normalize(q) * s;
     else if (q.x > q.y) n = float2(s.x, 0.0);
     else n = float2(0.0, s.y);
-    // 0 in the middle, 1 at the rim, rising steeply like the curve of a lens edge.
+    // Convex bevel: 0 inside, 1 at the edge, steepening like the side of a rounded lens.
     float t = clamp(1.0 + d / rim, 0.0, 1.0);
-    float m = t * t * t;
-    return content.eval(p - n * m * strength);
+    float m = 1.0 - sqrt(max(1.0 - t * t, 0.0));
+    float2 off = -n * m * strength;
+    half4 g = content.eval(p + off);
+    half r = content.eval(p + off * (1.0 + dispersion)).r;
+    half b = content.eval(p + off * (1.0 - dispersion)).b;
+    half4 col = half4(r, g.g, b, g.a);
+    // Light from the top left catches the rim; the far side gets a little too.
+    float lit = max(dot(n, normalize(float2(-0.55, -0.85))), 0.0);
+    float shine = spec * m * (0.3 + 0.7 * lit);
+    col.rgb = min(col.rgb + half3(shine) * col.a, half3(1.0));
+    return col;
 }
 """
 
-/** Set if the shader ever fails to compile on a phone, so we quietly fall back to frost only. */
+/** Set if a shader ever fails to compile on a phone, so we quietly fall back to frost only. */
 private var refractBroken = false
+
+/** Light frost with Apple-style vibrancy: colours a touch richer and brighter behind the glass. */
+@RequiresApi(31)
+private fun frosted(frost: Float): AndroidRenderEffect {
+    val blur = AndroidRenderEffect.createBlurEffect(frost.coerceAtLeast(0.1f), frost.coerceAtLeast(0.1f), Shader.TileMode.CLAMP)
+    val m = android.graphics.ColorMatrix().apply { setSaturation(1.45f) }
+    val lift = android.graphics.ColorMatrix(
+        floatArrayOf(
+            1.06f, 0f, 0f, 0f, 6f,
+            0f, 1.06f, 0f, 0f, 6f,
+            0f, 0f, 1.06f, 0f, 8f,
+            0f, 0f, 0f, 1f, 0f,
+        )
+    )
+    m.postConcat(lift)
+    return AndroidRenderEffect.createColorFilterEffect(android.graphics.ColorMatrixColorFilter(m), blur)
+}
 
 @RequiresApi(33)
 private fun glassEffect(size: Size, radius: Float, rim: Float, bend: Float, frost: Float): AndroidRenderEffect {
-    val blur = AndroidRenderEffect.createBlurEffect(frost.coerceAtLeast(0.1f), frost.coerceAtLeast(0.1f), Shader.TileMode.CLAMP)
-    if (refractBroken) return blur
-    val shader = try { RuntimeShader(REFRACT) } catch (e: Exception) { refractBroken = true; return blur }
+    val base = frosted(frost)
+    if (refractBroken) return base
+    val shader = try { RuntimeShader(REFRACT) } catch (e: Exception) { refractBroken = true; return base }
     shader.setFloatUniform("size", size.width, size.height)
     shader.setFloatUniform("radius", radius.coerceAtMost(minOf(size.width, size.height) / 2f))
     shader.setFloatUniform("rim", rim)
     shader.setFloatUniform("strength", bend)
-    val refract = AndroidRenderEffect.createRuntimeShaderEffect(shader, "content")
-    // Frost first, then bend the frosted view.
-    return AndroidRenderEffect.createChainEffect(refract, blur)
+    shader.setFloatUniform("dispersion", 0.22f)
+    shader.setFloatUniform("spec", 0.1f)
+    // Frost and colour first, then bend the result.
+    return AndroidRenderEffect.createChainEffect(AndroidRenderEffect.createRuntimeShaderEffect(shader, "content"), base)
 }
 
 /**
@@ -140,7 +178,7 @@ fun LiquidGlass(
                             size.minDimension <= 0f -> null
                             Build.VERSION.SDK_INT >= 33 ->
                                 glassEffect(size, r, rim.toPx(), bend.toPx(), frost.toPx()).asComposeRenderEffect()
-                            Build.VERSION.SDK_INT >= 31 -> BlurEffect(frost.toPx() * 1.6f, frost.toPx() * 1.6f, TileMode.Clamp)
+                            Build.VERSION.SDK_INT >= 31 -> frosted(frost.toPx() * 1.6f).asComposeRenderEffect()
                             else -> null
                         }
                     }
@@ -194,37 +232,54 @@ internal fun DrawScope.drawGlassLight(radius: Float, tint: Color) {
 
 private const val LIP = """
 uniform shader content;
+uniform float width;
 uniform float edge;     // where the glass's body ends
-uniform float rim;      // how far above the edge the bending starts
+uniform float rim;      // how far above the edge the bevel starts
 uniform float tail;     // how far below the edge it eases back to straight
 uniform float strength; // how far it pulls, at the edge
+uniform float dispersion;
+uniform float spec;
 
 half4 main(float2 p) {
     float m;
     if (p.y <= edge) {
+        // Convex bevel up to the lip.
         float t = clamp(1.0 - (edge - p.y) / rim, 0.0, 1.0);
-        m = t * t * t;
+        m = 1.0 - sqrt(max(1.0 - t * t, 0.0));
     } else {
+        // Below the lip, ease back to straight as the pane dissolves.
         float t = clamp(1.0 - (p.y - edge) / tail, 0.0, 1.0);
         m = t * t;
     }
-    // Near the bottom edge the view is pulled up from below, like light through a glass lip.
-    return content.eval(float2(p.x, p.y + m * strength));
+    // Light through the lip: the view is pulled up from just below the edge.
+    float dy = m * strength;
+    half4 g = content.eval(float2(p.x, p.y + dy));
+    half r = content.eval(float2(p.x, p.y + dy * (1.0 + dispersion))).r;
+    half b = content.eval(float2(p.x, p.y + dy * (1.0 - dispersion))).b;
+    half4 col = half4(r, g.g, b, g.a);
+    // Soft specular along the lip, brightest towards the light on the left.
+    float lit = 0.45 + 0.55 * (1.0 - clamp(p.x / width, 0.0, 1.0));
+    float shine = spec * m * lit;
+    col.rgb = min(col.rgb + half3(shine) * col.a, half3(1.0));
+    return col;
 }
 """
 
 private var lipBroken = false
 
 @RequiresApi(33)
-private fun lipEffect(edge: Float, rim: Float, tail: Float, bend: Float, frost: Float): AndroidRenderEffect {
-    val blur = AndroidRenderEffect.createBlurEffect(frost, frost, Shader.TileMode.CLAMP)
-    if (lipBroken) return blur
-    val shader = try { RuntimeShader(LIP) } catch (e: Exception) { lipBroken = true; return blur }
+private fun lipEffect(width: Float, edge: Float, rim: Float, tail: Float, bend: Float, frost: Float): AndroidRenderEffect {
+    val base = frosted(frost)
+    if (lipBroken) return base
+    val shader = try { RuntimeShader(LIP) } catch (e: Exception) { lipBroken = true; return base }
+    shader.setFloatUniform("width", width.coerceAtLeast(1f))
     shader.setFloatUniform("edge", edge)
     shader.setFloatUniform("rim", rim)
     shader.setFloatUniform("tail", tail)
     shader.setFloatUniform("strength", bend)
-    return AndroidRenderEffect.createChainEffect(AndroidRenderEffect.createRuntimeShaderEffect(shader, "content"), blur)
+    shader.setFloatUniform("dispersion", 0.3f)
+    shader.setFloatUniform("spec", 0.08f)
+    return AndroidRenderEffect.createChainEffect(AndroidRenderEffect.createRuntimeShaderEffect(shader, "content"), base)
 }
 
 /**
@@ -241,8 +296,8 @@ fun GlassHeader(
     fade: Dp,
     tint: Color,
     modifier: Modifier = Modifier,
-    frost: Dp = 20.dp,
-    bend: Dp = 10.dp,
+    frost: Dp = 16.dp,
+    bend: Dp = 12.dp,
 ) {
     val density = LocalDensity.current
     val fadePx = with(density) { fade.toPx() }
@@ -289,9 +344,9 @@ fun GlassHeader(
                         val f = frost.toPx()
                         val edge = bodyPx()
                         renderEffect = if (Build.VERSION.SDK_INT >= 33) {
-                            lipEffect(edge, 22.dp.toPx(), fadePx, bend.toPx(), f).asComposeRenderEffect()
+                            lipEffect(size.width, edge, 26.dp.toPx(), fadePx, bend.toPx(), f).asComposeRenderEffect()
                         } else {
-                            BlurEffect(f, f, TileMode.Clamp)
+                            frosted(f).asComposeRenderEffect()
                         }
                     }
                     .drawBehind { drawLayer(backdrop) }
@@ -311,16 +366,6 @@ fun GlassHeader(
                             listOf(Color(0x1FFFFFFF), Color.Transparent),
                             center = Offset(size.width * 0.15f, 0f),
                             radius = size.width * 0.7f,
-                        )
-                    )
-                    // A faint glow along the glass's lower lip, soft on both sides (not a line).
-                    val e = h - fadePx
-                    val band = 14.dp.toPx()
-                    drawRect(
-                        Brush.verticalGradient(
-                            ((e - band) / h).coerceIn(0f, 1f) to Color.Transparent,
-                            (e / h).coerceIn(0f, 1f) to Color(0x0DFFFFFF),
-                            ((e + band) / h).coerceIn(0f, 1f) to Color.Transparent,
                         )
                     )
                 }

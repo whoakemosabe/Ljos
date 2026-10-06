@@ -450,7 +450,7 @@ fun LjosApp() {
             }
 
             val headerBodyPx = with(density) { (statusTop + HeaderBody).toPx() }
-            GlassHeader(pageLayer, bodyPx = { headerBodyPx }, fade = HeaderFade, tint = NightBg.copy(alpha = 0.42f))
+            GlassHeader(pageLayer, bodyPx = { headerBodyPx }, fade = HeaderFade, tint = NightBg.copy(alpha = 0.34f))
             PullHint(
                 pullFraction = pullFraction,
                 loading = loading,
