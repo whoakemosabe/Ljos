@@ -121,20 +121,12 @@ half4 main(float2 p) {
 /** Set if a shader ever fails to compile on a phone, so we quietly fall back to frost only. */
 private var refractBroken = false
 
-/** Light frost with Apple-style vibrancy: colours a touch richer and brighter behind the glass. */
+/** Light frost with a hint of vibrancy: colours a touch richer behind the glass, not shifted. */
 @RequiresApi(31)
 private fun frosted(frost: Float): AndroidRenderEffect {
     val blur = AndroidRenderEffect.createBlurEffect(frost.coerceAtLeast(0.1f), frost.coerceAtLeast(0.1f), Shader.TileMode.CLAMP)
-    val m = android.graphics.ColorMatrix().apply { setSaturation(1.45f) }
-    val lift = android.graphics.ColorMatrix(
-        floatArrayOf(
-            1.06f, 0f, 0f, 0f, 6f,
-            0f, 1.06f, 0f, 0f, 6f,
-            0f, 0f, 1.06f, 0f, 8f,
-            0f, 0f, 0f, 1f, 0f,
-        )
-    )
-    m.postConcat(lift)
+    // Only a touch richer, so colours behind the glass stay true as they slide under it.
+    val m = android.graphics.ColorMatrix().apply { setSaturation(1.12f) }
     return AndroidRenderEffect.createColorFilterEffect(android.graphics.ColorMatrixColorFilter(m), blur)
 }
 
@@ -261,8 +253,6 @@ uniform float bevel;     // radius of the rounded lip
 uniform float depth;     // glass thickness the light travels through
 uniform float tail;      // below the edge, the pane dissolves over this
 uniform float3 ior;      // index of refraction for red, green, blue
-uniform float light;     // 0..1 across the width: where the light catches the lip
-uniform float spec;
 uniform float dimBase;
 uniform float dimBright;
 
@@ -301,16 +291,11 @@ half4 main(float2 p) {
     half b = content.eval(float2(p.x, p.y + db)).b;
     half4 col = half4(r, g.g, b, g.a);
 
-    // Adaptive dimming: tone down what's bright behind the glass so the title stays readable.
+    // Adaptive dimming, gentle: only really bright things behind are toned down, so the title
+    // stays readable without the glass going dark or shifting colours.
     float lum = dot(float3(col.rgb), float3(0.2126, 0.7152, 0.0722));
-    float dim = dimBase + dimBright * smoothstep(0.18, 0.75, lum);
+    float dim = dimBase + dimBright * smoothstep(0.35, 0.85, lum);
     col.rgb *= half(1.0 - dim);
-
-    // The curved lip catches the light; where along the edge depends on the phone's tilt.
-    float fres = pow(sin(theta), 3.0) * ease;
-    float d = p.x / width - light;
-    float lit = 0.25 + 0.75 * exp(-d * d / 0.06);
-    col.rgb = min(col.rgb + half3(spec * fres * lit) * col.a, half3(1.0));
     return col;
 }
 """
@@ -320,47 +305,52 @@ half4 main(float2 p) {
 private class LipShader {
     private val shader = RuntimeShader(LIP)
 
-    fun effect(width: Float, edge: Float, bevel: Float, depth: Float, tail: Float, light: Float, frost: Float): AndroidRenderEffect {
+    fun effect(width: Float, edge: Float, bevel: Float, depth: Float, tail: Float, frost: Float): AndroidRenderEffect {
         shader.setFloatUniform("width", width.coerceAtLeast(1f))
         shader.setFloatUniform("edge", edge)
         shader.setFloatUniform("bevel", bevel)
         shader.setFloatUniform("depth", depth)
         shader.setFloatUniform("tail", tail.coerceAtLeast(1f))
         shader.setFloatUniform("ior", 1.48f, 1.50f, 1.53f)
-        shader.setFloatUniform("light", light)
-        shader.setFloatUniform("spec", 0.22f)
-        shader.setFloatUniform("dimBase", 0.10f)
-        shader.setFloatUniform("dimBright", 0.38f)
-        // Frost and colour first, then refract, dim and light the result.
+        shader.setFloatUniform("dimBase", 0.0f)
+        shader.setFloatUniform("dimBright", 0.16f)
+        // Frost and colour first, then refract and dim the result.
         return AndroidRenderEffect.createChainEffect(AndroidRenderEffect.createRuntimeShaderEffect(shader, "content"), frosted(frost))
     }
 }
 
 /**
- * Where along the glass's edge the light catches it, 0 (left) to 1 (right). Follows the phone's
- * tilt like a real reflection: level, it sits top left; roll the phone and it slides across.
- * The sensor only runs while the app is in front.
+ * Where light glints on the glass, as fractions of its width and height. Follows the phone's
+ * tilt like a real reflection: held normally it sits top left; roll the phone left or right and it
+ * slides across, tip it towards or away from you and it moves down or up. The sensor only runs
+ * while the app is in front.
  */
 @Composable
-private fun rememberTiltLight(): State<Float> {
+private fun rememberTiltLight(): State<Offset> {
     val context = LocalContext.current
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    val light = remember { mutableFloatStateOf(0.25f) }
+    val light = remember { mutableStateOf(Offset(0.3f, 0.2f)) }
     DisposableEffect(lifecycle) {
         val sm = context.getSystemService(SensorManager::class.java)
         val sensor = sm?.getDefaultSensor(Sensor.TYPE_GRAVITY) ?: sm?.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
-        var smooth = 0.25f
+        var sx = 0.3f
+        var sy = 0.2f
         val listener = object : SensorEventListener {
             override fun onSensorChanged(e: SensorEvent) {
-                val target = (0.25f - e.values[0] / 9.81f * 0.9f).coerceIn(0f, 1f)
-                smooth += (target - smooth) * 0.18f
-                if (kotlin.math.abs(smooth - light.floatValue) > 0.004f) light.floatValue = smooth
+                val g = 9.81f
+                // x: roll (gravity across the screen); y: pitch (gravity into the screen).
+                val tx = (0.3f - e.values[0] / g * 1.4f).coerceIn(-0.1f, 1.1f)
+                val ty = (0.2f + (e.values[2] / g - 0.55f) * 1.6f).coerceIn(-0.2f, 1.2f)
+                sx += (tx - sx) * 0.2f
+                sy += (ty - sy) * 0.2f
+                val cur = light.value
+                if (kotlin.math.abs(sx - cur.x) > 0.003f || kotlin.math.abs(sy - cur.y) > 0.003f) light.value = Offset(sx, sy)
             }
             override fun onAccuracyChanged(s: Sensor?, accuracy: Int) {}
         }
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_RESUME -> if (sensor != null) sm.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_UI)
+                Lifecycle.Event.ON_RESUME -> if (sensor != null) sm.registerListener(listener, sensor, SensorManager.SENSOR_DELAY_GAME)
                 Lifecycle.Event.ON_PAUSE -> sm?.unregisterListener(listener)
                 else -> {}
             }
@@ -389,9 +379,9 @@ fun GlassHeader(
     tint: Color,
     modifier: Modifier = Modifier,
     visible: () -> Float = { 1f },
-    frost: Dp = 5.dp,
-    bevel: Dp = 14.dp,
-    depth: Dp = 9.dp,
+    frost: Dp = 6.dp,
+    bevel: Dp = 16.dp,
+    depth: Dp = 7.dp,
 ) {
     val density = LocalDensity.current
     val fadePx = with(density) { fade.toPx() }
@@ -401,9 +391,9 @@ fun GlassHeader(
             try { LipShader() } catch (e: Exception) { lipBroken = true; null }
         } else null
     }
-    val light = if (lip != null) rememberTiltLight() else null
-    // With the shader, a whisper of tint just for the status bar; without it, the full tint.
-    val shownTint = if (lip != null) tint.copy(alpha = tint.alpha * 0.35f) else tint
+    val light = rememberTiltLight()
+    // With the shader, just a whisper of tint for the status bar; without it, the full tint.
+    val shownTint = if (lip != null) tint.copy(alpha = tint.alpha * 0.22f) else tint
     Box(
         modifier
             .fillMaxWidth()
@@ -450,7 +440,7 @@ fun GlassHeader(
                         renderEffect = if (Build.VERSION.SDK_INT >= 33 && lip is LipShader) {
                             lip.effect(
                                 width = size.width, edge = bodyPx() - bevel.toPx() * 0.5f, bevel = bevel.toPx(),
-                                depth = depth.toPx(), tail = fadePx, light = light?.value ?: 0.25f, frost = f,
+                                depth = depth.toPx(), tail = fadePx, frost = f,
                             ).asComposeRenderEffect()
                         } else {
                             frosted(f * 2f).asComposeRenderEffect()
@@ -466,6 +456,30 @@ fun GlassHeader(
                     val h = size.height
                     val k = ((h - fadePx) / h).coerceIn(0f, 1f)
                     drawRect(Brush.verticalGradient(0f to shownTint, k to shownTint.copy(alpha = shownTint.alpha * 0.6f), 1f to Color.Transparent))
+                    // A broad, soft glint that moves as you tilt the phone, like light sliding
+                    // across a sheet of glass. Wide and faint, so it reads as glass, not as a spot.
+                    val l = light.value
+                    val c = Offset(size.width * l.x, k * h * l.y)
+                    drawRect(
+                        Brush.radialGradient(
+                            0f to Color.White.copy(alpha = 0.13f),
+                            0.45f to Color.White.copy(alpha = 0.05f),
+                            1f to Color.Transparent,
+                            center = c,
+                            radius = size.width * 0.62f,
+                        )
+                    )
+                    // A slimmer streak across it, angled like a reflection.
+                    val streakX = size.width * (l.x + 0.18f)
+                    drawRect(
+                        Brush.linearGradient(
+                            0f to Color.Transparent,
+                            0.5f to Color.White.copy(alpha = 0.07f),
+                            1f to Color.Transparent,
+                            start = Offset(streakX - 40.dp.toPx(), 0f),
+                            end = Offset(streakX + 40.dp.toPx(), 26.dp.toPx()),
+                        )
+                    )
                 }
         )
     }

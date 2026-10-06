@@ -129,12 +129,15 @@ import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
 // Header: one pane of liquid glass across the top, measured down from the bottom of the status bar.
-private val HeaderPadTop = 6.dp
+private val HeaderPadTop = 14.dp
 private val HeaderRow = 40.dp
-private val HeaderBody = 54.dp      // the glass's body: 6 + 40 row + 8
-private val HeaderFade = 32.dp      // then it dissolves over this
-// The page starts where the glass has fully dissolved, so nothing is frosted at rest.
-private val PageTop = HeaderBody + HeaderFade
+private val HeaderBody = 74.dp      // the glass's body: 14 + 40 row + 20 of clear glass below it
+private val HeaderFade = 28.dp      // then it dissolves over this
+// The glass is invisible at the top of the page, so the page can start just under the title.
+private val PageTop = 92.dp
+private val HeaderTextShadow = androidx.compose.ui.text.TextStyle(
+    shadow = androidx.compose.ui.graphics.Shadow(Color(0xB3000000), blurRadius = 18f),
+)
 
 @Composable
 fun LjosApp() {
@@ -578,12 +581,14 @@ private fun Header(
                 },
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("Ljós", color = Ink, fontSize = 20.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
+            // A soft shadow behind the header text (as iOS does on its glass bars) keeps it
+            // readable over bright things sliding under the clear glass, without darkening it.
+            Text("Ljós", color = Ink, fontSize = 20.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp, style = HeaderTextShadow)
             Spacer(Modifier.width(12.dp))
             PinIcon(Modifier.size(width = 10.dp, height = 13.dp))
             Spacer(Modifier.width(6.dp))
             Text(
-                placeName, maxLines = 1, fontSize = 13.sp, color = Ink.copy(alpha = 0.8f),
+                placeName, maxLines = 1, fontSize = 13.sp, color = Ink.copy(alpha = 0.85f), style = HeaderTextShadow,
                 overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
                 modifier = Modifier.weight(1f, fill = false),
             )
