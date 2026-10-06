@@ -606,7 +606,7 @@ private fun Header(
         Spacer(Modifier.width(10.dp))
         // The place, in a liquid-glass pill. Tap for settings. Once the hero has scrolled away
         // the score flies in and the pill grows to hold it.
-        Box(Modifier.weight(3f, fill = false)) {
+        Box(Modifier.widthIn(max = 200.dp)) {
             Row(
                 Modifier
                     .glassControl(backdrop, CircleShape, angle)
@@ -627,6 +627,7 @@ private fun Header(
                 if (score != null) ScoreSlot(score, scoreMorph, onPillTarget)
             }
         }
+        // All the free space goes here, so the buttons sit hard right.
         Spacer(Modifier.weight(1f).widthIn(min = 10.dp))
         GlassButton(backdrop, angle, onClick = onRefresh, enabled = !loading) {
             if (loading) CircularProgressIndicator(Modifier.size(16.dp), color = Ink, strokeWidth = 2.dp)

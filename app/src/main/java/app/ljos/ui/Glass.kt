@@ -160,7 +160,26 @@ fun GlassHeader(
                         val h = size.height
                         val k = ((h - fadePx) / h).coerceIn(0f, 1f)
                         drawRect(Brush.verticalGradient(0f to shownTint, k to shownTint.copy(alpha = shownTint.alpha * 0.6f), 1f to Color.Transparent))
-                        if (glass) drawGlint(light.value, k, margin.toFloat())
+                        if (glass) {
+                            // The glint fades out with the pane: drawn in its own layer, then
+                            // masked by the same dissolve, so it can't be cut off at the bottom.
+                            val canvas = drawContext.canvas
+                            canvas.saveLayer(androidx.compose.ui.geometry.Rect(Offset.Zero, size), androidx.compose.ui.graphics.Paint())
+                            drawGlint(light.value, k, margin.toFloat())
+                            fun at(x: Float) = k + (1f - k) * x
+                            drawRect(
+                                Brush.verticalGradient(
+                                    0f to Color.Black,
+                                    k to Color.Black,
+                                    at(0.25f) to Color.Black.copy(alpha = 0.56f),
+                                    at(0.5f) to Color.Black.copy(alpha = 0.25f),
+                                    at(0.75f) to Color.Black.copy(alpha = 0.06f),
+                                    1f to Color.Transparent,
+                                ),
+                                blendMode = androidx.compose.ui.graphics.BlendMode.DstIn,
+                            )
+                            canvas.restore()
+                        }
                     },
                 )
         )
