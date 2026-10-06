@@ -7,6 +7,9 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animate
+import androidx.compose.runtime.mutableFloatStateOf
+import app.ljos.model.Night
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
@@ -135,6 +138,7 @@ fun LjosApp() {
     var errors by remember { mutableStateOf<List<String>>(emptyList()) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var selected by remember { mutableStateOf<Long?>(null) }
+    var pullPx by remember { mutableFloatStateOf(0f) }
     var home by remember { mutableStateOf(prefs.home) }
     var detecting by remember { mutableStateOf(false) }
     val scroll = rememberScrollState()
@@ -247,6 +251,45 @@ fun LjosApp() {
             }
         }
         val openness: () -> Float = { 1f - sheet.value }
+
+        // Pull-to-refresh: pulling past the top stretches the aurora; release past the line refreshes.
+        val pullLine = with(density) { 110.dp.toPx() }
+        val pullFraction: () -> Float = { pullPx / pullLine }
+        val pullConnection = remember(pullLine) {
+            object : NestedScrollConnection {
+                override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                    if (available.y < 0 && pullPx > 0f) {
+                        val used = maxOf(available.y, -pullPx)
+                        pullPx += used
+                        return Offset(0f, used)
+                    }
+                    return Offset.Zero
+                }
+
+                override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+                    if (available.y > 0 && source == NestedScrollSource.UserInput) {
+                        val before = pullPx
+                        // Rubber band: each pixel counts for less the further you've pulled.
+                        val resistance = 0.5f * (1f - (pullPx / (pullLine * 1.6f))).coerceIn(0.05f, 1f)
+                        pullPx = (pullPx + available.y * resistance).coerceAtMost(pullLine * 1.5f)
+                        if (before < pullLine && pullPx >= pullLine) Haptics.segment(view)
+                        return Offset(0f, available.y)
+                    }
+                    return Offset.Zero
+                }
+
+                override suspend fun onPreFling(available: Velocity): Velocity {
+                    if (pullPx <= 0f) return Velocity.Zero
+                    if (pullPx >= pullLine && !loading) {
+                        Haptics.settle(view)
+                        scope.launch { reload(true) }
+                    }
+                    animate(pullPx, 0f, animationSpec = spring(dampingRatio = 0.62f, stiffness = 260f)) { v, _ -> pullPx = v }
+                    return available
+                }
+            }
+        }
+        val skyState: SkyState? = if (L.liveSky) sel?.let { h -> skyFor(h, night) } else null
         val sheetVisible by remember { derivedStateOf { sheet.value < 0.999f } }
 
         // A soft bump when the score lands in the header.
@@ -270,10 +313,12 @@ fun LjosApp() {
                 }
         ) {
             Box(Modifier.fillMaxSize().backdropSource(pageLayer)) {
-                AuroraBackground(intensity, Modifier.fillMaxSize())
+                AuroraBackground(intensity, Modifier.fillMaxSize(), sky = skyState, pull = { pullFraction().coerceIn(0f, 1.4f) })
                 Column(
                     Modifier
                         .fillMaxSize()
+                        .graphicsLayer { translationY = pullPx * 0.55f }
+                        .nestedScroll(pullConnection)
                         .verticalScroll(scroll)
                         .windowInsetsPadding(WindowInsets.navigationBars)
                         .padding(top = statusTop + HeaderExpanded + 8.dp)
@@ -282,6 +327,9 @@ fun LjosApp() {
                 ) {
                     Hero(
                         night, inp, loading,
+                        now = now,
+                        moon = moon,
+                        onScrub = { t -> selected = t },
                         scoreAlpha = { if (scoreMorph() > 0f) 0f else 1f },
                         // Store the position as if unscrolled: identical every frame, so no recomposition.
                         onScorePlaced = { pos, size -> heroBase = pos + Offset(0f, scroll.value.toFloat()); heroSize = size },
@@ -316,13 +364,14 @@ fun LjosApp() {
                 onRefresh = { scope.launch { reload(true) } },
                 onSettings = { openSheet() },
                 onPillTarget = { pillTarget = it },
+                pull = pullFraction,
             )
 
             // The big number itself, flying from the hero into the header pill. Always composed;
             // position, size, colour and visibility are all applied on the GPU per frame.
             val peakScore = night?.peak?.score
             if (peakScore != null) {
-                val endScale = with(density) { 15.sp.toPx() / 120.sp.toPx() } * 1.25f
+                val endScale = with(density) { 15.sp.toPx() / HeroScoreStyle.fontSize.toPx() } * 1.25f
                 val flight: GraphicsLayerScope.(Boolean) -> Unit = { coloured ->
                     val m = scoreMorph()
                     if (m <= 0f || !heroBase.isSpecified || !pillTarget.isSpecified) {
@@ -404,6 +453,7 @@ private fun Header(
     onRefresh: () -> Unit,
     onSettings: () -> Unit,
     onPillTarget: (Offset) -> Unit,
+    pull: () -> Float = { 0f },
 ) {
     val density = LocalDensity.current
     var titleW by remember { mutableIntStateOf(0) }
@@ -433,7 +483,7 @@ private fun Header(
             Spacer(Modifier.weight(1f))
             RoundButton(onClick = onRefresh, enabled = !loading) {
                 if (loading) CircularProgressIndicator(Modifier.size(16.dp), color = Ink, strokeWidth = 2.dp)
-                else Text("↻", color = Ink, fontSize = 18.sp)
+                else Text("↻", color = Ink, fontSize = 18.sp, modifier = Modifier.graphicsLayer { rotationZ = pull().coerceIn(0f, 1.5f) * 300f })
             }
             Spacer(Modifier.width(8.dp))
             RoundButton(onClick = onSettings) { TuneIcon() }
@@ -653,3 +703,20 @@ private fun PinIcon(modifier: Modifier) {
     }
 }
 
+
+/** Live-sky conditions for one hour. Moon height follows its altitude; it drifts across the night. */
+private fun skyFor(h: HourScore, night: Night?): SkyState {
+    val hours = night?.hours.orEmpty()
+    val frac = if (hours.size > 1) {
+        ((h.time - hours.first().time).toFloat() / (hours.last().time - hours.first().time)).coerceIn(0f, 1f)
+    } else 0.5f
+    return SkyState(
+        activity = h.factors.activity.toFloat(),
+        cloud = (h.cloud.coerceAtLeast(0) / 100f),
+        moonIllum = h.moonIllum.toFloat(),
+        moonUp = if (h.moonAlt > 0) 1f else 0f,
+        moonX = 0.15f + 0.7f * frac,
+        moonY = 0.32f - (h.moonAlt.coerceIn(0.0, 40.0) / 40.0).toFloat() * 0.22f,
+        storm = ((h.kp - 4.5) / 2.0).coerceIn(0.0, 1.0).toFloat(),
+    )
+}

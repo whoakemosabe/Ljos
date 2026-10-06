@@ -132,79 +132,9 @@ internal fun SettingsContent(
     }
 }
 
-/** Dark OpenStreetMap tiles with your pin and the comparison spots. */
+/** Settings uses the shared map: your pin plus the comparison spots, no scores. */
 @Composable
-private fun SpotsMap(home: Spot, spots: List<Spot>, modifier: Modifier) {
-    val context = LocalContext.current
-    val shape = RoundedCornerShape(18.dp)
-    BoxWithConstraints(
-        modifier
-            .clip(shape)
-            .background(Color(0xFF0A1322))
-            .border(1.dp, Color(0x1FFFFFFF), shape)
-    ) {
-        val wDp = maxWidth.value
-        val hDp = maxHeight.value
-        val radiusKm = spots.maxOf { Geo.km(home.lat, home.lon, it.lat, it.lon) }.coerceAtLeast(8.0)
-        val zoom = remember(home.lat, radiusKm, hDp) { MapTiles.zoomFor(home.lat, radiusKm, hDp / 2f) }
-        var tiles by remember { mutableStateOf<List<MapTiles.Tile>>(emptyList()) }
-        LaunchedEffect(home.lat, home.lon, zoom, wDp, hDp) {
-            tiles = MapTiles.load(context, home.lat, home.lon, zoom, wDp, hDp)
-        }
-        val fade by animateFloatAsState(if (tiles.isEmpty()) 0f else 1f, tween(700), label = "tiles")
-        val images = remember(tiles) { tiles.map { it to it.bitmap.asImageBitmap() } }
-
-        Canvas(Modifier.fillMaxSize()) {
-            val px = size.width / wDp
-            val (cx, cy) = MapTiles.project(home.lat, home.lon, zoom)
-            fun toScreen(wx: Double, wy: Double) = Offset(
-                ((wx - (cx - wDp / 2)) * px).toFloat(),
-                ((wy - (cy - hDp / 2)) * px).toFloat(),
-            )
-            images.forEach { (t, img) ->
-                val tw = 256.0 / (1 shl (t.zoom - zoom))
-                val o = toScreen(t.x * tw, t.y * tw)
-                val side = (tw * px).roundToInt() + 1
-                drawImage(
-                    img,
-                    dstOffset = IntOffset(o.x.roundToInt(), o.y.roundToInt()),
-                    dstSize = IntSize(side, side),
-                    alpha = fade,
-                    filterQuality = FilterQuality.Medium,
-                )
-            }
-            // Cool night tint so the map sits inside the app's palette
-            drawRect(Color(0x260A1A3A))
-            drawRect(Brush.radialGradient(listOf(Color.Transparent, Color(0x99050812)), radius = size.maxDimension * 0.75f))
-
-            spots.drop(1).forEach { s ->
-                val (wx, wy) = MapTiles.project(s.lat, s.lon, zoom)
-                val p = toScreen(wx, wy)
-                drawCircle(Teal.copy(alpha = 0.22f), 9.dp.toPx(), p)
-                drawCircle(Teal, 3.5.dp.toPx(), p)
-                drawCircle(Color(0xFF0A1322), 1.4.dp.toPx(), p)
-            }
-            val c = Offset(size.width / 2f, size.height / 2f)
-            drawCircle(Green.copy(alpha = 0.16f), 26.dp.toPx(), c)
-            drawCircle(Green.copy(alpha = 0.10f), 14.dp.toPx(), c)
-            val head = c + Offset(0f, -15.dp.toPx())
-            val pin = androidx.compose.ui.graphics.Path().apply {
-                moveTo(c.x, c.y)
-                lineTo(head.x - 7.5.dp.toPx(), head.y + 3.dp.toPx())
-                lineTo(head.x + 7.5.dp.toPx(), head.y + 3.dp.toPx())
-                close()
-            }
-            drawCircle(Color(0x66000000), 3.dp.toPx(), c + Offset(0f, 1.dp.toPx()))
-            drawPath(pin, Green)
-            drawCircle(Green, 8.5.dp.toPx(), head)
-            drawCircle(Color(0xFF0A1322), 3.2.dp.toPx(), head)
-        }
-        Text(
-            MapTiles.attribution, color = Color(0x80E8F1FF), fontSize = 9.sp,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(6.dp),
-        )
-    }
-}
+private fun SpotsMap(home: Spot, spots: List<Spot>, modifier: Modifier) = SpotMap(home, spots, modifier)
 
 @Composable
 private fun AlertSettings() {
@@ -562,6 +492,15 @@ private fun DisplaySettings() {
     SegmentRow(L.t("Distance", "Fjarlægð"), listOf("km", "mi"), if (L.miles) 1 else 0) {
         L.miles = it == 1; prefs.miles = L.miles; changed()
     }
+    SegmentRow(L.t("Sky", "Himinn"), listOf(L.t("Calm", "Rólegur"), L.t("Live", "Lifandi")), if (L.liveSky) 1 else 0) {
+        L.liveSky = it == 1; prefs.liveSky = L.liveSky
+    }
+    Text(
+        if (L.liveSky) L.t("The background shows the forecast: aurora strength, clouds as fog and the real moon.",
+            "Bakgrunnurinn sýnir spána: styrk norðurljósa, ský sem þoku og raunverulegt tungl.")
+        else L.t("A gentle aurora that brightens with tonight's score.", "Mild norðurljós sem lýsast með einkunn kvöldsins."),
+        color = Faint, fontSize = 12.sp, modifier = Modifier.padding(bottom = 4.dp),
+    )
 }
 
 @Composable

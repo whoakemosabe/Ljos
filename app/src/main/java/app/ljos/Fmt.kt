@@ -19,6 +19,8 @@ object L {
     var icelandic by mutableStateOf(false)
     var clock24 by mutableStateOf(true)
     var miles by mutableStateOf(false)
+    /** Background sky: calm (default) or live, drawn from the forecast. */
+    var liveSky by mutableStateOf(false)
 
     /** Picks the English or Icelandic text. */
     fun t(en: String, isl: String): String = if (icelandic) isl else en
@@ -28,6 +30,7 @@ object L {
         icelandic = p.icelandic
         clock24 = p.clock24
         miles = p.miles
+        liveSky = p.liveSky
     }
 }
 

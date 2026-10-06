@@ -100,4 +100,8 @@ class Prefs(context: Context) {
     var onboarded: Boolean
         get() = p.getBoolean("onboarded", false)
         set(v) = p.edit().putBoolean("onboarded", v).apply()
+
+    var liveSky: Boolean
+        get() = p.getBoolean("live_sky", false)
+        set(v) = p.edit().putBoolean("live_sky", v).apply()
 }

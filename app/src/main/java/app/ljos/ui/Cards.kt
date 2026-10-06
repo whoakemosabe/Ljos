@@ -14,6 +14,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.clickable
+import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.material3.Text
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
@@ -38,6 +44,9 @@ import app.ljos.Fmt
 import app.ljos.L
 import app.ljos.data.Inputs
 import app.ljos.model.HourScore
+import app.ljos.model.MoonTimeline
+import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.widthIn
 import app.ljos.model.Model
 import app.ljos.model.Night
 import app.ljos.model.NowState
@@ -47,45 +56,82 @@ import kotlin.math.roundToInt
 internal val Glow = Shadow(color = Color(0x99000000), blurRadius = 24f)
 
 internal val HeroScoreStyle: TextStyle = TextStyle(
-    color = Color.White, fontSize = 120.sp, fontWeight = FontWeight.ExtraLight,
-    lineHeight = 124.sp, shadow = Glow,
+    color = Color.White, fontSize = 84.sp, fontWeight = FontWeight.ExtraLight,
+    lineHeight = 88.sp, shadow = Glow,
 )
 
+/**
+ * Tonight at a glance. With dark hours, a night dial (drag the ring to explore, release to snap
+ * back) wraps the score; otherwise just the headline.
+ */
 @Composable
 internal fun Hero(
     night: Night?,
     inp: Inputs?,
     loading: Boolean,
+    now: Long = System.currentTimeMillis(),
+    moon: MoonTimeline? = null,
+    onScrub: (Long?) -> Unit = {},
     scoreAlpha: () -> Float = { 1f },
     onScorePlaced: (Offset, IntSize) -> Unit = { _, _ -> },
 ) {
     val peak = night?.peak
     val shown by animateIntAsState(peak?.score ?: 0, tween(1200), label = "score")
-    Column(Modifier.fillMaxWidth().padding(top = 28.dp, bottom = 18.dp)) {
-        Text(L.t("TONIGHT", "Í KVÖLD"), color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 3.sp)
-        Text(
-            if (peak != null) shown.toString() else "—",
-            style = HeroScoreStyle,
-            modifier = Modifier
-                .onGloballyPositioned { onScorePlaced(it.positionInRoot(), it.size) }
-                .graphicsLayer { alpha = if (peak != null) scoreAlpha() else 1f },
-        )
-        val headline = when {
-            peak != null -> Model.label(peak.score)
-            night != null -> L.t("Too bright for aurora", "Of bjart fyrir norðurljós")
-            inp == null || inp.isEmpty -> if (loading) L.t("Reading the sky…", "Les himininn…") else L.t("No data yet — tap ↻", "Engin gögn enn — ýttu á ↻")
-            else -> "—"
-        }
-        Text(headline, style = TextStyle(color = Ink, fontSize = 26.sp, fontWeight = FontWeight.Light, shadow = Glow))
-        if (peak != null) {
-            Spacer(Modifier.height(6.dp))
+    Column(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 14.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        if (night != null && night.hours.isNotEmpty() && peak != null) {
+            NightDial(
+                hours = night.hours,
+                moon = moon,
+                now = now,
+                onScrub = onScrub,
+                modifier = Modifier.widthIn(max = 360.dp).fillMaxWidth().aspectRatio(1f),
+            ) { scrubbed ->
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        if (scrubbed == null) L.t("TONIGHT", "Í KVÖLD") else L.t("AT ", "KL. ") + Fmt.hhmm(scrubbed.time),
+                        color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Medium, letterSpacing = 3.sp,
+                    )
+                    val value = scrubbed?.score ?: shown
+                    Text(
+                        value.toString(),
+                        style = HeroScoreStyle.copy(color = if (scrubbed == null) Color.White else scoreColor(value)),
+                        modifier = Modifier
+                            .onGloballyPositioned { onScorePlaced(it.positionInRoot(), it.size) }
+                            .graphicsLayer { alpha = if (scrubbed == null) scoreAlpha() else 1f },
+                    )
+                    Text(
+                        Model.label(scrubbed?.score ?: peak.score),
+                        style = TextStyle(color = Ink, fontSize = 18.sp, fontWeight = FontWeight.Light, shadow = Glow),
+                    )
+                    if (scrubbed != null) {
+                        Text(
+                            "Kp ${Fmt.one(scrubbed.kp)} · ${Fmt.cloud(scrubbed.cloud)}",
+                            color = Faint, fontSize = 12.sp, modifier = Modifier.padding(top = 2.dp),
+                        )
+                    }
+                }
+            }
+            Spacer(Modifier.height(4.dp))
             Text(
                 L.t("Peak around ", "Hámark um ") + "${Fmt.hhmm(peak.time)} · Kp ${Fmt.one(peak.kp)} · ${Fmt.cloud(peak.cloud)}",
                 color = Muted, fontSize = 14.sp,
             )
-        }
-        if (night?.darkFrom != null && night.darkUntil != null) {
-            Text(L.t("Dark ", "Myrkur ") + "${Fmt.hhmm(night.darkFrom)}–${Fmt.hhmm(night.darkUntil)}", color = Faint, fontSize = 13.sp)
+            if (night.darkFrom != null && night.darkUntil != null) {
+                Text(
+                    L.t("Dark ", "Myrkur ") + "${Fmt.hhmm(night.darkFrom)}–${Fmt.hhmm(night.darkUntil)} · " +
+                        L.t("drag the ring to explore", "dragðu hringinn til að skoða"),
+                    color = Faint, fontSize = 12.sp,
+                )
+            }
+        } else {
+            val headline = when {
+                night != null -> L.t("Too bright for aurora", "Of bjart fyrir norðurljós")
+                inp == null || inp.isEmpty -> if (loading) L.t("Reading the sky…", "Les himininn…") else L.t("No data yet — tap ↻", "Engin gögn enn — ýttu á ↻")
+                else -> "—"
+            }
+            Spacer(Modifier.height(60.dp))
+            Text(headline, style = TextStyle(color = Ink, fontSize = 26.sp, fontWeight = FontWeight.Light, shadow = Glow))
+            Spacer(Modifier.height(60.dp))
         }
     }
 }
@@ -200,49 +246,73 @@ internal fun FactorRow(name: String, value: String, f: Double, last: Boolean = f
 internal fun WhereCard(spots: List<SpotScore>, sel: HourScore) {
     val context = LocalContext.current
     val view = LocalView.current
+    val home = spots.firstOrNull { it.spot.id == "home" } ?: spots.first()
+    val best = spots.firstOrNull { it.score > 0 && it.spot.id != "home" }
+    var picked by remember(sel.time) { mutableStateOf(best?.spot?.id) }
+    val pickedSpot = spots.firstOrNull { it.spot.id == picked }
+
     Column(Modifier.glass()) {
         CardTitle(
             L.t("Where to go at ", "Hvert á að fara kl. ") + Fmt.hhmm(sel.time),
-            L.t("Tap a place for directions", "Ýttu á stað til að fá leiðsögn"),
+            L.t("Tap a pin or a place", "Ýttu á pinna eða stað"),
         )
-        Spacer(Modifier.height(6.dp))
-        spots.forEachIndexed { i, s ->
-            val best = i == 0 && s.score > 0
-            val here = s.distanceKm < 1
+        Spacer(Modifier.height(12.dp))
+        SpotMap(
+            home = home.spot,
+            spots = listOf(home.spot) + spots.filter { it !== home }.map { it.spot },
+            modifier = Modifier.fillMaxWidth().height(200.dp),
+            scores = spots.associate { it.spot.id to it.score },
+            bestId = best?.spot?.id,
+            selectedId = picked,
+            onSelect = { picked = it.id },
+        )
+        // Selected pin: score, drive time and a Directions button.
+        androidx.compose.animation.AnimatedContent(
+            targetState = pickedSpot,
+            transitionSpec = {
+                (androidx.compose.animation.fadeIn(tween(220)) + androidx.compose.animation.slideInVertically { it / 4 }) togetherWith
+                    androidx.compose.animation.fadeOut(tween(160))
+            },
+            label = "picked",
+        ) { s ->
+            if (s != null) {
+                Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Column(Modifier.weight(1f)) {
+                        Text(s.spot.name, color = Ink, fontSize = 16.sp)
+                        Text(
+                            L.t("≈ ${driveMinutes(s.distanceKm)} min drive · ", "≈ ${driveMinutes(s.distanceKm)} mín akstur · ") +
+                                Fmt.distance(s.distanceKm) + " · " + Fmt.cloud(s.cloud),
+                            color = Faint, fontSize = 12.sp,
+                        )
+                    }
+                    Text(s.score.toString(), color = scoreColor(s.score), fontSize = 24.sp, fontWeight = FontWeight.Light)
+                    Spacer(Modifier.width(10.dp))
+                    Pill(L.t("Go", "Fara"), primary = true) { openDirections(context, s.spot.lat, s.spot.lon, s.spot.name) }
+                }
+            }
+        }
+        Spacer(Modifier.height(8.dp))
+        spots.forEach { s ->
+            val here = s.spot.id == "home" || s.distanceKm < 1
+            val isPicked = s.spot.id == picked
             Row(
                 Modifier
                     .fillMaxWidth()
-                    .clip(RoundedCornerShape(14.dp))
-                    .then(
-                        if (here) Modifier else Modifier.clickable {
-                            Haptics.tap(view)
-                            openDirections(context, s.spot.lat, s.spot.lon, s.spot.name)
-                        }
-                    )
-                    .padding(vertical = 9.dp, horizontal = 4.dp),
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(if (isPicked) Color(0x0FFFFFFF) else Color.Transparent)
+                    .then(if (here) Modifier else Modifier.clickable { Haptics.tap(view); picked = s.spot.id })
+                    .padding(vertical = 8.dp, horizontal = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Column(Modifier.weight(1f)) {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Text(s.spot.name, color = Ink, fontSize = 15.sp)
-                        if (best) {
-                            Spacer(Modifier.width(8.dp))
-                            Text(
-                                L.t("BEST", "BEST"),
-                                color = Color(0xFF03130B), fontSize = 10.sp, fontWeight = FontWeight.Bold,
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(6.dp))
-                                    .background(Green)
-                                    .padding(horizontal = 6.dp, vertical = 2.dp),
-                            )
-                        }
-                    }
-                    val where = if (here) L.t("you're here", "þú ert hér")
-                    else L.t("≈ ${driveMinutes(s.distanceKm)} min drive · ", "≈ ${driveMinutes(s.distanceKm)} mín akstur · ") + Fmt.distance(s.distanceKm)
-                    Text("$where · ${Fmt.cloud(s.cloud)}", color = Faint, fontSize = 12.sp)
-                }
-                Text(s.score.toString(), color = scoreColor(s.score).copy(alpha = 0.95f), fontSize = 22.sp, fontWeight = FontWeight.Light)
-                if (!here) Text("  ›", color = Faint, fontSize = 18.sp)
+                Box(Modifier.size(8.dp).clip(CircleShape).background(scoreColor(s.score)))
+                Spacer(Modifier.width(10.dp))
+                Text(s.spot.name, color = Ink, fontSize = 14.sp, modifier = Modifier.weight(1f))
+                Text(
+                    if (here) L.t("you're here", "þú ert hér") else Fmt.distance(s.distanceKm),
+                    color = Faint, fontSize = 12.sp,
+                )
+                Spacer(Modifier.width(12.dp))
+                Text(s.score.toString(), color = scoreColor(s.score), fontSize = 16.sp, fontWeight = FontWeight.Light)
             }
         }
     }
