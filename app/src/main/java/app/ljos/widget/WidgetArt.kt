@@ -22,7 +22,7 @@ import kotlin.math.sqrt
  * and (for the wide widget) tonight's hourly bars. Text is laid over this by Glance so it stays crisp.
  */
 object WidgetArt {
-    private const val MAX_PIXELS = 220_000f
+    private const val MAX_PIXELS = 180_000f
 
     fun render(
         wDp: Float,

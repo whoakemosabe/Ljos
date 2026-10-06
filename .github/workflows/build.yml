@@ -33,13 +33,27 @@ jobs:
       - name: Name the APK
         run: cp app/build/outputs/apk/release/app-release.apk ljos.apk
 
+      - name: Live feed check
+        continue-on-error: true
+        env:
+          LIVE_CHECK: "1"
+        run: ./gradlew --no-daemon testReleaseUnitTest --tests app.ljos.LiveCheck --rerun
+
+      - name: Release notes
+        run: |
+          {
+            echo "Tap **ljos.apk** below on your phone to install or update."
+            echo
+            echo "Built from ${GITHUB_SHA}."
+            echo
+            cat app/build/live-check.md 2>/dev/null || echo "_Live feed check didn't complete._"
+          } > notes.md
+
       - name: Publish release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}
           name: Ljós 1.0.${{ github.run_number }}
-          body: |
-            Tap **ljos.apk** below on your phone to install or update.
-            Built from ${{ github.sha }}.
+          body_path: notes.md
           files: ljos.apk
           make_latest: true
