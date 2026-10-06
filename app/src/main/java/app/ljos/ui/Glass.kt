@@ -41,7 +41,7 @@ import com.kyant.backdrop.effects.lens
  * and redraws it through a chain of effects: a touch of extra colour, a light frost, and the
  * library's lens, which refracts a rounded-rect glass edge with real depth and chromatic
  * dispersion. On top of that we add only what Ljós needs: a soft dissolve at the bottom of the
- * header, a whisper of tint, and a glint that follows the phone's tilt.
+ * header and a whisper of tint.
  *
  * The lens and the dissolve need Android 13; older phones get a plain tint.
  */
@@ -161,12 +161,12 @@ fun GlassHeader(
 /** Pages and cards that want glass controls read the backdrop to refract from here. */
 val LocalGlassBackdrop = androidx.compose.runtime.staticCompositionLocalOf<LayerBackdrop?> { null }
 
-/** Shared tilt-following highlight angle, so every glass piece on the page uses one sensor. */
+/** Shared highlight angle for every glass piece on the page. */
 val LocalGlassAngle = androidx.compose.runtime.staticCompositionLocalOf<State<Float>?> { null }
 
 /**
  * Liquid glass for a card: more frost than a control (it carries text), a gentle lens around its
- * rounded edge with colour fringing, a rim highlight that follows the tilt, a soft shadow and a
+ * rounded edge with colour fringing, a rim highlight from the top left, a soft shadow and a
  * dark wash so text stays crisp over bright aurora.
  */
 fun Modifier.glassCard(
@@ -198,7 +198,7 @@ fun rememberGlassLightAngle(): State<Float> = remember { mutableStateOf(45f) }
 /**
  * True liquid glass for a floating control (button, pill, chip), as on iOS 26: barely frosted,
  * the lens bending its whole rounded edge with colour fringing, a rim highlight that moves with
- * the phone's tilt, and a soft shadow. [shape] must be a rounded shape (RoundedCornerShape,
+ * the top left, and a soft shadow. [shape] must be a rounded shape (RoundedCornerShape,
  * CircleShape). Phones before Android 13 get a plain translucent fill.
  */
 fun Modifier.glassControl(
