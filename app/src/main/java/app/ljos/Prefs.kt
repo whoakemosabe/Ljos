@@ -104,4 +104,9 @@ class Prefs(context: Context) {
     var liveSky: Boolean
         get() = p.getBoolean("live_sky", false)
         set(v) = p.edit().putBoolean("live_sky", v).apply()
+
+    /** How many times the "pull down to refresh" hint has been shown on open (shown 3×). */
+    var pullHintCount: Int
+        get() = p.getInt("pull_hint_count", 0)
+        set(v) = p.edit().putInt("pull_hint_count", v).apply()
 }

@@ -7,6 +7,7 @@ import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.animate
 import androidx.compose.runtime.mutableFloatStateOf
 import app.ljos.model.Night
@@ -359,6 +360,15 @@ fun LjosApp() {
             }
 
             ProgressiveBlurHeader(pageLayer, height = statusTop + HeaderExpanded + HeaderFade, heightPx = headerHeightPx)
+            // Teach pull-to-refresh on the first three opens.
+            val showPullIntro = remember { prefs.pullHintCount < 3 }
+            LaunchedEffect(Unit) { if (showPullIntro) prefs.pullHintCount = prefs.pullHintCount + 1 }
+            PullHint(
+                pullFraction = pullFraction,
+                loading = loading,
+                top = statusTop + HeaderExpanded + 6.dp,
+                showOnOpen = showPullIntro,
+            )
             Header(
                 placeName = home.name,
                 score = night?.peak?.score,
@@ -777,4 +787,63 @@ private fun androidx.compose.foundation.layout.ColumnScope.SoftReveal(visible: B
         exit = androidx.compose.animation.fadeOut(tween(200)) +
             androidx.compose.animation.shrinkVertically(spring(dampingRatio = 1f, stiffness = 400f)),
     ) { content() }
+}
+
+/**
+ * A quiet line under the header that teaches pull-to-refresh: fades in with the pull, says
+ * "Release to refresh" past the line, "Refreshing…" while loading, and fades out after.
+ * Also drifts in and out once on the first few opens so people know it exists.
+ */
+@Composable
+private fun PullHint(pullFraction: () -> Float, loading: Boolean, top: Dp, showOnOpen: Boolean) {
+    val pastLine by remember { derivedStateOf { pullFraction() >= 1f } }
+    val pulling by remember { derivedStateOf { pullFraction() > 0.02f } }
+    // "Refreshing…" shows only for refreshes the pull started.
+    var pullStarted by remember { mutableStateOf(false) }
+    LaunchedEffect(pastLine) { if (pastLine) pullStarted = true }
+    LaunchedEffect(loading) { if (!loading) { delay(350); pullStarted = false } }
+    val refreshing = loading && pullStarted
+    val refreshAlpha by animateFloatAsState(if (refreshing) 1f else 0f, tween(400, easing = FastOutSlowInEasing), label = "refreshing")
+
+    val intro = remember { Animatable(0f) }
+    LaunchedEffect(showOnOpen) {
+        if (!showOnOpen) return@LaunchedEffect
+        delay(1200)
+        intro.animateTo(1f, tween(700, easing = FastOutSlowInEasing))
+        delay(2600)
+        intro.animateTo(0f, tween(900, easing = FastOutSlowInEasing))
+    }
+
+    val text = when {
+        refreshing -> L.t("Refreshing…", "Uppfæri…")
+        pastLine -> L.t("Release to refresh", "Slepptu til að uppfæra")
+        else -> L.t("Pull down to refresh", "Dragðu niður til að uppfæra")
+    }
+    Box(Modifier.fillMaxWidth().padding(top = top), contentAlignment = Alignment.TopCenter) {
+        androidx.compose.animation.AnimatedContent(
+            targetState = text,
+            transitionSpec = {
+                androidx.compose.animation.fadeIn(tween(220)) togetherWith androidx.compose.animation.fadeOut(tween(160))
+            },
+            label = "pullText",
+        ) { t ->
+            Row(
+                Modifier.graphicsLayer {
+                    val p = pullFraction().coerceIn(0f, 1.2f)
+                    alpha = maxOf((p * 1.4f).coerceAtMost(1f), intro.value, refreshAlpha)
+                    // Drifts down a touch with the pull, like it's being drawn out.
+                    translationY = p * 10.dp.toPx() + (1f - intro.value) * (if (pulling) 0f else -4.dp.toPx())
+                },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                if (t == L.t("Refreshing…", "Uppfæri…")) {
+                    CircularProgressIndicator(Modifier.size(11.dp), color = Muted, strokeWidth = 1.5.dp)
+                } else {
+                    Text(if (pastLine) "↑" else "↓", color = Muted, fontSize = 12.sp)
+                }
+                Spacer(Modifier.width(6.dp))
+                Text(t, color = Muted, fontSize = 12.sp, letterSpacing = 0.4.sp)
+            }
+        }
+    }
 }
