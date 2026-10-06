@@ -81,6 +81,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import app.ljos.Fmt
+import app.ljos.L
+import app.ljos.work.Alerts
 import app.ljos.Prefs
 import app.ljos.data.HOUR_MS
 import app.ljos.data.Inputs
@@ -129,6 +131,7 @@ fun LjosApp() {
         inputs = withContext(Dispatchers.IO) { repo.inputs() }
         now = System.currentTimeMillis()
         loading = false
+        inputs?.let { i -> try { withContext(Dispatchers.IO) { Alerts.check(context, i) } } catch (e: Exception) { } }
         try { Widgets.updateAll(context) } catch (e: Exception) { }
     }
 
@@ -144,22 +147,23 @@ fun LjosApp() {
     val permissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
         if (result[Manifest.permission.ACCESS_COARSE_LOCATION] == true) scope.launch { detect() }
     }
-    fun askOrDetect() {
-        if (Locator.hasPermission(context)) {
+    fun askOrDetect(locationToo: Boolean = true) {
+        if (locationToo && Locator.hasPermission(context)) {
             scope.launch { detect() }
         } else {
             val wanted = buildList {
-                add(Manifest.permission.ACCESS_COARSE_LOCATION)
+                if (locationToo) add(Manifest.permission.ACCESS_COARSE_LOCATION)
                 if (Build.VERSION.SDK_INT >= 33 &&
                     ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
                 ) add(Manifest.permission.POST_NOTIFICATIONS)
             }
-            permissions.launch(wanted.toTypedArray())
+            if (wanted.isNotEmpty()) permissions.launch(wanted.toTypedArray())
         }
     }
 
     LaunchedEffect(Unit) {
-        askOrDetect()
+        // Auto-detect on open unless home is pinned; Detect in settings always works.
+        askOrDetect(locationToo = prefs.autoDetect)
         reload(false)
     }
     LaunchedEffect(Unit) {
@@ -180,6 +184,12 @@ fun LjosApp() {
     val spotScores = remember(inp, sel?.time, now) {
         if (inp != null && sel != null) Model.spotsAt(sel.time, inp, now) else emptyList()
     }
+    val moon = remember(night, inp) {
+        val n = night
+        if (n == null || n.hours.isEmpty() || inp == null) null
+        else Model.moonTimeline(n.hours.first().time, n.hours.last().time + HOUR_MS, inp.home)
+    }
+    val kpDays = remember(inp, now) { inp?.takeIf { it.kp.isNotEmpty() }?.let { Model.kpOutlook(it.kp, now) } }
     val intensity by animateFloatAsState((night?.peak?.score ?: 0) / 100f, tween(1800), label = "intensity")
 
     // The page, drawn once for real and once (blurred, non-interactive) inside the header.
@@ -199,14 +209,19 @@ fun LjosApp() {
                 if (nowState != null && nowState.isDark) NowCard(nowState)
                 if (night != null && night.hours.isNotEmpty()) {
                     Column(Modifier.glass()) {
-                        CardTitle("Hour by hour", "Tap or drag a bar")
+                        CardTitle(L.t("Hour by hour", "Klukkustund fyrir klukkustund"), L.t("Tap or drag a bar", "Ýttu á eða dragðu súlu"))
                         Spacer(Modifier.height(12.dp))
                         HourStrip(night.hours, sel?.time, now, onSelect = if (interactive) { t -> selected = t } else null)
+                        if (moon != null) {
+                            Spacer(Modifier.height(10.dp))
+                            MoonLine(night.hours, moon)
+                        }
                     }
                 }
                 if (sel != null) WhyCard(sel)
                 if (spotScores.isNotEmpty() && sel != null) WhereCard(spotScores, sel)
-                Footer(errors)
+                if (kpDays != null) KpOutlookCard(kpDays, now)
+                MadeWithLove(errors)
                 Spacer(Modifier.height(16.dp))
             }
         }
@@ -322,7 +337,7 @@ private fun Header(
             Text("Ljós", color = Ink, fontSize = 20.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
             if (score != null) {
                 Text(
-                    "  ·  Tonight $score · ${Model.label(score)}",
+                    L.t("  ·  Tonight $score · ", "  ·  Í kvöld $score · ") + Model.label(score),
                     color = Muted.copy(alpha = Muted.alpha * miniAlpha), fontSize = 13.sp, maxLines = 1,
                 )
             }

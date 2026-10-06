@@ -1,6 +1,7 @@
 package app.ljos.data
 
 import android.content.Context
+import app.ljos.L
 import android.content.Intent
 import android.net.Uri
 import android.provider.Settings
@@ -52,7 +53,7 @@ object Updater {
             if (code == 404 || code == 401) {
                 c.disconnect()
                 return@withContext Check.Failed(
-                    if (token.isBlank()) "The repo is private. Add a GitHub token below." else "GitHub didn't accept the token."
+                    if (token.isBlank()) L.t("The repo is private. Add a GitHub token below.", "Safnið er lokað. Bættu við GitHub lykli hér fyrir neðan.") else L.t("GitHub didn't accept the token.", "GitHub samþykkti ekki lykilinn.")
                 )
             }
             if (code !in 200..299) throw IOException("GitHub returned $code")
@@ -65,11 +66,11 @@ object Updater {
                 val a = assets.getJSONObject(i)
                 if (a.optString("name").endsWith(".apk")) asset = a
             }
-            val apk = asset ?: return@withContext Check.Failed("Latest release has no APK yet.")
+            val apk = asset ?: return@withContext Check.Failed(L.t("Latest release has no APK yet.", "Nýjasta útgáfan er ekki með APK enn."))
             if (!isNewer(tag, installedVersion(context))) return@withContext Check.UpToDate
             Check.Available(Release(tag.removePrefix("v"), apk.getString("url"), apk.optLong("size")))
         } catch (e: Exception) {
-            Check.Failed(e.message ?: "Couldn't reach GitHub.")
+            Check.Failed(L.t("Couldn't reach GitHub.", "Náði ekki sambandi við GitHub."))
         }
     }
 

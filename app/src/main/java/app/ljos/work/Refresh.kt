@@ -8,6 +8,7 @@ import androidx.work.NetworkType
 import androidx.work.PeriodicWorkRequestBuilder
 import androidx.work.WorkManager
 import androidx.work.WorkerParameters
+import app.ljos.L
 import app.ljos.data.Repo
 import app.ljos.widget.Widgets
 import java.util.concurrent.TimeUnit
@@ -15,6 +16,7 @@ import java.util.concurrent.TimeUnit
 /** Runs every ~15 minutes: fetch feeds, fire alerts, redraw widgets. */
 class RefreshWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
+        L.load(applicationContext)
         val repo = Repo(applicationContext)
         repo.refresh()
         val inp = repo.inputs()

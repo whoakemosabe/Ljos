@@ -1,5 +1,6 @@
 package app.ljos.model
 
+import app.ljos.L
 import app.ljos.data.CloudSeries
 import app.ljos.data.HOUR_MS
 import app.ljos.data.Inputs
@@ -216,10 +217,55 @@ object Model {
     }
 
     fun label(score: Int): String = when {
-        score >= 80 -> "Excellent"
-        score >= 60 -> "Good chance"
-        score >= 40 -> "Possible"
-        score >= 20 -> "Unlikely"
-        else -> "Not tonight"
+        score >= 80 -> L.t("Excellent", "Frábærar líkur")
+        score >= 60 -> L.t("Good chance", "Góðar líkur")
+        score >= 40 -> L.t("Possible", "Mögulegt")
+        score >= 20 -> L.t("Unlikely", "Ólíklegt")
+        else -> L.t("Not tonight", "Ekki í kvöld")
+    }
+
+    /** When the moon is up between [start] and [end], at 10-minute resolution, plus its brightness. */
+    fun moonTimeline(start: Long, end: Long, home: Spot): MoonTimeline {
+        val step = 10 * MIN_MS
+        val segments = ArrayList<Pair<Long, Long>>()
+        var upFrom: Long? = null
+        var rise: Long? = null
+        var set: Long? = null
+        var prevUp: Boolean? = null
+        var t = start
+        while (t <= end) {
+            val up = Astro.moonAltitude(t, home.lat, home.lon) > 0.0
+            if (prevUp != null && up != prevUp) { if (up) rise = rise ?: t else set = set ?: t }
+            if (up && upFrom == null) upFrom = t
+            if (!up && upFrom != null) { segments += upFrom to t; upFrom = null }
+            prevUp = up
+            t += step
+        }
+        upFrom?.let { segments += it to end }
+        val mid = start + (end - start) / 2
+        return MoonTimeline(segments, rise, set, Astro.moonIllumination(mid), waxing = Astro.moonIllumination(mid + 6 * HOUR_MS) > Astro.moonIllumination(mid))
+    }
+
+    /** Kp forecast grouped into today and the next two days, local time. */
+    fun kpOutlook(kp: List<KpPoint>, now: Long, zone: ZoneId = ZoneId.systemDefault()): List<KpDay> {
+        val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+        return (0L..2L).map { offset ->
+            val date = today.plusDays(offset)
+            val dayStart = date.atStartOfDay(zone).toInstant().toEpochMilli()
+            val dayEnd = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+            val blocks = kp.filter { it.time >= dayStart && it.time < dayEnd }
+            KpDay(dayStart, blocks, blocks.maxOfOrNull { it.kp })
+        }
     }
 }
+
+data class MoonTimeline(
+    val upSegments: List<Pair<Long, Long>>,
+    val rise: Long?,
+    val set: Long?,
+    val illumination: Double,
+    val waxing: Boolean,
+)
+
+data class KpDay(val dayStart: Long, val blocks: List<KpPoint>, val maxKp: Double?)
+

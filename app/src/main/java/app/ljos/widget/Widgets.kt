@@ -34,6 +34,7 @@ import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import app.ljos.Fmt
+import app.ljos.L
 import app.ljos.MainActivity
 import app.ljos.data.HOUR_MS
 import app.ljos.data.Repo
@@ -61,20 +62,21 @@ class WidgetData(
 ) {
     companion object {
         fun load(context: Context): WidgetData {
+            L.load(context)
             val now = System.currentTimeMillis()
             val inp = Repo(context).inputs()
-            if (inp.isEmpty) return WidgetData(null, "Open Ljós", "to load data", emptyList(), now, false)
+            if (inp.isEmpty) return WidgetData(null, L.t("Open Ljós", "Opnaðu Ljós"), L.t("to load data", "til að sækja gögn"), emptyList(), now, false)
             val night = Model.night(now, inp)
             val peak = night.peak
-                ?: return WidgetData(null, "Too bright", "No dark hours tonight", emptyList(), now, false)
+                ?: return WidgetData(null, L.t("Too bright", "Of bjart"), L.t("No dark hours tonight", "Engin myrkur í nótt"), emptyList(), now, false)
             val st = Model.nowState(now, inp)
             val stale = now - inp.updatedAt > 6 * HOUR_MS
             val sub = when {
-                stale -> "Updated ${Fmt.ago(inp.updatedAt, now)}"
-                st.isDark -> "Now ${st.score} · peak ${Fmt.hhmm(peak.time)}"
-                else -> "Peak ${Fmt.hhmm(peak.time)} · ${Fmt.cloud(peak.cloud)}"
+                stale -> L.t("Updated ", "Uppfært ") + Fmt.ago(inp.updatedAt, now)
+                st.isDark -> L.t("Now ${st.score} · peak ${Fmt.hhmm(peak.time)}", "Núna ${st.score} · hámark ${Fmt.hhmm(peak.time)}")
+                else -> L.t("Peak ", "Hámark ") + "${Fmt.hhmm(peak.time)} · ${Fmt.cloud(peak.cloud)}"
             }
-            val label = if (st.lookUp) "Look up now!" else Model.label(peak.score)
+            val label = if (st.lookUp) L.t("Look up now!", "Líttu upp!") else Model.label(peak.score)
             return WidgetData(peak.score, label, sub, night.hours, now, st.lookUp)
         }
     }
@@ -134,7 +136,7 @@ private fun SmallContent(d: WidgetData) {
         )
         Column(modifier = GlanceModifier.fillMaxSize().padding(14.dp)) {
             Text(
-                "TONIGHT",
+                L.t("TONIGHT", "Í KVÖLD"),
                 style = TextStyle(color = ColorProvider(Muted), fontSize = 11.sp, fontWeight = FontWeight.Medium),
             )
             Spacer(GlanceModifier.defaultWeight())
@@ -160,7 +162,7 @@ private fun WideContent(d: WidgetData) {
         Row(modifier = GlanceModifier.fillMaxSize().padding(16.dp), verticalAlignment = Alignment.Bottom) {
             Column(modifier = GlanceModifier.width((leftDp - 16f).dp).fillMaxHeight()) {
                 Text(
-                    "TONIGHT",
+                    L.t("TONIGHT", "Í KVÖLD"),
                     style = TextStyle(color = ColorProvider(Muted), fontSize = 11.sp, fontWeight = FontWeight.Medium),
                 )
                 Spacer(GlanceModifier.defaultWeight())

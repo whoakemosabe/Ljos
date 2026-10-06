@@ -53,4 +53,46 @@ class Prefs(context: Context) {
     var githubToken: String
         get() = p.getString("github_token", "") ?: ""
         set(v) = p.edit().putString("github_token", v.trim()).apply()
+
+    // Display
+    var icelandic: Boolean
+        get() = p.getBoolean("lang_is", false)
+        set(v) = p.edit().putBoolean("lang_is", v).apply()
+
+    var clock24: Boolean
+        get() = p.getBoolean("clock24", true)
+        set(v) = p.edit().putBoolean("clock24", v).apply()
+
+    var miles: Boolean
+        get() = p.getBoolean("miles", false)
+        set(v) = p.edit().putBoolean("miles", v).apply()
+
+    // Location
+    /** When false, home stays fixed and is only changed with the Detect button. */
+    var autoDetect: Boolean
+        get() = p.getBoolean("auto_detect", true)
+        set(v) = p.edit().putBoolean("auto_detect", v).apply()
+
+    // Alerts
+    var liveLockScreen: Boolean
+        get() = p.getBoolean("live_lock", true)
+        set(v) = p.edit().putBoolean("live_lock", v).apply()
+
+    var quietOn: Boolean
+        get() = p.getBoolean("quiet_on", false)
+        set(v) = p.edit().putBoolean("quiet_on", v).apply()
+
+    /** Hours of the day, 0..23. Quiet runs from [quietFrom] up to (not including) [quietTo], wrapping midnight. */
+    var quietFrom: Int
+        get() = p.getInt("quiet_from", 1)
+        set(v) = p.edit().putInt("quiet_from", v).apply()
+
+    var quietTo: Int
+        get() = p.getInt("quiet_to", 7)
+        set(v) = p.edit().putInt("quiet_to", v).apply()
+
+    fun isQuiet(hour: Int): Boolean {
+        if (!quietOn || quietFrom == quietTo) return false
+        return if (quietFrom < quietTo) hour in quietFrom until quietTo else hour >= quietFrom || hour < quietTo
+    }
 }

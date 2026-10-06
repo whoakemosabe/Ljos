@@ -18,6 +18,7 @@ class MainActivity : ComponentActivity() {
             statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
             navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
         )
+        L.load(this)
         Alerts.createChannels(this)
         Scheduler.ensure(this)
         setContent {

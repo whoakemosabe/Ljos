@@ -27,6 +27,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.ljos.Fmt
+import app.ljos.L
 import app.ljos.data.Inputs
 import app.ljos.model.HourScore
 import app.ljos.model.Model
@@ -42,7 +43,7 @@ internal fun Hero(night: Night?, inp: Inputs?, loading: Boolean) {
     val peak = night?.peak
     val shown by animateIntAsState(peak?.score ?: 0, tween(1200), label = "score")
     Column(Modifier.fillMaxWidth().padding(top = 28.dp, bottom = 18.dp)) {
-        Text("TONIGHT", color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 3.sp)
+        Text(L.t("TONIGHT", "Í KVÖLD"), color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 3.sp)
         Text(
             if (peak != null) shown.toString() else "—",
             style = TextStyle(
@@ -52,20 +53,20 @@ internal fun Hero(night: Night?, inp: Inputs?, loading: Boolean) {
         )
         val headline = when {
             peak != null -> Model.label(peak.score)
-            night != null -> "Too bright for aurora"
-            inp == null || inp.isEmpty -> if (loading) "Reading the sky…" else "No data yet — tap ↻"
+            night != null -> L.t("Too bright for aurora", "Of bjart fyrir norðurljós")
+            inp == null || inp.isEmpty -> if (loading) L.t("Reading the sky…", "Les himininn…") else L.t("No data yet — tap ↻", "Engin gögn enn — ýttu á ↻")
             else -> "—"
         }
         Text(headline, style = TextStyle(color = Ink, fontSize = 26.sp, fontWeight = FontWeight.Light, shadow = Glow))
         if (peak != null) {
             Spacer(Modifier.height(6.dp))
             Text(
-                "Peak around ${Fmt.hhmm(peak.time)} · Kp ${Fmt.one(peak.kp)} · ${Fmt.cloud(peak.cloud)}",
+                L.t("Peak around ", "Hámark um ") + "${Fmt.hhmm(peak.time)} · Kp ${Fmt.one(peak.kp)} · ${Fmt.cloud(peak.cloud)}",
                 color = Muted, fontSize = 14.sp,
             )
         }
         if (night?.darkFrom != null && night.darkUntil != null) {
-            Text("Dark ${Fmt.hhmm(night.darkFrom)}–${Fmt.hhmm(night.darkUntil)}", color = Faint, fontSize = 13.sp)
+            Text(L.t("Dark ", "Myrkur ") + "${Fmt.hhmm(night.darkFrom)}–${Fmt.hhmm(night.darkUntil)}", color = Faint, fontSize = 13.sp)
         }
     }
 }
@@ -90,21 +91,21 @@ internal fun NowCard(st: NowState) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(
-                    if (st.lookUp) "LOOK UP NOW" else "RIGHT NOW",
+                    if (st.lookUp) L.t("LOOK UP NOW", "LÍTTU UPP NÚNA") else L.t("RIGHT NOW", "NÚNA"),
                     color = accent, fontSize = 12.sp, fontWeight = FontWeight.SemiBold, letterSpacing = 2.sp,
                 )
                 Spacer(Modifier.height(4.dp))
                 val bzText = when {
-                    st.bz == null -> "Solar wind data unavailable"
-                    !st.bzFresh -> "Solar wind data is stale"
-                    st.bz <= -3 -> "Bz ${Fmt.signed(st.bz)} nT · field pointing south, good"
-                    st.bz >= 3 -> "Bz ${Fmt.signed(st.bz)} nT · pointing north, quiet"
-                    else -> "Bz ${Fmt.signed(st.bz)} nT · neutral"
+                    st.bz == null -> L.t("Solar wind data unavailable", "Sólvindsgögn vantar")
+                    !st.bzFresh -> L.t("Solar wind data is stale", "Sólvindsgögn eru gömul")
+                    st.bz <= -3 -> "Bz ${Fmt.signed(st.bz)} nT · " + L.t("field pointing south, good", "segulsvið til suðurs, gott")
+                    st.bz >= 3 -> "Bz ${Fmt.signed(st.bz)} nT · " + L.t("pointing north, quiet", "til norðurs, rólegt")
+                    else -> "Bz ${Fmt.signed(st.bz)} nT · " + L.t("neutral", "hlutlaust")
                 }
                 Text(bzText, color = Muted, fontSize = 13.sp)
-                Text(Fmt.cloud(st.cloud) + " at home", color = Faint, fontSize = 13.sp)
+                Text(Fmt.cloud(st.cloud) + L.t(" here", " hér"), color = Faint, fontSize = 13.sp)
                 st.clearerSpot?.let {
-                    Text("Clearer at ${it.spot.name} (${Fmt.cloud(it.cloud)})", color = Green, fontSize = 13.sp)
+                    Text(L.t("Clearer at ", "Heiðskírara við ") + "${it.spot.name} (${Fmt.cloud(it.cloud)})", color = Green, fontSize = 13.sp)
                 }
             }
             Text(st.score.toString(), color = Color.White, fontSize = 44.sp, fontWeight = FontWeight.Light)
@@ -115,26 +116,27 @@ internal fun NowCard(st: NowState) {
 @Composable
 internal fun WhyCard(h: HourScore) {
     Column(Modifier.glass()) {
-        CardTitle("Why ${Fmt.hhmm(h.time)} scores ${h.score}", "Each one multiplies the score")
+        CardTitle(L.t("Why ${Fmt.hhmm(h.time)} scores ${h.score}", "Af hverju ${Fmt.hhmm(h.time)} fær ${h.score}"), L.t("Each one multiplies the score", "Hver þáttur margfaldar einkunnina"))
         Spacer(Modifier.height(14.dp))
         FactorRow(
-            "Solar activity",
-            "Kp ${Fmt.one(h.kp)}" + if (h.live) " · live boost" else "",
+            L.t("Solar activity", "Sólvirkni"),
+            "Kp ${Fmt.one(h.kp)}" + if (h.live) L.t(" · live boost", " · lifandi uppfærsla") else "",
             h.factors.activity,
         )
         FactorRow(
-            "Clear sky",
-            if (h.cloud < 0) "unknown" else "${100 - h.cloud}% clear",
+            L.t("Clear sky", "Heiðskírt"),
+            if (h.cloud < 0) L.t("unknown", "óþekkt") else L.t("${100 - h.cloud}% clear", "${100 - h.cloud}% heiðskírt"),
             h.factors.clear,
         )
         FactorRow(
-            "Moon",
-            "${(h.moonIllum * 100).roundToInt()}% lit · " + if (h.moonAlt > 0) "up ${h.moonAlt.roundToInt()}°" else "below horizon",
+            L.t("Moon", "Tungl"),
+            L.t("${(h.moonIllum * 100).roundToInt()}% lit · ", "${(h.moonIllum * 100).roundToInt()}% lýst · ") +
+                if (h.moonAlt > 0) L.t("up ${h.moonAlt.roundToInt()}°", "á lofti ${h.moonAlt.roundToInt()}°") else L.t("below horizon", "undir sjóndeildarhring"),
             h.factors.moon,
         )
         FactorRow(
-            "Darkness",
-            "sun ${h.sunAlt.roundToInt()}°",
+            L.t("Darkness", "Myrkur"),
+            L.t("sun ${h.sunAlt.roundToInt()}°", "sól ${h.sunAlt.roundToInt()}°"),
             h.factors.dark,
             last = true,
         )
@@ -171,7 +173,7 @@ internal fun FactorRow(name: String, value: String, f: Double, last: Boolean = f
 @Composable
 internal fun WhereCard(spots: List<SpotScore>, sel: HourScore) {
     Column(Modifier.glass()) {
-        CardTitle("Where to go at ${Fmt.hhmm(sel.time)}", "Town lights cost home a few points")
+        CardTitle(L.t("Where to go at ", "Hvert á að fara kl. ") + Fmt.hhmm(sel.time), L.t("Town lights cost home a few points", "Bæjarljós kosta nokkur stig"))
         Spacer(Modifier.height(10.dp))
         spots.forEachIndexed { i, s ->
             val best = i == 0 && s.score > 0
@@ -182,7 +184,7 @@ internal fun WhereCard(spots: List<SpotScore>, sel: HourScore) {
                         if (best) {
                             Spacer(Modifier.width(8.dp))
                             Text(
-                                "BEST",
+                                L.t("BEST", "BEST"),
                                 color = Color(0xFF03130B), fontSize = 10.sp, fontWeight = FontWeight.Bold,
                                 modifier = Modifier
                                     .clip(RoundedCornerShape(6.dp))
@@ -191,7 +193,7 @@ internal fun WhereCard(spots: List<SpotScore>, sel: HourScore) {
                             )
                         }
                     }
-                    val dist = if (s.distanceKm < 1) "you're here" else "${s.distanceKm.roundToInt()} km away"
+                    val dist = if (s.distanceKm < 1) L.t("you're here", "þú ert hér") else L.t("${Fmt.distance(s.distanceKm)} away", "${Fmt.distance(s.distanceKm)} í burtu")
                     Text("$dist · ${Fmt.cloud(s.cloud)}", color = Faint, fontSize = 12.sp)
                 }
                 Text(s.score.toString(), color = scoreColor(s.score).copy(alpha = 0.95f), fontSize = 22.sp, fontWeight = FontWeight.Light)
@@ -206,10 +208,3 @@ internal fun CardTitle(title: String, sub: String?) {
     if (sub != null) Text(sub, color = Faint, fontSize = 12.sp)
 }
 
-@Composable
-internal fun Footer(errors: List<String>) {
-    Column(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        errors.forEach { Text(it, color = Warn.copy(alpha = 0.8f), fontSize = 11.sp) }
-        Text("Data: NOAA SWPC · Open-Meteo", color = Faint, fontSize = 11.sp)
-    }
-}
