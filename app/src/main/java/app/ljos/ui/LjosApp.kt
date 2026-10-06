@@ -128,7 +128,12 @@ import kotlin.math.roundToInt
 
 private val HeaderExpanded = 82.dp
 private val HeaderCollapsed = 56.dp
-private val HeaderFade = 56.dp
+// Blur zone, measured from the top of the status bar:
+// frosted down to just under the header's last line, then a short fixed fade.
+private val FrostExpanded = 80.dp   // under the place chip (12 top + 42 line two + 26 chip)
+private val FrostCollapsed = 54.dp  // under the buttons (12 top + 36 row + 6)
+private val FadeAtRest = 10.dp      // ends at statusTop + 90, exactly where the page starts
+private val FadeScrolled = 24.dp
 
 @Composable
 fun LjosApp() {
@@ -269,10 +274,13 @@ fun LjosApp() {
                 ((scroll.value - startScroll) / flightRange).coerceIn(0f, 1f)
             }
         }
+        val headerFadePx: () -> Float = {
+            with(density) { (FadeAtRest + (FadeScrolled - FadeAtRest) * placeMorph()).toPx() }
+        }
         val headerHeightPx: () -> Float = {
             with(density) {
-                val bar = HeaderExpanded + (HeaderCollapsed - HeaderExpanded) * placeMorph()
-                (statusTop + bar + HeaderFade).toPx()
+                val frost = FrostExpanded + (FrostCollapsed - FrostExpanded) * placeMorph()
+                (statusTop + frost).toPx() + headerFadePx()
             }
         }
         val openness: () -> Float = { 1f - sheet.value }
@@ -376,7 +384,7 @@ fun LjosApp() {
                                 if (target in collapsed) toggle(target)
                                 val coords = cardSpots[target]
                                 if (coords != null && coords.isAttached) {
-                                    val headerBottom = with(density) { (statusTop + HeaderCollapsed + 12.dp).toPx() }
+                                    val headerBottom = with(density) { (statusTop + FrostCollapsed + FadeScrolled + 4.dp).toPx() }
                                     val y = coords.positionInRoot().y
                                     scope.launch {
                                         scroll.animateScrollTo(
@@ -453,7 +461,10 @@ fun LjosApp() {
                 }
             }
 
-            ProgressiveBlurHeader(pageLayer, height = statusTop + HeaderExpanded + HeaderFade, heightPx = headerHeightPx)
+            ProgressiveBlurHeader(
+                pageLayer, height = statusTop + FrostExpanded + FadeAtRest,
+                heightPx = headerHeightPx, featherPx = headerFadePx,
+            )
             // Teach pull-to-refresh on the first three opens.
             val showPullIntro = remember { prefs.pullHintCount < 3 }
             LaunchedEffect(Unit) { if (showPullIntro) prefs.pullHintCount = prefs.pullHintCount + 1 }

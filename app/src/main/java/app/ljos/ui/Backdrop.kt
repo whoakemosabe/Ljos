@@ -51,6 +51,12 @@ fun ProgressiveBlurHeader(
     maxRadius: Dp = 36.dp,
     tint: Color = Color(0xB3050812),
     bands: Int = 5,
+    /**
+     * Optional fixed fade length in px, read at draw time. Everything above the last [feather] px
+     * is fully frosted and the blur dissolves only inside it, so the fade hugs the header's
+     * contents instead of growing with the header. Without it the fade is a share of the height.
+     */
+    featherPx: (() -> Float)? = null,
 ) {
     if (Build.VERSION.SDK_INT >= 31) {
         for (i in 0 until bands) {
@@ -72,8 +78,15 @@ fun ProgressiveBlurHeader(
                     }
                     .drawWithContent {
                         drawLayer(layer)
+                        val f = featherPx?.invoke()
+                        val (a, b) = if (f == null || size.height <= 0f) solid to end else {
+                            // Strongest band starts fading first, gentlest reaches the very bottom.
+                            val h = size.height
+                            val e = (h - 0.45f * f * t) / h
+                            ((e - 0.55f * f / h).coerceAtLeast(0f)) to e
+                        }
                         drawRect(
-                            Brush.verticalGradient(0f to Color.Black, solid to Color.Black, end to Color.Transparent),
+                            Brush.verticalGradient(0f to Color.Black, a to Color.Black, b to Color.Transparent),
                             blendMode = BlendMode.DstIn,
                         )
                     }
@@ -86,6 +99,19 @@ fun ProgressiveBlurHeader(
             .fillMaxWidth()
             .liveHeight(height, heightPx)
             .drawWithContent {
+                val f = featherPx?.invoke()
+                if (f != null && size.height > 0f) {
+                    val k = ((size.height - f) / size.height).coerceIn(0f, 1f)
+                    drawRect(
+                        Brush.verticalGradient(
+                            0f to tint,
+                            k to tint.copy(alpha = tint.alpha * 0.6f),
+                            (k + (1f - k) * 0.5f) to tint.copy(alpha = tint.alpha * 0.18f),
+                            1f to Color.Transparent,
+                        )
+                    )
+                    return@drawWithContent
+                }
                 drawRect(
                     Brush.verticalGradient(
                         0f to tint,
