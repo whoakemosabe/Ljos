@@ -34,6 +34,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
@@ -313,7 +314,8 @@ private fun Header(
     var titleW by remember { mutableIntStateOf(0) }
     var chipW by remember { mutableIntStateOf(0) }
     var chipH by remember { mutableIntStateOf(0) }
-    var scoreH by remember { mutableIntStateOf(0) }
+    var pillW by remember { mutableIntStateOf(0) }
+    var pillH by remember { mutableIntStateOf(0) }
     BoxWithConstraints(
         Modifier
             .fillMaxWidth()
@@ -325,7 +327,7 @@ private fun Header(
         val rowH = with(density) { 36.dp.toPx() }
         val gap = with(density) { 10.dp.toPx() }
         val line2Y = with(density) { 42.dp.toPx() }
-        val buttonsW = with(density) { 88.dp.toPx() }
+        val buttonsW = with(density) { 92.dp.toPx() }
         val fullW = constraints.maxWidth.toFloat()
 
         Row(Modifier.fillMaxWidth().height(36.dp), verticalAlignment = Alignment.CenterVertically) {
@@ -356,30 +358,40 @@ private fun Header(
         ) {
             PinIcon(Modifier.size(width = 10.dp, height = 13.dp))
             Spacer(Modifier.width(6.dp))
+            // Room left between the title and the score pill when collapsed; plenty when expanded.
+            val nameMax = with(density) {
+                val collapsedRoom = fullW - buttonsW - pillW - titleW - gap * 2 - 24.dp.toPx()
+                (collapsedRoom + (fullW - collapsedRoom) * (1f - placeMorph)).coerceAtLeast(40.dp.toPx()).toDp()
+            }
             Text(
                 placeName, maxLines = 1, fontSize = 13.sp,
+                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+                modifier = Modifier.widthIn(max = nameMax),
                 color = androidx.compose.ui.graphics.lerp(Muted, Ink.copy(alpha = 0.8f), placeMorph),
             )
             Text("  ›", color = Faint.copy(alpha = Faint.alpha * (1f - placeMorph)), fontSize = 13.sp)
         }
 
-        // "Tonight 63 · Good chance" after the place, once the hero has scrolled away.
+        // Compact score pill, right-aligned against the buttons once the hero has scrolled away.
         if (score != null) {
-            val scoreX = titleW + gap + chipW + gap * 0.4f
-            val maxW = (fullW - buttonsW - scoreX).coerceAtLeast(0f)
-            Text(
-                "· " + L.t("Tonight $score · ", "Í kvöld $score · ") + Model.label(score),
-                color = Muted, fontSize = 13.sp, maxLines = 1,
-                overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
-                modifier = Modifier
-                    .width(with(density) { maxW.toDp() })
-                    .onSizeChanged { scoreH = it.height }
+            val pillX = fullW - buttonsW - pillW
+            Box(
+                Modifier
+                    .onSizeChanged { pillW = it.width; pillH = it.height }
                     .graphicsLayer {
-                        translationX = scoreX
-                        translationY = (rowH - scoreH) / 2f + (1f - scoreMorph) * 8.dp.toPx()
-                        alpha = scoreMorph * placeMorph
-                    },
-            )
+                        translationX = pillX
+                        translationY = (rowH - pillH) / 2f + (1f - scoreMorph) * 6.dp.toPx()
+                        alpha = scoreMorph
+                        val sc = 0.85f + 0.15f * scoreMorph
+                        scaleX = sc; scaleY = sc
+                    }
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(scoreColor(score).copy(alpha = 0.18f))
+                    .border(1.dp, scoreColor(score).copy(alpha = 0.45f), RoundedCornerShape(12.dp))
+                    .padding(horizontal = 9.dp, vertical = 3.dp),
+            ) {
+                Text(score.toString(), color = scoreColor(score), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            }
         }
     }
 }
