@@ -30,6 +30,7 @@ import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
@@ -303,18 +304,22 @@ private fun PermissionRow(title: String, sub: String, granted: Boolean, onAllow:
             Text(sub, color = Faint, fontSize = 12.sp)
         }
         Spacer(Modifier.width(10.dp))
-        Box(contentAlignment = Alignment.Center) {
-            if (check < 0.99f) {
-                Text(
-                    L.t("Allow", "Leyfa"), color = Color(0xFF03130B), fontSize = 13.sp, fontWeight = FontWeight.Medium,
-                    modifier = Modifier
-                        .graphicsLayer { alpha = 1f - check; scaleX = 1f - 0.3f * check; scaleY = 1f - 0.3f * check }
-                        .clip(RoundedCornerShape(12.dp))
-                        .background(Green)
-                        .padding(horizontal = 14.dp, vertical = 8.dp),
-                )
-            }
-            if (check > 0.01f) {
+        // A fixed-size slot with both the button and the tick always in it: only their alpha and
+        // scale animate, so nothing re-lays out (the springy tick overshooting used to make the
+        // button pop back in and out, and the row jump in width).
+        Box(Modifier.widthIn(min = 80.dp).height(36.dp), contentAlignment = Alignment.CenterEnd) {
+            Text(
+                L.t("Allow", "Leyfa"), color = Color(0xFF03130B), fontSize = 13.sp, fontWeight = FontWeight.Medium,
+                modifier = Modifier
+                    .graphicsLayer {
+                        val c = check.coerceIn(0f, 1f)
+                        alpha = 1f - c; scaleX = 1f - 0.3f * c; scaleY = 1f - 0.3f * c
+                    }
+                    .clip(RoundedCornerShape(12.dp))
+                    .background(Green)
+                    .padding(horizontal = 14.dp, vertical = 8.dp),
+            )
+            Box(Modifier.size(36.dp), contentAlignment = Alignment.Center) {
                 Canvas(Modifier.size(28.dp).graphicsLayer { scaleX = check; scaleY = check; alpha = check.coerceIn(0f, 1f) }) {
                     drawCircle(Green.copy(alpha = 0.18f))
                     val sw = 2.2.dp.toPx()

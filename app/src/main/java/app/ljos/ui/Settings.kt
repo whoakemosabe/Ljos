@@ -447,7 +447,8 @@ private fun ToggleRow(title: String, sub: String, checked: Boolean, onChange: (B
             Text(title, color = Ink, fontSize = 15.sp)
             Text(sub, color = Faint, fontSize = 12.sp)
         }
-        SoftSwitch(checked) { onChange(it) }
+        // A little room on the right for the switch's glow, which reaches 3dp past the track.
+        Box(Modifier.padding(end = 4.dp)) { SoftSwitch(checked) { onChange(it) } }
     }
 }
 
@@ -474,8 +475,11 @@ private fun SoftSwitch(checked: Boolean, onChange: (Boolean) -> Unit) {
         }
         val pad = 3.dp.toPx()
         val d = h - pad * 2
-        val w = d * stretch
-        val x = pad + (size.width - pad * 2 - w) * pos
+        // The spring overshoots past the end; let the knob squash against the wall instead of
+        // sliding out of the track (that's what was getting cut off on the right).
+        val over = kotlin.math.abs(pos - pos.coerceIn(0f, 1f))
+        val w = d * stretch * (1f - 0.6f * over)
+        val x = pad + (size.width - pad * 2 - w) * pos.coerceIn(0f, 1f)
         drawRoundRect(knob, Offset(x, pad), Size(w, d), CornerRadius(d / 2f))
     }
 }

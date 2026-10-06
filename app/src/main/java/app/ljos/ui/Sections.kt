@@ -118,41 +118,47 @@ internal fun CollapsibleCard(
     }
 }
 
-/** Kp · cloud · moon · dark, as tappable chips under the score. */
+/** Kp · cloud · moon · dark, as tappable chips under the score. Four equal chips that always fit. */
 @Composable
 internal fun ConditionChips(peak: HourScore, night: Night, now: Long, onChip: (String) -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        Chip("kp", "Kp ${Fmt.one(peak.kp)}", onChip) { KpIcon(it) }
-        Chip("cloud", if (peak.cloud < 0) "—" else "${peak.cloud}%", onChip) { CloudIcon(it) }
-        Chip("moon", "${(peak.moonIllum * 100).roundToInt()}%", onChip) { MoonIcon(it, peak.moonIllum.toFloat()) }
-        val darkText = when {
-            night.darkFrom == null -> "—"
-            now < night.darkFrom -> Fmt.hhmm(night.darkFrom)
-            night.darkUntil != null && now < night.darkUntil -> L.t("until ", "til ") + Fmt.hhmm(night.darkUntil)
-            else -> Fmt.hhmm(night.darkFrom)
-        }
-        Chip("dark", darkText, onChip) { DarkIcon(it) }
+    // Dark hours start on the hour, so 12-hour clocks get the short "8PM" form to fit.
+    fun time(t: Long) = if (L.clock24) Fmt.hhmm(t) else Fmt.hour(t)
+    // The chip shows when it gets dark, or once dark, when it ends ("Dark until 07:00" is spelled
+    // out in the line above).
+    val darkText = when {
+        night.darkFrom == null -> "—"
+        now < night.darkFrom -> time(night.darkFrom)
+        night.darkUntil != null && now < night.darkUntil -> time(night.darkUntil)
+        else -> time(night.darkFrom)
+    }
+    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        val m = Modifier.weight(1f)
+        Chip("kp", "Kp ${Fmt.one(peak.kp)}", onChip, m) { KpIcon(it) }
+        Chip("cloud", if (peak.cloud < 0) "—" else "${peak.cloud}%", onChip, m) { CloudIcon(it) }
+        Chip("moon", "${(peak.moonIllum * 100).roundToInt()}%", onChip, m) { MoonIcon(it, peak.moonIllum.toFloat()) }
+        Chip("dark", darkText, onChip, m) { DarkIcon(it) }
     }
 }
 
 @Composable
-private fun Chip(id: String, text: String, onChip: (String) -> Unit, icon: @Composable (Modifier) -> Unit) {
+private fun Chip(id: String, text: String, onChip: (String) -> Unit, modifier: Modifier, icon: @Composable (Modifier) -> Unit) {
     val view = LocalView.current
     Row(
-        Modifier
+        modifier
             .clip(RoundedCornerShape(14.dp))
             .background(Color(0x1AFFFFFF))
             .border(1.dp, Color(0x14FFFFFF), RoundedCornerShape(14.dp))
             .clickable { Haptics.tap(view); onChip(id) }
-            .padding(horizontal = 11.dp, vertical = 7.dp),
+            .padding(horizontal = 6.dp, vertical = 7.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.Center,
     ) {
-        icon(Modifier.size(14.dp))
-        Spacer(Modifier.width(6.dp))
-        Text(text, color = Ink, fontSize = 13.sp)
+        icon(Modifier.size(13.dp))
+        Spacer(Modifier.width(5.dp))
+        Text(
+            text, color = Ink, fontSize = 13.sp, maxLines = 1, softWrap = false,
+            overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis,
+        )
     }
 }
 
