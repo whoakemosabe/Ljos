@@ -28,6 +28,9 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.widthIn
@@ -148,23 +151,52 @@ fun Onboarding(onDone: () -> Unit) {
     }
 }
 
+/** True on short screens: pages tighten their type and spacing. */
+private val LocalCompact = androidx.compose.runtime.staticCompositionLocalOf { false }
+
+/**
+ * A page that's vertically centred when it fits and scrolls when it doesn't, so nothing is ever
+ * cut off on small screens. Short screens also get tighter type and spacing.
+ */
+@Composable
+private fun PageColumn(content: @Composable androidx.compose.foundation.layout.ColumnScope.() -> Unit) {
+    androidx.compose.foundation.layout.BoxWithConstraints(Modifier.fillMaxSize()) {
+        val compact = maxHeight < 600.dp
+        val minH = maxHeight
+        androidx.compose.runtime.CompositionLocalProvider(LocalCompact provides compact) {
+            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState())) {
+                Column(
+                    Modifier.fillMaxWidth().heightIn(min = minH).padding(vertical = 12.dp),
+                    verticalArrangement = Arrangement.Center,
+                    content = content,
+                )
+            }
+        }
+    }
+}
+
+/** Spacing that shrinks on short screens. */
+@Composable
+private fun gap(normal: Int): androidx.compose.ui.unit.Dp = if (LocalCompact.current) (normal * 0.55f).dp else normal.dp
+
 @Composable
 private fun WelcomePage() {
-    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center) {
+    val compact = LocalCompact.current
+    PageColumn {
         Text(
             "Ljós",
             style = TextStyle(
                 fontFamily = Script,
-                fontSize = 76.sp,
+                fontSize = if (LocalCompact.current) 58.sp else 76.sp,
                 brush = Brush.linearGradient(listOf(Green, Color(0xFF8FF5D0), Violet)),
             ),
         )
-        Spacer(Modifier.height(8.dp))
+        Spacer(Modifier.height(gap(8)))
         Text(
             L.t("Will you see the northern lights tonight?", "Sérðu norðurljósin í kvöld?"),
-            color = Ink, fontSize = 26.sp, fontWeight = FontWeight.Light, lineHeight = 32.sp,
+            color = Ink, fontSize = if (compact) 22.sp else 26.sp, fontWeight = FontWeight.Light, lineHeight = if (compact) 28.sp else 32.sp,
         )
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(gap(16)))
         Text(
             L.t(
                 "One score for tonight, right where you are, plus where to drive for clearer skies.",
@@ -177,19 +209,20 @@ private fun WelcomePage() {
 
 @Composable
 private fun ScorePage() {
-    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center) {
-        Text(L.t("How the score works", "Svona virkar einkunnin"), color = Ink, fontSize = 26.sp, fontWeight = FontWeight.Light)
+    val compact = LocalCompact.current
+    PageColumn {
+        Text(L.t("How the score works", "Svona virkar einkunnin"), color = Ink, fontSize = if (compact) 22.sp else 26.sp, fontWeight = FontWeight.Light)
         Spacer(Modifier.height(6.dp))
         Text(
             L.t("Four things, multiplied. Any one at zero means no show.", "Fjórir þættir, margfaldaðir. Ef einn er núll sést ekkert."),
             color = Muted, fontSize = 14.sp,
         )
-        Spacer(Modifier.height(22.dp))
+        Spacer(Modifier.height(gap(22)))
         Explainer(L.t("Solar activity", "Sólvirkni"), L.t("How stirred up the sky is (Kp)", "Hversu órólegur himinninn er (Kp)"), Green)
         Explainer(L.t("Clear sky", "Heiðskírt"), L.t("Low clouds hide everything", "Lág ský fela allt"), Teal)
         Explainer(L.t("Moon", "Tungl"), L.t("A bright moon washes out faint aurora", "Bjart tungl skyggir á dauf norðurljós"), Color(0xFFF3E7C1))
         Explainer(L.t("Darkness", "Myrkur"), L.t("The sun well below the horizon", "Sólin vel undir sjóndeildarhring"), Violet)
-        Spacer(Modifier.height(22.dp))
+        Spacer(Modifier.height(gap(22)))
         Box(
             Modifier
                 .fillMaxWidth()
@@ -215,7 +248,7 @@ private fun ScorePage() {
 
 @Composable
 private fun Explainer(title: String, sub: String, color: Color) {
-    Row(Modifier.fillMaxWidth().padding(vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+    Row(Modifier.fillMaxWidth().padding(vertical = if (LocalCompact.current) 4.dp else 7.dp), verticalAlignment = Alignment.CenterVertically) {
         Box(Modifier.size(10.dp).clip(CircleShape).background(color))
         Spacer(Modifier.width(14.dp))
         Column {
@@ -248,14 +281,15 @@ private fun PermissionsPage() {
     val askLocation = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { tick++ }
     val askNotify = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { tick++ }
 
-    Column(Modifier.fillMaxSize(), verticalArrangement = Arrangement.Center) {
-        Text(L.t("Let Ljós look out for you", "Leyfðu Ljós að vaka fyrir þig"), color = Ink, fontSize = 26.sp, fontWeight = FontWeight.Light, lineHeight = 32.sp)
+    val compact = LocalCompact.current
+    PageColumn {
+        Text(L.t("Let Ljós look out for you", "Leyfðu Ljós að vaka fyrir þig"), color = Ink, fontSize = if (compact) 22.sp else 26.sp, fontWeight = FontWeight.Light, lineHeight = if (compact) 28.sp else 32.sp)
         Spacer(Modifier.height(6.dp))
         Text(
             L.t("All optional. You can change these later in Settings.", "Allt valfrjálst. Þú getur breytt þessu síðar í stillingum."),
             color = Muted, fontSize = 14.sp,
         )
-        Spacer(Modifier.height(22.dp))
+        Spacer(Modifier.height(gap(22)))
         PermissionRow(
             L.t("Location", "Staðsetning"),
             L.t("Clouds and darkness for where you actually are", "Ský og myrkur þar sem þú ert"),
@@ -289,14 +323,14 @@ private fun PermissionRow(title: String, sub: String, granted: Boolean, onAllow:
     Row(
         Modifier
             .fillMaxWidth()
-            .padding(vertical = 6.dp)
+            .padding(vertical = if (LocalCompact.current) 4.dp else 6.dp)
             .clip(RoundedCornerShape(18.dp))
             .background(Color(0x14FFFFFF))
             .border(1.dp, Color(0x14FFFFFF), RoundedCornerShape(18.dp))
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, enabled = !granted) {
                 Haptics.tap(view); onAllow()
             }
-            .padding(14.dp),
+            .padding(if (LocalCompact.current) 11.dp else 14.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
