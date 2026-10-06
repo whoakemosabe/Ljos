@@ -229,9 +229,10 @@ fun Modifier.glassControl(
     shadow = if (shadow) ({ Shadow(radius = 14.dp, color = Color.Black.copy(alpha = 0.22f)) }) else null,
     onDrawBackdrop = { draw ->
         if (magnify == 1f) draw()
-        else withTransform({
-            scale(magnify, magnify, pivot = Offset(magnifyPivot.x.toPx(), magnifyPivot.y.toPx()))
-        }) { draw() }
+        else {
+            val pivot = Offset(magnifyPivot.x.toPx(), magnifyPivot.y.toPx())
+            withTransform({ scale(magnify, magnify, pivot = pivot) }) { draw() }
+        }
     },
     onDrawSurface = {
         // A faint dark wash so white text and icons read over bright things behind.
