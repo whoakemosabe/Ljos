@@ -130,10 +130,13 @@ import kotlin.math.roundToInt
 private val HeaderPadTop = 6.dp
 private val HeaderRow = 36.dp       // title + round buttons
 private val HeaderLine2 = 34.dp     // top of the place chip, under the title
-private val FrostExpanded = 66.dp   // frosted down to just under the place chip (6 + 34 + 26)
-private val FrostCollapsed = 48.dp  // frosted down to just under the buttons (6 + 36 + 6)
-// The page starts where the fade ends, so nothing is blurred until you scroll.
-private val PageTop = FrostExpanded + Frost.Fade
+private val HeaderExpanded = 66.dp  // bottom of the place chip (6 + 34 + 26)
+// Full frost stops 14dp above the header's last line; the 40dp fade runs on from there
+// (the header's own text is drawn sharp on top, so it doesn't matter that it overlaps).
+private val FrostExpanded = 52.dp   // fade ends 92dp below the status bar
+private val FrostCollapsed = 34.dp  // buttons end at 42; fade ends at 74
+// The page starts at 86 and the hero's label at 92, where the blur has fully gone.
+private val PageTop = 86.dp
 
 @Composable
 fun LjosApp() {
@@ -585,7 +588,7 @@ private fun Header(
             .windowInsetsPadding(WindowInsets.statusBars)
             .padding(horizontal = 20.dp)
             .padding(top = HeaderPadTop)
-            .height(FrostExpanded - HeaderPadTop)
+            .height(HeaderExpanded - HeaderPadTop)
     ) {
         val rowH = with(density) { HeaderRow.toPx() }
         val gap = with(density) { 10.dp.toPx() }
@@ -683,8 +686,10 @@ private fun RoundButton(onClick: () -> Unit, enabled: Boolean = true, content: @
     ) { content() }
 }
 
-// Settings sheet: frosted down to just under the title row (8 + 4 handle + 8 + 30 row + 4).
-private val SheetFrost = 54.dp
+// Settings sheet header: 8 + 4 handle + 8 + 30 title row + 4.
+private val SheetHeader = 54.dp
+// Same frost as the main screen: full frost to 40dp, eased off by 80dp.
+private val SheetFrost = 40.dp
 
 /**
  * Bottom sheet that follows the finger. It has its own blurred header (same technique as the
@@ -753,7 +758,7 @@ private fun SettingsSheet(
                     // shows there. (The sheet's content has no opaque background, so without this
                     // plain text stays readable through the blur.) The recorded layer below is
                     // captured before this mask, so the blur still has full content to work with.
-                    .fadeUnderHeader(SheetFrost, SheetFrost + Frost.Fade)
+                    .fadeUnderHeader(SheetFrost + Frost.Fade * Frost.SharpFrom, SheetFrost + Frost.Fade)
                     .backdropSource(layer)
                     .nestedScroll(connection)
                     .verticalScroll(inner)
@@ -767,7 +772,7 @@ private fun SettingsSheet(
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .height(SheetFrost)
+                    .height(SheetHeader)
                     .draggable(
                         state = dragState,
                         orientation = Orientation.Vertical,

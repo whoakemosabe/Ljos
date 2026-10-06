@@ -35,15 +35,32 @@ fun Modifier.backdropSource(layer: GraphicsLayer): Modifier = drawWithContent {
 
 /**
  * One frosted-header look, shared by every screen so they all feel the same:
- * fully frosted behind the header's contents, then a short fixed fade into the sharp page.
- * Only the frosted height differs from place to place.
+ * fully frosted at the top, then the blur eases off over [Fade] into the sharp page.
+ * Only where the frost starts easing off differs from place to place.
+ *
+ * The fade has to be long relative to the blur strength: a 40dp blur fading out over 20dp
+ * (v1.0.9) drops from 25dp to 1dp inside 10dp of screen and reads as a hard line.
+ * 28dp over 40dp loses under 1dp of blur per 1.4dp of screen.
  */
 object Frost {
-    /** How far below the frosted part the blur takes to dissolve. */
-    val Fade = 20.dp
-    val MaxRadius = 40.dp
-    const val TintAlpha = 0.6f
+    /** How far the blur takes to ease off, from full strength to sharp. */
+    val Fade = 40.dp
+    val MaxRadius = 28.dp
+    /** Light: the blur does the work, the tint only steadies the text. */
+    const val TintAlpha = 0.35f
     const val Bands = 5
+
+    /** Band [t] (0 gentlest … 1 strongest) eases off over this part of the fade, as fractions. */
+    internal fun window(t: Float): Pair<Float, Float> {
+        val start = 0.6f * (1f - t)
+        return start to start + 0.3f + 0.1f * (1f - t)
+    }
+
+    /**
+     * Where content with a see-through background should start showing sharp under the header:
+     * only the gentlest band is left there, so blurred and sharp cross-fade without a gap.
+     */
+    const val SharpFrom = 0.6f
 }
 
 /**
@@ -51,8 +68,8 @@ object Frost {
  * copy simply fading out, so there's no "double image" in the fade.
  *
  * [Frost.Bands] blur layers are stacked: above [frostPx] every band is on (full frost); inside
- * the [Frost.Fade] below it the strongest band dissolves first and the gentlest reaches the very
- * bottom. Each band is blurred first and masked second, so the blur can never spill past its
+ * the [Frost.Fade] below it they ease off one after another, strongest first, so the blur
+ * radius falls steadily to nothing at the bottom edge. Each band is blurred first and masked second, so the blur can never spill past its
  * mask and get cut off by the header's edge (that was the hard line under the settings header).
  * A tint in [base] (the surface colour behind) dims the frosted part for legibility.
  * Android 12+ blurs; older phones keep just the tint.
@@ -88,8 +105,10 @@ fun FrostHeader(
                         drawContent()
                         val h = size.height
                         if (h <= 0f) return@drawWithContent
-                        val e = (h - 0.45f * fadePx * t) / h
-                        val s = (e - 0.55f * fadePx / h).coerceAtLeast(0f)
+                        val top = (h - fadePx).coerceAtLeast(0f)
+                        val (ws, we) = Frost.window(t)
+                        val s = (top + ws * fadePx) / h
+                        val e = (top + we * fadePx) / h
                         drawRect(
                             Brush.verticalGradient(0f to Color.Black, s to Color.Black, e to Color.Transparent),
                             blendMode = BlendMode.DstIn,
@@ -127,9 +146,8 @@ fun FrostHeader(
                     Brush.verticalGradient(
                         // Eases off steadily from the top, so there's no dark "lid" over the sky.
                         0f to tint,
-                        (k * 0.5f) to tint.copy(alpha = tint.alpha * 0.7f),
-                        k to tint.copy(alpha = tint.alpha * 0.35f),
-                        (k + (1f - k) * 0.5f) to tint.copy(alpha = tint.alpha * 0.1f),
+                        k to tint.copy(alpha = tint.alpha * 0.45f),
+                        (k + (1f - k) * 0.5f) to tint.copy(alpha = tint.alpha * 0.12f),
                         1f to Color.Transparent,
                     )
                 )
