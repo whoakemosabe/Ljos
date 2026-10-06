@@ -8,7 +8,21 @@ import android.net.Uri
 import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
+import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInVertically
+import androidx.compose.animation.slideOutVertically
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.navigationBars
+import androidx.compose.ui.draw.blur
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.animateIntAsState
@@ -91,6 +105,9 @@ fun LjosApp() {
     var errors by remember { mutableStateOf<List<String>>(emptyList()) }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var selected by remember { mutableStateOf<Long?>(null) }
+    var showSettings by remember { mutableStateOf(false) }
+    val blurRadius by animateDpAsState(if (showSettings) 28.dp else 0.dp, tween(350), label = "blur")
+    BackHandler(enabled = showSettings) { showSettings = false }
 
     suspend fun reload(force: Boolean) {
         loading = true
@@ -134,6 +151,8 @@ fun LjosApp() {
     val intensity by animateFloatAsState((night?.peak?.score ?: 0) / 100f, tween(1800), label = "intensity")
 
     Box(Modifier.fillMaxSize().background(NightBg)) {
+      // Everything behind the settings panel; blurred while it's open (Android 12+).
+      Box(Modifier.fillMaxSize().then(if (blurRadius > 0.dp) Modifier.blur(blurRadius) else Modifier)) {
         AuroraBackground(intensity, Modifier.fillMaxSize())
         Column(
             Modifier
@@ -143,7 +162,7 @@ fun LjosApp() {
                 .padding(horizontal = 20.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            TopBar(inp?.updatedAt ?: 0L, now, loading) { scope.launch { reload(true) } }
+            TopBar(inp?.updatedAt ?: 0L, now, loading, onSettings = { showSettings = true }) { scope.launch { reload(true) } }
             Hero(night, inp, loading)
             if (nowState != null && nowState.isDark) NowCard(nowState)
             if (night != null && night.hours.isNotEmpty()) {
@@ -155,15 +174,16 @@ fun LjosApp() {
             }
             if (sel != null) WhyCard(sel)
             if (spots.isNotEmpty() && sel != null) WhereCard(spots, sel)
-            AlertsCard()
             Footer(errors)
             Spacer(Modifier.height(16.dp))
         }
+      }
+        SettingsSheet(showSettings) { showSettings = false }
     }
 }
 
 @Composable
-private fun TopBar(updatedAt: Long, now: Long, loading: Boolean, onRefresh: () -> Unit) {
+private fun TopBar(updatedAt: Long, now: Long, loading: Boolean, onSettings: () -> Unit, onRefresh: () -> Unit) {
     Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
         Text("Ljós", color = Ink, fontSize = 20.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp)
         Spacer(Modifier.weight(1f))
@@ -184,6 +204,86 @@ private fun TopBar(updatedAt: Long, now: Long, loading: Boolean, onRefresh: () -
                 CircularProgressIndicator(Modifier.size(16.dp), color = Ink, strokeWidth = 2.dp)
             } else {
                 Text("↻", color = Ink, fontSize = 18.sp)
+            }
+        }
+        Spacer(Modifier.width(8.dp))
+        Box(
+            Modifier
+                .size(36.dp)
+                .clip(CircleShape)
+                .background(Color(0x1AFFFFFF))
+                .clickable(onClick = onSettings),
+            contentAlignment = Alignment.Center,
+        ) {
+            TuneIcon()
+        }
+    }
+}
+
+/** Three slider lines with knobs, drawn so it matches the thin UI. */
+@Composable
+private fun TuneIcon() {
+    Canvas(Modifier.size(16.dp)) {
+        val sw = 1.6.dp.toPx()
+        val ys = listOf(0.2f, 0.5f, 0.8f)
+        val knobs = listOf(0.68f, 0.32f, 0.58f)
+        ys.forEachIndexed { i, y ->
+            drawLine(Ink, Offset(0f, size.height * y), Offset(size.width, size.height * y), sw, StrokeCap.Round)
+            drawCircle(NightBg, 3.2.dp.toPx(), Offset(size.width * knobs[i], size.height * y))
+            drawCircle(Ink, 2.4.dp.toPx(), Offset(size.width * knobs[i], size.height * y), style = androidx.compose.ui.graphics.drawscope.Stroke(sw))
+        }
+    }
+}
+
+@Composable
+private fun SettingsSheet(visible: Boolean, onClose: () -> Unit) {
+    AnimatedVisibility(visible, enter = fadeIn(tween(250)), exit = fadeOut(tween(250))) {
+        Box(
+            Modifier
+                .fillMaxSize()
+                .background(Color(0x40000000))
+                .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, onClick = onClose)
+        )
+    }
+    Box(Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+        AnimatedVisibility(
+            visible,
+            enter = slideInVertically(tween(350)) { it } + fadeIn(tween(200)),
+            exit = slideOutVertically(tween(300)) { it } + fadeOut(tween(200)),
+        ) {
+            val shape = RoundedCornerShape(topStart = 32.dp, topEnd = 32.dp)
+            // Frosted glass: the page behind is blurred; this layer adds tint, sheen and a hairline edge.
+            val tint = if (Build.VERSION.SDK_INT >= 31) Color(0x590A1022) else Color(0xE60A1022)
+            Column(
+                Modifier
+                    .fillMaxWidth()
+                    .clip(shape)
+                    .background(tint)
+                    .background(Brush.verticalGradient(listOf(Color(0x24FFFFFF), Color(0x08FFFFFF))))
+                    .border(1.dp, Color(0x2EFFFFFF), shape)
+                    .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { }
+                    .windowInsetsPadding(WindowInsets.navigationBars)
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 22.dp, vertical = 14.dp)
+            ) {
+                Box(
+                    Modifier
+                        .align(Alignment.CenterHorizontally)
+                        .size(width = 40.dp, height = 4.dp)
+                        .clip(RoundedCornerShape(2.dp))
+                        .background(Color(0x4DFFFFFF))
+                )
+                Spacer(Modifier.height(16.dp))
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text("Settings", color = Ink, fontSize = 22.sp, fontWeight = FontWeight.Light)
+                    Spacer(Modifier.weight(1f))
+                    Text(
+                        "Done", color = Green, fontSize = 15.sp, fontWeight = FontWeight.Medium,
+                        modifier = Modifier.clip(RoundedCornerShape(10.dp)).clickable(onClick = onClose).padding(8.dp),
+                    )
+                }
+                Spacer(Modifier.height(8.dp))
+                SettingsContent()
             }
         }
     }
@@ -354,7 +454,7 @@ private fun WhereCard(spots: List<SpotScore>, sel: HourScore) {
 
 @SuppressLint("BatteryLife")
 @Composable
-private fun AlertsCard() {
+private fun SettingsContent() {
     val context = LocalContext.current
     val prefs = remember { Prefs(context) }
     var tonight by remember { mutableStateOf(prefs.tonightAlerts) }
@@ -364,9 +464,8 @@ private fun AlertsCard() {
     val pm = remember { context.getSystemService(PowerManager::class.java) }
     val unrestricted = remember(checks) { pm?.isIgnoringBatteryOptimizations(context.packageName) ?: true }
 
-    Column(Modifier.glass()) {
-        CardTitle("Alerts", null)
-        Spacer(Modifier.height(6.dp))
+    Column {
+        SectionLabel("ALERTS")
         ToggleRow("Evening heads-up", "Once a night, 16:00–23:00, if tonight reaches your level", tonight) {
             tonight = it; prefs.tonightAlerts = it
         }
@@ -393,8 +492,11 @@ private fun AlertsCard() {
                 )
             }
         }
-        if (!unrestricted) {
-            Spacer(Modifier.height(14.dp))
+        Spacer(Modifier.height(18.dp))
+        SectionLabel("BACKGROUND")
+        if (unrestricted) {
+            Text("Background refresh allowed. Widgets and alerts update about every 15 minutes.", color = Muted, fontSize = 13.sp)
+        } else {
             Row(
                 Modifier
                     .fillMaxWidth()
@@ -421,6 +523,7 @@ private fun AlertsCard() {
                 }
             }
         }
+        AboutRows()
     }
     LaunchedEffect(Unit) {
         while (true) {
@@ -428,6 +531,25 @@ private fun AlertsCard() {
             checks++
         }
     }
+}
+
+@Composable
+private fun SectionLabel(text: String) {
+    Text(text, color = Faint, fontSize = 11.sp, fontWeight = FontWeight.Medium, letterSpacing = 2.sp,
+        modifier = Modifier.padding(bottom = 4.dp))
+}
+
+@Composable
+private fun AboutRows() {
+    val context = LocalContext.current
+    val version = remember {
+        try { context.packageManager.getPackageInfo(context.packageName, 0).versionName } catch (e: Exception) { null } ?: "?"
+    }
+    Spacer(Modifier.height(18.dp))
+    SectionLabel("ABOUT")
+    Text("Home: Njarðvík · spots on Reykjanes", color = Muted, fontSize = 13.sp)
+    Text("Version $version", color = Muted, fontSize = 13.sp)
+    Spacer(Modifier.height(8.dp))
 }
 
 @Composable

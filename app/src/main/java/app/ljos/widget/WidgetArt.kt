@@ -121,50 +121,67 @@ object WidgetArt {
 
     private fun bars(c: Canvas, w: Int, h: Int, scale: Float, hours: List<HourScore>, now: Long, leftDp: Float) {
         val left = leftDp * scale
-        val right = w - 16f * scale
-        val top = 18f * scale
-        val labelH = 16f * scale
-        val bottom = h - 14f * scale - labelH
+        val right = w - 14f * scale
+        val top = 14f * scale
+        val labelH = 18f * scale
+        val bottom = h - 12f * scale - labelH
         if (right - left < 40f * scale) return
+
+        // Dark glass panel behind the chart so bars stand out from the aurora art
+        val panel = Paint(Paint.ANTI_ALIAS_FLAG).apply { color = 0xB3050812.toInt() }
+        val pad = 8f * scale
+        c.drawRoundRect(RectF(left - pad, top - pad, right + pad, h - 6f * scale), 14f * scale, 14f * scale, panel)
+        panel.style = Paint.Style.STROKE
+        panel.strokeWidth = max(1f, 0.8f * scale)
+        panel.color = 0x26FFFFFF
+        c.drawRoundRect(RectF(left - pad, top - pad, right + pad, h - 6f * scale), 14f * scale, 14f * scale, panel)
 
         val n = hours.size
         val slot = (right - left) / n
-        val barW = slot * 0.6f
+        val barW = min(slot * 0.74f, 14f * scale)
         val radius = barW / 2f
         val chartH = bottom - top
         val p = Paint(Paint.ANTI_ALIAS_FLAG)
+        val glow = Paint(Paint.ANTI_ALIAS_FLAG)
         val txt = Paint(Paint.ANTI_ALIAS_FLAG).apply {
-            color = 0x99E8F1FF.toInt()
-            textSize = 10f * scale
+            color = 0xD9E8F1FF.toInt()
+            textSize = 11f * scale
             textAlign = Paint.Align.CENTER
-            typeface = Typeface.create(Typeface.DEFAULT, Typeface.NORMAL)
+            typeface = Typeface.create(Typeface.DEFAULT, Typeface.BOLD)
         }
 
         hours.forEachIndexed { i, hs ->
             val x = left + i * slot + (slot - barW) / 2f
+            val isNow = now >= hs.time && now < hs.time + HOUR_MS
             // Track
             p.shader = null
-            p.color = 0x14FFFFFF
+            p.color = 0x2EFFFFFF
             c.drawRoundRect(RectF(x, top, x + barW, bottom), radius, radius, p)
-            // Bar
-            val bh = max(chartH * hs.score / 100f, barW)
-            val col = scoreColor(hs.score)
-            p.shader = LinearGradient(
-                0f, bottom - bh, 0f, bottom,
-                intArrayOf(col, (0x55 shl 24) or (col and 0xFFFFFF)), null, Shader.TileMode.CLAMP,
-            )
+            // Bar: solid, bright, with a soft glow; a stub is always visible even at 0
+            val bh = max(chartH * hs.score / 100f, barW * 0.9f)
+            val col = if (hs.score == 0) 0xFF5A6B80.toInt() else brighten(scoreColor(hs.score))
+            if (hs.score >= 20) {
+                glow.color = (0x55 shl 24) or (col and 0xFFFFFF)
+                c.drawRoundRect(RectF(x - 2f * scale, bottom - bh - 2f * scale, x + barW + 2f * scale, bottom + 2f * scale),
+                    radius + 2f * scale, radius + 2f * scale, glow)
+            }
+            p.color = col
             c.drawRoundRect(RectF(x, bottom - bh, x + barW, bottom), radius, radius, p)
-            p.shader = null
-            // Current hour marker
-            if (now >= hs.time && now < hs.time + HOUR_MS) {
+            if (isNow) {
+                p.style = Paint.Style.STROKE
+                p.strokeWidth = 1.5f * scale
                 p.color = 0xFFFFFFFF.toInt()
-                c.drawCircle(x + barW / 2f, bottom + 5f * scale, 2f * scale, p)
+                c.drawRoundRect(RectF(x - 2.5f * scale, top - 2.5f * scale, x + barW + 2.5f * scale, bottom + 2.5f * scale),
+                    radius + 2.5f * scale, radius + 2.5f * scale, p)
+                p.style = Paint.Style.FILL
             }
             if (i % 3 == 0) {
                 c.drawText(Fmt.hour(hs.time), x + barW / 2f, h - 12f * scale, txt)
             }
         }
     }
+
+    private fun brighten(c: Int): Int = lerp(c, 0xFFFFFFFF.toInt(), 0.12f)
 
     /** Teal for low scores, green in the middle, violet at the top. */
     fun scoreColor(score: Int): Int {
