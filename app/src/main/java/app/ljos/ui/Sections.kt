@@ -223,12 +223,17 @@ internal fun countdownLine(night: Night, now: Long): String? {
 @Composable
 internal fun TomorrowNudge(tomorrowScore: Int, onTap: () -> Unit) {
     val view = LocalView.current
+    val backdrop = LocalGlassBackdrop.current
     Row(
         Modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(Brush.horizontalGradient(listOf(Color(0x263DFFA0), Color(0x1AB79CFF))))
-            .border(1.dp, Color(0x333DFFA0), RoundedCornerShape(16.dp))
-            .clickable { Haptics.tap(view); onTap() }
+            .then(
+                if (backdrop != null) Modifier.glassControl(backdrop, RoundedCornerShape(16.dp), LocalGlassAngle.current, surface = Color(0x2E1A3D30))
+                else Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Brush.horizontalGradient(listOf(Color(0x263DFFA0), Color(0x1AB79CFF))))
+                    .border(1.dp, Color(0x333DFFA0), RoundedCornerShape(16.dp))
+            )
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { Haptics.tap(view); onTap() }
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

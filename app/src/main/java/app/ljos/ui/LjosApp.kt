@@ -551,6 +551,7 @@ fun LjosApp() {
                 loading = loading,
                 top = statusTop + PageTop - 4.dp,
                 intro = { pullIntro.value },
+                backdrop = skyBackdrop,
             )
             Header(
                 backdrop = pageBackdrop,
@@ -753,12 +754,10 @@ private fun ScoreSlot(score: Int, scoreMorph: () -> Float, onPillTarget: (Offset
                     val sc = 0.9f + 0.1f * landed
                     scaleX = sc; scaleY = sc
                 }
-                .clip(RoundedCornerShape(12.dp))
-                .background(scoreColor(score).copy(alpha = 0.18f))
-                .border(1.dp, scoreColor(score).copy(alpha = 0.45f), RoundedCornerShape(12.dp))
-                .padding(horizontal = 9.dp, vertical = 3.dp),
+                .padding(horizontal = 2.dp, vertical = 3.dp),
         ) {
-            Text(score.toString(), color = scoreColor(score), fontSize = 14.sp, fontWeight = FontWeight.Medium)
+            // Just the number, in its colour; the glass pill around the place is frame enough.
+            Text(score.toString(), color = scoreColor(score), fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
         }
     }
 }
@@ -1028,7 +1027,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.SoftReveal(visible: B
  * Also drifts in and out once on the first few opens so people know it exists.
  */
 @Composable
-private fun PullHint(pullFraction: () -> Float, loading: Boolean, top: Dp, intro: () -> Float) {
+private fun PullHint(pullFraction: () -> Float, loading: Boolean, top: Dp, intro: () -> Float, backdrop: LayerBackdrop? = null) {
     val pastLine by remember { derivedStateOf { pullFraction() >= 1f } }
     val pulling by remember { derivedStateOf { pullFraction() > 0.02f } }
     // "Refreshing…" shows only for refreshes the pull started.
@@ -1058,7 +1057,9 @@ private fun PullHint(pullFraction: () -> Float, loading: Boolean, top: Dp, intro
                     alpha = maxOf((p * 1.4f).coerceAtMost(1f), intro(), refreshAlpha)
                     // Drifts down a touch with the pull, like it's being drawn out.
                     translationY = p * 10.dp.toPx() + (1f - intro()) * (if (pulling) 0f else -4.dp.toPx())
-                },
+                }
+                    .then(if (backdrop != null) Modifier.glassControl(backdrop, CircleShape, shadow = false) else Modifier)
+                    .padding(horizontal = 12.dp, vertical = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 if (t == L.t("Refreshing…", "Uppfæri…")) {
@@ -1078,12 +1079,17 @@ private fun PullHint(pullFraction: () -> Float, loading: Boolean, top: Dp, intro
 @Composable
 private fun UpdateBanner(version: String, onClick: () -> Unit) {
     val view = LocalView.current
+    val backdrop = LocalGlassBackdrop.current
     Row(
         Modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(Brush.horizontalGradient(listOf(Color(0x263DFFA0), Color(0x1AB79CFF))))
-            .border(1.dp, Color(0x333DFFA0), RoundedCornerShape(16.dp))
-            .clickable { Haptics.tap(view); onClick() }
+            .then(
+                if (backdrop != null) Modifier.glassControl(backdrop, RoundedCornerShape(16.dp), LocalGlassAngle.current, surface = Color(0x2E1A3D30))
+                else Modifier
+                    .clip(RoundedCornerShape(16.dp))
+                    .background(Brush.horizontalGradient(listOf(Color(0x263DFFA0), Color(0x1AB79CFF))))
+                    .border(1.dp, Color(0x333DFFA0), RoundedCornerShape(16.dp))
+            )
+            .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { Haptics.tap(view); onClick() }
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {

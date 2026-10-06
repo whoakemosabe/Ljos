@@ -71,7 +71,10 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.draw.drawWithContent
 import app.ljos.Fmt
+import com.kyant.backdrop.backdrops.layerBackdrop
 import app.ljos.L
 import app.ljos.widget.Widgets
 import app.ljos.Prefs
@@ -435,25 +438,49 @@ private fun SoftSwitch(checked: Boolean, onChange: (Boolean) -> Unit) {
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val stretch by animateFloatAsState(if (pressed) 1.25f else 1f, spring(dampingRatio = 0.6f, stiffness = 500f), label = "stretch")
-    Canvas(
+    // iOS 26: while your finger is on it, the knob turns to liquid glass (you see the track
+    // through it, bent), then settles back to solid when you let go.
+    val press by animateFloatAsState(if (pressed) 1f else 0f, spring(dampingRatio = 0.8f, stiffness = 400f), label = "glassKnob")
+    val glass = android.os.Build.VERSION.SDK_INT >= 33
+    val trackB = com.kyant.backdrop.backdrops.rememberLayerBackdrop()
+    Box(
         Modifier
             .size(width = 46.dp, height = 28.dp)
             .clickable(interactionSource = interaction, indication = null) { Haptics.toggle(view, !checked); onChange(!checked) }
     ) {
-        val h = size.height
-        drawRoundRect(track, cornerRadius = CornerRadius(h / 2f))
-        if (checked || pos > 0.01f) {
-            drawRoundRect(Green.copy(alpha = 0.25f * pos), Offset(-3.dp.toPx(), -3.dp.toPx()),
-                Size(size.width + 6.dp.toPx(), h + 6.dp.toPx()), CornerRadius(h / 2f + 3.dp.toPx()))
+        Canvas(Modifier.matchParentSize().then(if (glass) Modifier.layerBackdrop(trackB) else Modifier)) {
+            val h = size.height
+            drawRoundRect(track, cornerRadius = CornerRadius(h / 2f))
+            if (checked || pos > 0.01f) {
+                drawRoundRect(Green.copy(alpha = 0.25f * pos), Offset(-3.dp.toPx(), -3.dp.toPx()),
+                    Size(size.width + 6.dp.toPx(), h + 6.dp.toPx()), CornerRadius(h / 2f + 3.dp.toPx()))
+            }
         }
-        val pad = 3.dp.toPx()
-        val d = h - pad * 2
-        // The spring overshoots past the end; let the knob squash against the wall instead of
-        // sliding out of the track (that's what was getting cut off on the right).
-        val over = kotlin.math.abs(pos - pos.coerceIn(0f, 1f))
-        val w = d * stretch * (1f - 0.6f * over)
-        val x = pad + (size.width - pad * 2 - w) * pos.coerceIn(0f, 1f)
-        drawRoundRect(knob, Offset(x, pad), Size(w, d), CornerRadius(d / 2f))
+        Box(
+            Modifier
+                .layout { measurable, constraints ->
+                    val pad = 3.dp.roundToPx()
+                    val d = constraints.maxHeight - pad * 2
+                    // The spring overshoots past the end; the knob squashes against the wall
+                    // instead of sliding out of the track.
+                    val over = kotlin.math.abs(pos - pos.coerceIn(0f, 1f))
+                    val w = (d * stretch * (1f - 0.6f * over)).toInt().coerceAtLeast(1)
+                    val x = pad + ((constraints.maxWidth - pad * 2 - w) * pos.coerceIn(0f, 1f)).toInt()
+                    val p = measurable.measure(androidx.compose.ui.unit.Constraints.fixed(w, d))
+                    layout(constraints.maxWidth, constraints.maxHeight) { p.place(x, pad) }
+                }
+                .then(
+                    if (glass) Modifier.glassControl(
+                        trackB, RoundedCornerShape(50), lensHeight = 6.dp, lensAmount = 10.dp,
+                        surface = Color.Transparent, shadow = false,
+                    ) else Modifier
+                )
+                .drawWithContent {
+                    drawContent()
+                    val a = if (glass) 1f - 0.9f * press else 1f
+                    drawRoundRect(knob.copy(alpha = knob.alpha * a), cornerRadius = CornerRadius(size.height / 2f))
+                }
+        )
     }
 }
 
@@ -512,6 +539,11 @@ private fun SegmentRow(title: String, options: List<String>, selected: Int, onSe
 internal fun SlidingSegments(options: List<String>, selected: Int, modifier: Modifier, onSelect: (Int) -> Unit) {
     val view = LocalView.current
     val pos by animateFloatAsState(selected.toFloat(), spring(dampingRatio = 0.72f, stiffness = 340f), label = "segment")
+    // iOS 26 style: the labels sit on the track, and the selection is a liquid-glass thumb that
+    // slides over them, its lens magnifying the label underneath. Before Android 13 the thumb
+    // is a solid green pill as before.
+    val glass = android.os.Build.VERSION.SDK_INT >= 33
+    val track = com.kyant.backdrop.backdrops.rememberLayerBackdrop()
     BoxWithConstraints(
         modifier
             .height(36.dp)
@@ -521,15 +553,17 @@ internal fun SlidingSegments(options: List<String>, selected: Int, modifier: Mod
             .padding(3.dp)
     ) {
         val segW = maxWidth / options.size
-        Box(
-            Modifier
-                .offset(x = segW * pos)
-                .width(segW)
-                .fillMaxHeight()
-                .clip(RoundedCornerShape(10.dp))
-                .background(Brush.horizontalGradient(listOf(Green, Color(0xFF5CFFC0))))
-        )
-        Row(Modifier.fillMaxSize()) {
+        if (!glass) {
+            Box(
+                Modifier
+                    .offset(x = segW * pos)
+                    .width(segW)
+                    .fillMaxHeight()
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Brush.horizontalGradient(listOf(Green, Color(0xFF5CFFC0))))
+            )
+        }
+        Row(Modifier.fillMaxSize().then(if (glass) Modifier.layerBackdrop(track) else Modifier)) {
             options.forEachIndexed { i, label ->
                 val closeness = (1f - kotlin.math.abs(pos - i)).coerceIn(0f, 1f)
                 Box(
@@ -544,12 +578,26 @@ internal fun SlidingSegments(options: List<String>, selected: Int, modifier: Mod
                 ) {
                     Text(
                         label,
-                        color = androidx.compose.ui.graphics.lerp(Muted, Color(0xFF03130B), closeness),
+                        color = if (glass) androidx.compose.ui.graphics.lerp(Muted, Ink, closeness)
+                        else androidx.compose.ui.graphics.lerp(Muted, Color(0xFF03130B), closeness),
                         fontSize = 13.sp,
                         fontWeight = FontWeight.Medium,
                     )
                 }
             }
+        }
+        if (glass) {
+            Box(
+                Modifier
+                    .offset(x = segW * pos)
+                    .width(segW)
+                    .fillMaxHeight()
+                    .glassControl(
+                        track, RoundedCornerShape(10.dp), lensHeight = 8.dp, lensAmount = 14.dp,
+                        surface = Color(0x263DFFA0), magnify = 1.12f,
+                        magnifyPivot = androidx.compose.ui.unit.DpOffset(segW / 2, 15.dp), shadow = false,
+                    )
+            )
         }
     }
 }
