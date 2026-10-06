@@ -50,6 +50,8 @@ jobs:
           } > notes.md
 
       - name: Publish release
+        # Only main publishes; other branches are build checks.
+        if: github.ref == 'refs/heads/main'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v1.0.${{ github.run_number }}

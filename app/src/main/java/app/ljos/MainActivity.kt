@@ -8,7 +8,7 @@ import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.LocalOverscrollConfiguration
+import androidx.compose.foundation.LocalOverscrollFactory
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
@@ -47,7 +47,7 @@ class MainActivity : ComponentActivity() {
             val widthDp = LocalConfiguration.current.screenWidthDp
             val scale = (widthDp / 410f).coerceIn(0.85f, 1f)
             val scaled = Density(base.density * scale, base.fontScale.coerceAtMost(1.15f))
-            CompositionLocalProvider(LocalOverscrollConfiguration provides null, LocalDensity provides scaled) {
+            CompositionLocalProvider(LocalOverscrollFactory provides null, LocalDensity provides scaled) {
             LjosTheme {
                 var onboarded by remember { mutableStateOf(prefs.onboarded) }
                 Crossfade(onboarded, animationSpec = tween(600), label = "start") { done ->

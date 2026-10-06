@@ -11,7 +11,6 @@ import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.layout.layout
-import androidx.compose.ui.graphics.layer.GraphicsLayer
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.animate
 import androidx.compose.runtime.mutableFloatStateOf
@@ -21,7 +20,9 @@ import androidx.compose.foundation.gestures.Orientation
 import androidx.compose.foundation.gestures.draggable
 import androidx.compose.foundation.gestures.rememberDraggableState
 import androidx.compose.foundation.interaction.collectIsPressedAsState
-import androidx.compose.ui.graphics.rememberGraphicsLayer
+import com.kyant.backdrop.backdrops.LayerBackdrop
+import com.kyant.backdrop.backdrops.layerBackdrop
+import com.kyant.backdrop.backdrops.rememberLayerBackdrop
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -254,7 +255,7 @@ fun LjosApp() {
     val intensity by animateFloatAsState((night?.peak?.score ?: 0) / 100f, tween(1800), label = "intensity")
 
     // Recorded once per frame and reused (blurred) by the header, so the page is only composed once.
-    val pageLayer = rememberGraphicsLayer()
+    val pageBackdrop = rememberLayerBackdrop()
 
     BoxWithConstraints(Modifier.fillMaxSize().background(NightBg)) {
         val screenH = maxHeight
@@ -359,7 +360,7 @@ fun LjosApp() {
                     }
                 }
         ) {
-            Box(Modifier.fillMaxSize().backdropSource(pageLayer)) {
+            Box(Modifier.fillMaxSize().layerBackdrop(pageBackdrop)) {
                 AuroraBackground(intensity, Modifier.fillMaxSize(), sky = skyState, pull = { pullFraction().coerceIn(0f, 1.4f) })
                 Column(
                     Modifier
@@ -473,7 +474,7 @@ fun LjosApp() {
             // Like iOS: no glass at the top of the page; it materialises over the first 24dp of scroll.
             val glassIn = with(density) { 24.dp.toPx() }
             GlassHeader(
-                pageLayer, bodyPx = { headerBodyPx }, fade = HeaderFade, tint = NightBg.copy(alpha = 0.34f),
+                pageBackdrop, bodyPx = { headerBodyPx }, fade = HeaderFade, tint = NightBg.copy(alpha = 0.34f),
                 visible = { scroll.value / glassIn },
             )
             PullHint(
@@ -538,7 +539,7 @@ fun LjosApp() {
                     .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { closeSheet() }
             )
             SettingsSheet(
-                backdrop = pageLayer,
+                backdrop = pageBackdrop,
                 sheet = sheet,
                 maxHeight = screenH * 0.9f,
                 onClose = { closeSheet() },
@@ -689,7 +690,7 @@ private val SheetFade = 24.dp
  */
 @Composable
 private fun SettingsSheet(
-    backdrop: GraphicsLayer,
+    backdrop: LayerBackdrop,
     sheet: Animatable<Float, *>,
     maxHeight: Dp,
     onClose: () -> Unit,
@@ -699,7 +700,7 @@ private fun SettingsSheet(
 ) {
     var heightPx by remember { mutableIntStateOf(100_000) }
     val inner = rememberScrollState()
-    val layer = rememberGraphicsLayer()
+    val layer = rememberLayerBackdrop()
     val connection = remember {
         object : NestedScrollConnection {
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
@@ -741,31 +742,15 @@ private fun SettingsSheet(
                 .clip(shape)
                 .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { }
         ) {
-            // The glass itself. It runs 48dp past the bottom so only the top corners are rounded
-            // (the sheet's clip trims the rest).
-            LiquidGlass(
-                backdrop,
-                cornerRadius = 32.dp,
-                tint = tint,
-                frost = 12.dp,
-                rim = 22.dp,
-                modifier = Modifier
-                    .matchParentSize()
-                    .layout { measurable, constraints ->
-                        val extra = 48.dp.roundToPx()
-                        val p = measurable.measure(
-                            androidx.compose.ui.unit.Constraints.fixed(constraints.maxWidth, constraints.maxHeight + extra)
-                        )
-                        layout(constraints.maxWidth, constraints.maxHeight) { p.place(0, 0) }
-                    },
-            )
+            // The glass itself: the screen behind, frosted, its rounded top bent by the lens.
+            Box(Modifier.matchParentSize().glassSheet(backdrop, 32.dp, tint))
             Column(
                 Modifier
                     // The sheet's content has a see-through background, so the sharp copy fades
                     // out under the glass header (as the glass fades in), and the glass shows a
                     // frosted copy recorded before this mask.
                     .fadeUnderHeader(SheetHeader, SheetHeader + SheetFade)
-                    .backdropSource(layer)
+                    .layerBackdrop(layer)
                     .nestedScroll(connection)
                     .verticalScroll(inner)
                     .windowInsetsPadding(WindowInsets.navigationBars)
