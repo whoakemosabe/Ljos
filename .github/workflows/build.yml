@@ -43,9 +43,17 @@ jobs:
           echo "KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD" >> "$GITHUB_ENV"
 
       - name: Test and build
+        shell: bash
         run: |
           chmod +x gradlew
-          ./gradlew --no-daemon testReleaseUnitTest assembleRelease
+          set -o pipefail
+          ./gradlew --no-daemon testReleaseUnitTest assembleRelease 2>&1 | tee build.log
+
+      - name: Report compile errors
+        if: failure()
+        shell: bash
+        run: |
+          grep -E "^e: |FAILED|error:" build.log | head -40 | while IFS= read -r line; do echo "::error::${line}"; done
 
       - name: Name the APK
         run: cp app/build/outputs/apk/release/app-release.apk ljos.apk
