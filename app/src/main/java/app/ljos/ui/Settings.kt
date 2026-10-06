@@ -68,6 +68,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import app.ljos.Fmt
 import app.ljos.L
 import app.ljos.widget.Widgets
@@ -75,6 +78,7 @@ import app.ljos.Prefs
 import app.ljos.data.Spot
 import app.ljos.data.Updater
 import app.ljos.model.Geo
+import app.ljos.model.Model
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File
@@ -184,11 +188,26 @@ private fun AlertSettings() {
         }
     }
     Spacer(Modifier.height(8.dp))
-    Text(L.t("Heads-up level", "Viðvörunarmark"), color = Ink, fontSize = 14.sp)
-    Spacer(Modifier.height(6.dp))
+    Text(L.t("Alert me from score", "Láta vita frá einkunn"), color = Ink, fontSize = 14.sp)
+    Text(
+        L.t("For the evening heads-up and the lock screen card", "Fyrir kvöldviðvörun og lásskjáspjaldið"),
+        color = Muted, fontSize = 12.sp,
+    )
+    Spacer(Modifier.height(8.dp))
     val levels = listOf(30, 40, 50, 60, 70)
-    SlidingSegments(levels.map { it.toString() }, levels.indexOf(threshold).coerceAtLeast(0), Modifier.fillMaxWidth()) {
+    SlidingSegments(levels.map { "$it+" }, levels.indexOf(threshold).coerceAtLeast(0), Modifier.fillMaxWidth()) {
         threshold = levels[it]; prefs.threshold = levels[it]
+    }
+    Spacer(Modifier.height(6.dp))
+    androidx.compose.animation.AnimatedContent(
+        targetState = threshold,
+        transitionSpec = { fadeIn(tween(220)) togetherWith fadeOut(tween(150)) },
+        label = "thresholdMeaning",
+    ) { v ->
+        Text(
+            L.t("Nights scoring $v+ · ${Model.label(v)} or better", "Kvöld með $v+ · ${Model.label(v)} eða betra"),
+            color = scoreColor(v), fontSize = 12.sp,
+        )
     }
 }
 

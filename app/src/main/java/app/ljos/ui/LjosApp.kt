@@ -126,14 +126,14 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlin.math.roundToInt
 
-private val HeaderExpanded = 82.dp
-private val HeaderCollapsed = 56.dp
-// Blur zone, measured from the top of the status bar:
-// frosted down to just under the header's last line, then a short fixed fade.
-private val FrostExpanded = 80.dp   // under the place chip (12 top + 42 line two + 26 chip)
-private val FrostCollapsed = 54.dp  // under the buttons (12 top + 36 row + 6)
-private val FadeAtRest = 10.dp      // ends at statusTop + 90, exactly where the page starts
-private val FadeScrolled = 24.dp
+// Header geometry, measured down from the bottom of the status bar.
+private val HeaderPadTop = 6.dp
+private val HeaderRow = 36.dp       // title + round buttons
+private val HeaderLine2 = 34.dp     // top of the place chip, under the title
+private val FrostExpanded = 66.dp   // frosted down to just under the place chip (6 + 34 + 26)
+private val FrostCollapsed = 48.dp  // frosted down to just under the buttons (6 + 36 + 6)
+// The page starts where the fade ends, so nothing is blurred until you scroll.
+private val PageTop = FrostExpanded + Frost.Fade
 
 @Composable
 fun LjosApp() {
@@ -261,7 +261,7 @@ fun LjosApp() {
         // Long runway so the number drifts up gently rather than snapping into the header.
         val flightRange = with(density) { 340.dp.toPx() }
         val flightLead = with(density) { 200.dp.toPx() }
-        val headerOrigin = with(density) { Offset(20.dp.toPx(), statusTop.toPx() + 12.dp.toPx()) }
+        val headerOrigin = with(density) { Offset(20.dp.toPx(), (statusTop + HeaderPadTop).toPx()) }
         val placeMorph: () -> Float = { (scroll.value / placeRange).coerceIn(0f, 1f) }
         val scoreMorph: () -> Float = {
             if (!heroBase.isSpecified || !pillTarget.isSpecified) 0f
@@ -274,14 +274,19 @@ fun LjosApp() {
                 ((scroll.value - startScroll) / flightRange).coerceIn(0f, 1f)
             }
         }
-        val headerFadePx: () -> Float = {
-            with(density) { (FadeAtRest + (FadeScrolled - FadeAtRest) * placeMorph()).toPx() }
+        val headerFrostPx: () -> Float = {
+            with(density) { (statusTop + FrostExpanded + (FrostCollapsed - FrostExpanded) * placeMorph()).toPx() }
         }
-        val headerHeightPx: () -> Float = {
-            with(density) {
-                val frost = FrostExpanded + (FrostCollapsed - FrostExpanded) * placeMorph()
-                (statusTop + frost).toPx() + headerFadePx()
-            }
+        // First three opens: the page dips a little to show the pull-to-refresh hint, then settles.
+        val showPullIntro = remember { prefs.pullHintCount < 3 }
+        val pullIntro = remember { Animatable(0f) }
+        LaunchedEffect(Unit) {
+            if (!showPullIntro) return@LaunchedEffect
+            prefs.pullHintCount = prefs.pullHintCount + 1
+            delay(1200)
+            pullIntro.animateTo(1f, tween(700, easing = FastOutSlowInEasing))
+            delay(2400)
+            pullIntro.animateTo(0f, spring(dampingRatio = 0.8f, stiffness = 120f))
         }
         val openness: () -> Float = { 1f - sheet.value }
 
@@ -350,11 +355,11 @@ fun LjosApp() {
                 Column(
                     Modifier
                         .fillMaxSize()
-                        .graphicsLayer { translationY = pullPx * 0.55f }
+                        .graphicsLayer { translationY = pullPx * 0.55f + pullIntro.value * 30.dp.toPx() }
                         .nestedScroll(pullConnection)
                         .verticalScroll(scroll)
                         .windowInsetsPadding(WindowInsets.navigationBars)
-                        .padding(top = statusTop + HeaderExpanded + 8.dp)
+                        .padding(top = statusTop + PageTop)
                         .padding(horizontal = 20.dp),
                     verticalArrangement = Arrangement.spacedBy(14.dp),
                 ) {
@@ -384,7 +389,7 @@ fun LjosApp() {
                                 if (target in collapsed) toggle(target)
                                 val coords = cardSpots[target]
                                 if (coords != null && coords.isAttached) {
-                                    val headerBottom = with(density) { (statusTop + FrostCollapsed + FadeScrolled + 4.dp).toPx() }
+                                    val headerBottom = with(density) { (statusTop + FrostCollapsed + Frost.Fade + 6.dp).toPx() }
                                     val y = coords.positionInRoot().y
                                     scope.launch {
                                         scroll.animateScrollTo(
@@ -461,18 +466,12 @@ fun LjosApp() {
                 }
             }
 
-            ProgressiveBlurHeader(
-                pageLayer, height = statusTop + FrostExpanded + FadeAtRest,
-                heightPx = headerHeightPx, featherPx = headerFadePx,
-            )
-            // Teach pull-to-refresh on the first three opens.
-            val showPullIntro = remember { prefs.pullHintCount < 3 }
-            LaunchedEffect(Unit) { if (showPullIntro) prefs.pullHintCount = prefs.pullHintCount + 1 }
+            FrostHeader(pageLayer, frostPx = headerFrostPx, base = NightBg)
             PullHint(
                 pullFraction = pullFraction,
                 loading = loading,
-                top = statusTop + HeaderExpanded + 6.dp,
-                showOnOpen = showPullIntro,
+                top = statusTop + PageTop - 4.dp,
+                intro = { pullIntro.value },
             )
             Header(
                 placeName = home.name,
@@ -585,16 +584,16 @@ private fun Header(
             .fillMaxWidth()
             .windowInsetsPadding(WindowInsets.statusBars)
             .padding(horizontal = 20.dp)
-            .padding(top = 12.dp)
-            .height(HeaderExpanded - 12.dp)
+            .padding(top = HeaderPadTop)
+            .height(FrostExpanded - HeaderPadTop)
     ) {
-        val rowH = with(density) { 36.dp.toPx() }
+        val rowH = with(density) { HeaderRow.toPx() }
         val gap = with(density) { 10.dp.toPx() }
-        val line2Y = with(density) { 42.dp.toPx() }
+        val line2Y = with(density) { HeaderLine2.toPx() }
         val buttonsW = with(density) { 92.dp.toPx() }
         val fullW = constraints.maxWidth.toFloat()
 
-        Row(Modifier.fillMaxWidth().height(36.dp), verticalAlignment = Alignment.CenterVertically) {
+        Row(Modifier.fillMaxWidth().height(HeaderRow), verticalAlignment = Alignment.CenterVertically) {
             Text(
                 "Ljós", color = Ink, fontSize = 20.sp, fontWeight = FontWeight.Medium, letterSpacing = 1.sp,
                 modifier = Modifier.onSizeChanged { titleW = it.width },
@@ -684,7 +683,8 @@ private fun RoundButton(onClick: () -> Unit, enabled: Boolean = true, content: @
     ) { content() }
 }
 
-private val SheetHeader = 66.dp
+// Settings sheet: frosted down to just under the title row (8 + 4 handle + 8 + 30 row + 4).
+private val SheetFrost = 54.dp
 
 /**
  * Bottom sheet that follows the finger. It has its own blurred header (same technique as the
@@ -753,27 +753,28 @@ private fun SettingsSheet(
                     // shows there. (The sheet's content has no opaque background, so without this
                     // plain text stays readable through the blur.) The recorded layer below is
                     // captured before this mask, so the blur still has full content to work with.
-                    .fadeUnderHeader(SheetHeader, SheetHeader + 36.dp)
+                    .fadeUnderHeader(SheetFrost, SheetFrost + Frost.Fade)
                     .backdropSource(layer)
                     .nestedScroll(connection)
                     .verticalScroll(inner)
                     .windowInsetsPadding(WindowInsets.navigationBars)
                     .padding(horizontal = 22.dp)
-                    .padding(top = SheetHeader + 4.dp, bottom = 18.dp)
+                    .padding(top = SheetFrost + Frost.Fade, bottom = 18.dp)
             ) { content() }
 
-            ProgressiveBlurHeader(layer, SheetHeader + 40.dp, maxRadius = 56.dp, tint = Color(0xE00A1022))
+            val frostPx = with(LocalDensity.current) { SheetFrost.toPx() }
+            FrostHeader(layer, frostPx = { frostPx }, base = Color(0xFF0A1022))
             Column(
                 Modifier
                     .fillMaxWidth()
-                    .height(SheetHeader)
+                    .height(SheetFrost)
                     .draggable(
                         state = dragState,
                         orientation = Orientation.Vertical,
                         onDragStopped = { v -> onSettle(v) },
                     )
                     .padding(horizontal = 22.dp)
-                    .padding(top = 10.dp)
+                    .padding(top = 8.dp)
             ) {
                 Box(
                     Modifier
@@ -782,7 +783,7 @@ private fun SettingsSheet(
                         .clip(RoundedCornerShape(2.dp))
                         .background(Color(0x59FFFFFF))
                 )
-                Spacer(Modifier.height(10.dp))
+                Spacer(Modifier.height(8.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(L.t("Settings", "Stillingar"), color = Ink, fontSize = 22.sp, fontWeight = FontWeight.Light)
                     Spacer(Modifier.weight(1f))
@@ -900,7 +901,7 @@ private fun androidx.compose.foundation.layout.ColumnScope.SoftReveal(visible: B
  * Also drifts in and out once on the first few opens so people know it exists.
  */
 @Composable
-private fun PullHint(pullFraction: () -> Float, loading: Boolean, top: Dp, showOnOpen: Boolean) {
+private fun PullHint(pullFraction: () -> Float, loading: Boolean, top: Dp, intro: () -> Float) {
     val pastLine by remember { derivedStateOf { pullFraction() >= 1f } }
     val pulling by remember { derivedStateOf { pullFraction() > 0.02f } }
     // "Refreshing…" shows only for refreshes the pull started.
@@ -910,14 +911,6 @@ private fun PullHint(pullFraction: () -> Float, loading: Boolean, top: Dp, showO
     val refreshing = loading && pullStarted
     val refreshAlpha by animateFloatAsState(if (refreshing) 1f else 0f, tween(400, easing = FastOutSlowInEasing), label = "refreshing")
 
-    val intro = remember { Animatable(0f) }
-    LaunchedEffect(showOnOpen) {
-        if (!showOnOpen) return@LaunchedEffect
-        delay(1200)
-        intro.animateTo(1f, tween(700, easing = FastOutSlowInEasing))
-        delay(2600)
-        intro.animateTo(0f, tween(900, easing = FastOutSlowInEasing))
-    }
 
     val text = when {
         refreshing -> L.t("Refreshing…", "Uppfæri…")
@@ -935,9 +928,9 @@ private fun PullHint(pullFraction: () -> Float, loading: Boolean, top: Dp, showO
             Row(
                 Modifier.graphicsLayer {
                     val p = pullFraction().coerceIn(0f, 1.2f)
-                    alpha = maxOf((p * 1.4f).coerceAtMost(1f), intro.value, refreshAlpha)
+                    alpha = maxOf((p * 1.4f).coerceAtMost(1f), intro(), refreshAlpha)
                     // Drifts down a touch with the pull, like it's being drawn out.
-                    translationY = p * 10.dp.toPx() + (1f - intro.value) * (if (pulling) 0f else -4.dp.toPx())
+                    translationY = p * 10.dp.toPx() + (1f - intro()) * (if (pulling) 0f else -4.dp.toPx())
                 },
                 verticalAlignment = Alignment.CenterVertically,
             ) {

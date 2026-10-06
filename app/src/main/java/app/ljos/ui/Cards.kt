@@ -34,11 +34,13 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import app.ljos.Fmt
@@ -62,6 +64,14 @@ internal val HeroScoreStyle: TextStyle = TextStyle(
     lineHeight = 124.sp, shadow = Glow,
 )
 
+/** Lays out as if [top] and [bottom] were cut off; drawing isn't clipped. */
+private fun Modifier.trimHeight(top: Dp, bottom: Dp): Modifier = layout { measurable, constraints ->
+    val p = measurable.measure(constraints.copy(minHeight = 0))
+    val t = top.roundToPx()
+    val h = (p.height - t - bottom.roundToPx()).coerceAtLeast(0)
+    layout(p.width, h) { p.place(0, -t) }
+}
+
 /** Tonight at a glance: the big score, what it means, and when the peak and darkness are. */
 @Composable
 internal fun Hero(
@@ -74,12 +84,15 @@ internal fun Hero(
 ) {
     val peak = night?.peak
     val shown by animateIntAsState(peak?.score ?: 0, tween(1200), label = "score")
-    Column(Modifier.fillMaxWidth().padding(top = 28.dp, bottom = 18.dp)) {
+    Column(Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 12.dp)) {
         Text(L.t("TONIGHT", "Í KVÖLD"), color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 3.sp)
         Text(
             if (peak != null) shown.toString() else "—",
             style = HeroScoreStyle,
             modifier = Modifier
+                // A 120sp line carries a lot of empty font space above the digits and below the
+                // baseline; take most of it back so the label, number and headline sit together.
+                .trimHeight(top = 6.dp, bottom = 18.dp)
                 .onGloballyPositioned { onScorePlaced(it.positionInRoot(), it.size) }
                 .graphicsLayer { alpha = if (peak != null) scoreAlpha() else 1f },
         )
