@@ -92,30 +92,43 @@ internal fun Hero(
     now: Long = System.currentTimeMillis(),
     scoreAlpha: () -> Float = { 1f },
     onScorePlaced: (Offset, IntSize) -> Unit = { _, _ -> },
+    /** Set once it's dark: the hour we're in. The number then shows right now, not the peak. */
+    nowHour: HourScore? = null,
 ) {
     val peak = night?.peak
-    val shown by animateIntAsState(peak?.score ?: 0, tween(1200), label = "score")
+    val focus = nowHour ?: peak
+    val shown by animateIntAsState(focus?.score ?: 0, tween(1200), label = "score")
     Column(Modifier.fillMaxWidth().padding(top = 6.dp, bottom = 12.dp)) {
-        Text(L.t("TONIGHT", "Í KVÖLD"), color = Muted, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 3.sp)
         Text(
-            if (peak != null) shown.toString() else "—",
+            if (nowHour != null) L.t("RIGHT NOW", "NÚNA") else L.t("TONIGHT", "Í KVÖLD"),
+            color = if (nowHour != null) Green else Muted, fontSize = 12.sp, fontWeight = FontWeight.Medium, letterSpacing = 3.sp,
+        )
+        Text(
+            if (focus != null) shown.toString() else "—",
             style = HeroScoreStyle,
             modifier = Modifier
                 // A 120sp line carries a lot of empty font space above the digits and below the
                 // baseline; take most of it back so the label, number and headline sit together.
                 .trimHeight(top = 6.dp, bottom = 18.dp)
                 .onGloballyPositioned { onScorePlaced(it.positionInRoot(), it.size) }
-                .graphicsLayer { alpha = if (peak != null) scoreAlpha() else 1f },
+                .graphicsLayer { alpha = if (focus != null) scoreAlpha() else 1f },
         )
         val headline = when {
-            peak != null -> Model.label(peak.score)
+            focus != null -> Model.label(focus.score)
             night != null -> L.t("Too bright for aurora", "Of bjart fyrir norðurljós")
             inp == null || inp.isEmpty -> if (loading) L.t("Reading the sky…", "Les himininn…") else L.t("No data yet — tap ↻", "Engin gögn enn — ýttu á ↻")
             else -> "—"
         }
         Text(headline, style = TextStyle(color = Ink, fontSize = 26.sp, fontWeight = FontWeight.Light, shadow = Glow))
         // What happens next: "Dark in 4h 52m · peak around 21:00", then "Peak in 40m", then "Dark until 07:00".
-        val next = night?.let { countdownLine(it, now) }
+        val next = when {
+            night == null -> null
+            nowHour != null && peak != null && peak.time != nowHour.time && peak.score > nowHour.score ->
+                L.t("Best tonight: ${peak.score} around ${Fmt.hhmm(peak.time)}", "Best í kvöld: ${peak.score} um ${Fmt.hhmm(peak.time)}")
+            nowHour != null -> L.t("Tonight's best hour", "Besta stund kvöldsins") +
+                (night?.darkUntil?.let { L.t(" · dark until ${Fmt.hhmm(it)}", " · myrkur til ${Fmt.hhmm(it)}") } ?: "")
+            else -> night?.let { countdownLine(it, now) }
+        }
         if (next != null) {
             Spacer(Modifier.height(6.dp))
             Text(next, color = Muted, fontSize = 14.sp)
@@ -338,6 +351,8 @@ internal fun WhereCard(
     tomorrow: Boolean = false,
     /** True when showing the default hour, tonight's peak (the hour the big number is for). */
     atPeak: Boolean = true,
+    /** True when showing the default hour after dark: right now (also what the big number is). */
+    atNow: Boolean = false,
     modifier: Modifier = Modifier,
 ) {
     val context = LocalContext.current
@@ -356,6 +371,10 @@ internal fun WhereCard(
         subtitle = when {
             top == null -> L.t("No clear, dark spot nearby at this hour", "Enginn heiðskír, dimmur staður nálægt á þessum tíma")
             stayPut -> L.t("Best right where you are", "Best þar sem þú ert")
+            atNow -> L.t(
+                "Right now. ${home.spot.name} matches the big number; other places have their own clouds.",
+                "Núna. ${home.spot.name} er sama og stóra talan; aðrir staðir hafa sín eigin ský.",
+            )
             atPeak -> L.t(
                 "Tonight's peak hour. ${home.spot.name} matches the big number; other places have their own clouds.",
                 "Hámark kvöldsins. ${home.spot.name} er sama og stóra talan; aðrir staðir hafa sín eigin ský.",

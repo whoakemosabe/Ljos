@@ -32,6 +32,9 @@ data class SkyState(
     val moonX: Float,
     val moonY: Float,
     val storm: Float,
+    /** 0 at night, 1 in daylight; dusk is the in-between glow around sunset. */
+    val daylight: Float = 0f,
+    val dusk: Float = 0f,
 )
 
 /**
@@ -87,6 +90,8 @@ private fun ShaderAurora(shaderAny: Any, intensity: Float, sky: SkyState?, pull:
     val moonX by animateFloatAsState(sky?.moonX ?: 0.75f, ease, label = "moonX")
     val moonY by animateFloatAsState(sky?.moonY ?: 0.2f, ease, label = "moonY")
     val storm by animateFloatAsState(sky?.storm ?: 0f, ease, label = "storm")
+    val daylight by animateFloatAsState(sky?.daylight ?: 0f, ease, label = "daylight")
+    val dusk by animateFloatAsState(sky?.dusk ?: 0f, ease, label = "dusk")
     Canvas(modifier) {
         shader.setFloatUniform("iResolution", size.width, size.height)
         shader.setFloatUniform("iTime", time)
@@ -98,6 +103,8 @@ private fun ShaderAurora(shaderAny: Any, intensity: Float, sky: SkyState?, pull:
         shader.setFloatUniform("moonUp", moonUp)
         shader.setFloatUniform("moonPos", moonX, moonY)
         shader.setFloatUniform("storm", storm)
+        shader.setFloatUniform("daylight", daylight)
+        shader.setFloatUniform("dusk", dusk)
         shader.setFloatUniform("pull", pull())
         drawRect(ShaderBrush(shader))
     }
@@ -144,6 +151,8 @@ uniform float moonUp;
 uniform float2 moonPos;
 uniform float storm;
 uniform float pull;
+uniform float daylight;
+uniform float dusk;
 
 float hash(float2 p) {
     return fract(sin(dot(p, float2(127.1, 311.7))) * 43758.5453);
@@ -179,7 +188,13 @@ half4 main(float2 fragCoord) {
 
     float calmGlow = 0.15 + 0.85 * clamp(intensity, 0.0, 1.0);
     float liveGlow = 0.08 + 1.05 * pow(clamp(activity, 0.0, 1.0), 1.3);
-    float glow = mix(calmGlow, liveGlow, live) * (1.0 + 0.9 * pull);
+    // Live sky by day and at dusk: a deep evening blue with a warm band low down, and no
+    // aurora until it's properly dark.
+    float day = live * daylight;
+    float3 dayCol = mix(float3(0.075, 0.13, 0.24), float3(0.15, 0.20, 0.32), smoothstep(0.0, 0.8, uv.y));
+    col = mix(col, dayCol, day);
+    col += live * dusk * float3(0.22, 0.10, 0.06) * smoothstep(0.15, 0.6, uv.y) * (1.0 - smoothstep(0.6, 0.95, uv.y));
+    float glow = mix(calmGlow, liveGlow, live) * (1.0 + 0.9 * pull) * (1.0 - 0.95 * smoothstep(0.0, 0.7, day));
     float height = mix(1.0, 0.65 + 0.8 * clamp(activity, 0.0, 1.0), live) * (1.0 + 0.6 * pull);
     float violetBoost = live * storm;
 
@@ -211,7 +226,7 @@ half4 main(float2 fragCoord) {
     // Stars dim under a bright moon and vanish behind cloud.
     float s = hash(floor(fragCoord / 3.0));
     float twinkle = 0.6 + 0.4 * sin(iTime * 2.0 + s * 40.0);
-    float starDim = (1.0 - 0.75 * moonIllum * mUp) * (1.0 - live * clamp(cloud, 0.0, 1.0));
+    float starDim = (1.0 - 0.75 * moonIllum * mUp) * (1.0 - live * clamp(cloud, 0.0, 1.0)) * (1.0 - smoothstep(0.05, 0.45, day));
     col += float3(step(0.9982, s) * twinkle * (1.0 - smoothstep(0.2, 0.6, uv.y)) * 0.8 * starDim);
 
     // Cloud as slow drifting fog over everything (live only), faintly moonlit.

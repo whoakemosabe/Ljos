@@ -222,9 +222,14 @@ fun LjosApp() {
     val tomorrowNight = remember(inp, now) { inp?.takeUnless { it.isEmpty }?.let { Model.tomorrow(now, it) } }
     var showTomorrow by remember { mutableStateOf(false) }
     val shownNight = if (showTomorrow && tomorrowNight != null) tomorrowNight else night
-    // The hour everything below talks about: the one you tapped, else tonight's peak, which is the
-    // hour the big number is for. So the big number, the hour bar and "where to go" always agree.
-    val sel: HourScore? = shownNight?.let { n -> n.hours.firstOrNull { it.time == selected } ?: n.peak }
+    // Once it's dark the app follows the clock: the big number is "right now" and the current
+    // hour is the one selected. Before dark it's about tonight's peak. Either way the big number,
+    // the highlighted bar and "where to go" are about the same hour, unless you tap another.
+    val nowHour: HourScore? = night?.hours?.firstOrNull { now >= it.time && now < it.time + HOUR_MS && it.factors.dark > 0 }
+    val heroHour: HourScore? = nowHour ?: night?.peak
+    val sel: HourScore? = shownNight?.let { n ->
+        n.hours.firstOrNull { it.time == selected } ?: (if (!showTomorrow) nowHour else null) ?: n.peak
+    }
     val explicitSelection = shownNight?.hours?.any { it.time == selected } == true
     val spotScores = remember(inp, sel?.time, now) {
         if (inp != null && sel != null) Model.spotsAt(sel.time, inp, now) else emptyList()
@@ -322,7 +327,16 @@ fun LjosApp() {
                 }
             }
         }
-        val skyState: SkyState? = if (L.liveSky) sel?.let { h -> skyFor(h, night) } else null
+        // Live sky: the hour you tapped, else the sky as it is right now (day, dusk or night).
+        val liveSky = L.liveSky
+        val skyState: SkyState? = remember(liveSky, inp, selected, shownNight, now / HOUR_MS) {
+            if (!liveSky || inp == null || inp.isEmpty) null
+            else {
+                val h = shownNight?.hours?.firstOrNull { it.time == selected }
+                    ?: Model.hourScore(now - now % HOUR_MS, inp.home, inp, now)
+                skyFor(h, night, inp.home.lat, inp.home.lon)
+            }
+        }
         val sheetVisible by remember { derivedStateOf { sheet.value < 0.999f } }
 
         // A soft bump when the score lands in the header.
@@ -364,6 +378,7 @@ fun LjosApp() {
                         Hero(
                             night, inp, loading,
                             now = now,
+                            nowHour = nowHour,
                             scoreAlpha = { if (scoreMorph() > 0f) 0f else 1f },
                             // Store the position as if unscrolled: identical every frame, so no recomposition.
                             onScorePlaced = { pos, size -> heroBase = pos + Offset(0f, scroll.value.toFloat()); heroSize = size },
@@ -378,8 +393,8 @@ fun LjosApp() {
                             }
                         }
                         val peak = night?.peak
-                        if (night != null && peak != null) {
-                            ConditionChips(peak, night, now) { id ->
+                        if (night != null && heroHour != null) {
+                            ConditionChips(heroHour, night, now) { id ->
                                 val target = when (id) {
                                     "kp" -> "days"
                                     "cloud" -> "where"
@@ -435,7 +450,9 @@ fun LjosApp() {
                             sel?.let {
                                 WhereCard(
                                     spotScores, it, "where" in collapsed, { toggle("where") },
-                                    tomorrow = showTomorrow, atPeak = !explicitSelection,
+                                    tomorrow = showTomorrow,
+                                    atPeak = !explicitSelection && nowHour == null,
+                                    atNow = !explicitSelection && nowHour != null && !showTomorrow,
                                     modifier = Modifier.cardAnchor("where"),
                                 )
                             }
@@ -467,7 +484,7 @@ fun LjosApp() {
             )
             Header(
                 placeName = home.name,
-                score = night?.peak?.score,
+                score = heroHour?.score,
                 scoreMorph = scoreMorph,
                 loading = loading,
                 onRefresh = { scope.launch { reload(true) } },
@@ -478,7 +495,7 @@ fun LjosApp() {
 
             // The big number itself, flying from the hero into the header pill. Always composed;
             // position, size, colour and visibility are all applied on the GPU per frame.
-            val peakScore = night?.peak?.score
+            val peakScore = heroHour?.score
             if (peakScore != null) {
                 val endScale = with(density) { 15.sp.toPx() / HeroScoreStyle.fontSize.toPx() } * 1.25f
                 val flight: GraphicsLayerScope.(Boolean) -> Unit = { coloured ->
@@ -829,11 +846,15 @@ private fun PinIcon(modifier: Modifier) {
 
 
 /** Live-sky conditions for one hour. Moon height follows its altitude; it drifts across the night. */
-private fun skyFor(h: HourScore, night: Night?): SkyState {
+private fun skyFor(h: HourScore, night: Night?, lat: Double, lon: Double): SkyState {
     val hours = night?.hours.orEmpty()
     val frac = if (hours.size > 1) {
         ((h.time - hours.first().time).toFloat() / (hours.last().time - hours.first().time)).coerceIn(0f, 1f)
     } else 0.5f
+    // Sun height at the middle of the hour: day above 0°, dusk from 0° to -12°, night below.
+    val sun = app.ljos.model.Astro.sunAltitude(h.time + HOUR_MS / 2, lat, lon)
+    val daylight = ((sun + 12.0) / 12.0).coerceIn(0.0, 1.0).toFloat()
+    val dusk = (1.0 - kotlin.math.abs(sun + 4.0) / 6.0).coerceIn(0.0, 1.0).toFloat()
     return SkyState(
         activity = h.factors.activity.toFloat(),
         cloud = (h.cloud.coerceAtLeast(0) / 100f),
@@ -842,6 +863,8 @@ private fun skyFor(h: HourScore, night: Night?): SkyState {
         moonX = 0.15f + 0.7f * frac,
         moonY = 0.32f - (h.moonAlt.coerceIn(0.0, 40.0) / 40.0).toFloat() * 0.22f,
         storm = ((h.kp - 4.5) / 2.0).coerceIn(0.0, 1.0).toFloat(),
+        daylight = daylight,
+        dusk = dusk,
     )
 }
 
