@@ -107,3 +107,25 @@ private fun Modifier.liveHeight(height: Dp, heightPx: (() -> Float)?): Modifier 
         val p = measurable.measure(constraints.copy(minHeight = h, maxHeight = h))
         layout(p.width, h) { p.place(0, 0) }
     }
+
+/**
+ * Hides content under a header: fully transparent above [hiddenUntil], fading back to fully
+ * visible by [visibleFrom]. Use on content with a see-through background that scrolls under a
+ * [ProgressiveBlurHeader]; place it before [backdropSource] so the blur still sees everything.
+ */
+fun Modifier.fadeUnderHeader(hiddenUntil: Dp, visibleFrom: Dp): Modifier = this
+    .graphicsLayer { compositingStrategy = CompositingStrategy.Offscreen }
+    .drawWithContent {
+        drawContent()
+        val a = hiddenUntil.toPx() / size.height
+        val b = visibleFrom.toPx() / size.height
+        drawRect(
+            Brush.verticalGradient(
+                0f to Color.Transparent,
+                a.coerceIn(0f, 1f) to Color.Transparent,
+                b.coerceIn(0f, 1f) to Color.Black,
+                1f to Color.Black,
+            ),
+            blendMode = BlendMode.DstIn,
+        )
+    }

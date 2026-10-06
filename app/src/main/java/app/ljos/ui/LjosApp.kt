@@ -637,6 +637,11 @@ private fun SettingsSheet(
         ) {
             Column(
                 Modifier
+                    // Fade the sharp content out where the header sits, so only the blurred copy
+                    // shows there. (The sheet's content has no opaque background, so without this
+                    // plain text stays readable through the blur.) The recorded layer below is
+                    // captured before this mask, so the blur still has full content to work with.
+                    .fadeUnderHeader(SheetHeader, SheetHeader + 36.dp)
                     .backdropSource(layer)
                     .nestedScroll(connection)
                     .verticalScroll(inner)
