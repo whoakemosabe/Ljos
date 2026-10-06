@@ -782,9 +782,9 @@ private fun RoundButton(onClick: () -> Unit, enabled: Boolean = true, content: @
     ) { content() }
 }
 
-// Settings sheet header: 8 + 4 handle + 8 + 30 title row + 4; its glass then dissolves over 24.
-private val SheetHeader = 54.dp
-private val SheetFade = 24.dp
+// Settings sheet header: 10 + 4 handle + 14 + 36 title row; its glass then dissolves over 28.
+private val SheetHeader = 64.dp
+private val SheetFade = 28.dp
 
 /**
  * Bottom sheet that follows the finger, made of liquid glass: the screen behind shows through
@@ -887,7 +887,7 @@ private fun SettingsSheet(
                         onDragStopped = { v -> onSettle(v) },
                     )
                     .padding(horizontal = 22.dp)
-                    .padding(top = 8.dp)
+                    .padding(top = 10.dp)
             ) {
                 Box(
                     Modifier
@@ -896,7 +896,7 @@ private fun SettingsSheet(
                         .clip(RoundedCornerShape(2.dp))
                         .background(Color(0x59FFFFFF))
                 )
-                Spacer(Modifier.height(8.dp))
+                Spacer(Modifier.height(14.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(L.t("Settings", "Stillingar"), color = Ink, fontSize = 22.sp, fontWeight = FontWeight.Light)
                     Spacer(Modifier.weight(1f))

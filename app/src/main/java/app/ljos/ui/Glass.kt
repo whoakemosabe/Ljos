@@ -232,16 +232,20 @@ fun Modifier.glassControl(
  * frosted more than the header (there's text on it), with the lens bending its rounded top.
  */
 fun Modifier.glassSheet(backdrop: LayerBackdrop, cornerRadius: Dp, tint: Color): Modifier =
-    drawPlainBackdrop(
+    drawBackdrop(
         backdrop = backdrop,
         shape = { RoundedCornerShape(topStart = cornerRadius, topEnd = cornerRadius) },
         effects = {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                liquidGlass(14.dp.toPx(), lensHeight = 20.dp.toPx(), lensAmount = 28.dp.toPx())
+                // A thick, clearly bent rim along the rounded top, like an iOS 26 sheet.
+                liquidGlass(14.dp.toPx(), lensHeight = 28.dp.toPx(), lensAmount = 40.dp.toPx())
             } else {
                 blur(14.dp.toPx())
             }
         },
+        // The rim catches the light, as on every other glass piece.
+        highlight = { Highlight(style = HighlightStyle.Default(angle = 45f)) },
+        shadow = null,
         onDrawSurface = {
             drawRect(tint)
             drawRect(Brush.verticalGradient(listOf(Color(0x1AFFFFFF), Color(0x05FFFFFF))))
