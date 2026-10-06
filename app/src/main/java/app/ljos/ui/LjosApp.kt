@@ -67,6 +67,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -183,13 +184,25 @@ fun LjosApp() {
     fun closeSheet() { scope.launch { sheet.animateTo(1f, tween(240)) } }
     BackHandler(enabled = sheet.targetValue < 1f) { closeSheet() }
 
-    suspend fun reload(force: Boolean) {
-        loading = true
-        inputs = withContext(Dispatchers.IO) { repo.inputs() }
-        errors = repo.refresh(force)
-        inputs = withContext(Dispatchers.IO) { repo.inputs() }
-        now = System.currentTimeMillis()
-        loading = false
+    // When the screen last got fresh data, for the "Updated 2m ago" line and auto-refresh.
+    var loadedAt by remember { mutableLongStateOf(0L) }
+    var reloading by remember { mutableStateOf(false) }
+
+    /** [quiet]: background refresh while you look at the screen, no spinner. */
+    suspend fun reload(force: Boolean, quiet: Boolean = false, live: Boolean = false) {
+        if (reloading) return
+        reloading = true
+        if (!quiet) loading = true
+        try {
+            if (inputs == null) inputs = withContext(Dispatchers.IO) { repo.inputs() }
+            errors = repo.refresh(force, live)
+            inputs = withContext(Dispatchers.IO) { repo.inputs() }
+            now = System.currentTimeMillis()
+            loadedAt = now
+        } finally {
+            loading = false
+            reloading = false
+        }
         inputs?.let { i -> try { withContext(Dispatchers.IO) { Alerts.check(context, i) } } catch (e: Exception) { } }
         try { Widgets.updateAll(context) } catch (e: Exception) { }
     }
@@ -225,11 +238,36 @@ fun LjosApp() {
         askOrDetect(locationToo = prefs.autoDetect)
         reload(false)
     }
+    // Live while you're looking: every minute the clock moves on, and fresh data is fetched every
+    // 5 minutes, or every ~90 seconds after dark when the live solar wind and Kp matter.
+    // Only while the app is in front, so it costs nothing in the background.
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(Unit) {
         while (true) {
-            delay(60_000)
+            delay(30_000)
             now = System.currentTimeMillis()
+            if (!lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)) continue
+            val i = inputs
+            val live = i != null && !i.isEmpty && Model.worthLiveCheck(now, i)
+            val age = now - loadedAt
+            if (age >= (if (live) 90_000L else 5 * 60_000L)) reload(false, quiet = true, live = live)
         }
+    }
+    // Coming back to the app: refresh if what's on screen is more than 2 minutes old.
+    DisposableEffect(lifecycle) {
+        val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
+            if (event == androidx.lifecycle.Lifecycle.Event.ON_RESUME) {
+                now = System.currentTimeMillis()
+                if (loadedAt > 0 && now - loadedAt > 2 * 60_000L) {
+                    scope.launch {
+                        val i = inputs
+                        reload(false, quiet = true, live = i != null && !i.isEmpty && Model.worthLiveCheck(now, i))
+                    }
+                }
+            }
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
     }
 
     val inp = inputs
@@ -409,6 +447,7 @@ fun LjosApp() {
                             night, inp, loading,
                             now = now,
                             nowHour = nowHour,
+                            updatedAt = loadedAt,
                             scoreAlpha = { if (scoreMorph() > 0f) 0f else 1f },
                             // Store the position as if unscrolled: identical every frame, so no recomposition.
                             onScorePlaced = { pos, size -> heroBase = pos + Offset(0f, scroll.value.toFloat()); heroSize = size },

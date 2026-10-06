@@ -27,7 +27,12 @@ class Repo(context: Context) {
         return home to Spots.forHome(home)
     }
 
-    suspend fun refresh(force: Boolean = false): List<String> = withContext(Dispatchers.IO) {
+    /**
+     * Fetches whatever is stale. [live] (the app is open after dark) treats the live feeds,
+     * solar wind and live Kp, as stale after a minute instead of ten.
+     */
+    suspend fun refresh(force: Boolean = false, live: Boolean = false): List<String> = withContext(Dispatchers.IO) {
+        val liveAge = if (live) MIN_MS else 10 * MIN_MS
         val errors: MutableList<String> = Collections.synchronizedList(ArrayList())
         val (_, spots) = place()
         val cloudsUrl = Feeds.cloudsUrl(spots)
@@ -43,9 +48,9 @@ class Repo(context: Context) {
                         ok
                     }
                 },
-                async { pull(MAG, 10 * MIN_MS, Feeds.MAG_SUMMARY_URL, force, errors) { Feeds.parseMagSummary(it) != null } },
-                async { pull(WIND, 10 * MIN_MS, Feeds.WIND_SUMMARY_URL, force, errors) { Feeds.parseWindSummary(it) != null } },
-                async { pull(KP_NOW, 10 * MIN_MS, Feeds.KP_NOW_URL, force, errors) { Feeds.parseKpNow(it) != null } },
+                async { pull(MAG, liveAge, Feeds.MAG_SUMMARY_URL, force, errors) { Feeds.parseMagSummary(it) != null } },
+                async { pull(WIND, liveAge, Feeds.WIND_SUMMARY_URL, force, errors) { Feeds.parseWindSummary(it) != null } },
+                async { pull(KP_NOW, liveAge, Feeds.KP_NOW_URL, force, errors) { Feeds.parseKpNow(it) != null } },
             ).awaitAll()
         }
         // Minute-level solar wind (for travel time, coupling and "sustained" checks) is a bigger
@@ -54,8 +59,8 @@ class Repo(context: Context) {
         if (Model.worthLiveCheck(now, inputs())) {
             coroutineScope {
                 listOf(
-                    async { pull(MAG_RT, 10 * MIN_MS, Feeds.MAG_RTSW_URL, force, errors) { Feeds.parseMagRtsw(it) != null } },
-                    async { pull(WIND_RT, 10 * MIN_MS, Feeds.WIND_RTSW_URL, force, errors) { it.trim().startsWith("[") } },
+                    async { pull(MAG_RT, liveAge, Feeds.MAG_RTSW_URL, force, errors) { Feeds.parseMagRtsw(it) != null } },
+                    async { pull(WIND_RT, liveAge, Feeds.WIND_RTSW_URL, force, errors) { it.trim().startsWith("[") } },
                 ).awaitAll()
             }
         }

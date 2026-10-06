@@ -94,6 +94,8 @@ internal fun Hero(
     onScorePlaced: (Offset, IntSize) -> Unit = { _, _ -> },
     /** Set once it's dark: the hour we're in. The number then shows right now, not the peak. */
     nowHour: HourScore? = null,
+    /** When the data on screen was last fetched (0 = not yet). */
+    updatedAt: Long = 0L,
 ) {
     val peak = night?.peak
     val focus = nowHour ?: peak
@@ -132,6 +134,10 @@ internal fun Hero(
         if (next != null) {
             Spacer(Modifier.height(6.dp))
             Text(next, color = Muted, fontSize = 14.sp)
+        }
+        if (updatedAt > 0L) {
+            Spacer(Modifier.height(4.dp))
+            Text(L.t("Updated ", "Uppfært ") + Fmt.ago(updatedAt, now), color = Faint, fontSize = 12.sp)
         }
     }
 }
