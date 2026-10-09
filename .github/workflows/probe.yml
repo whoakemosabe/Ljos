@@ -21,35 +21,44 @@ jobs:
           ctx() { grep -oE ".{0,200}$1.{0,300}" "$2" | head -${3:-15}; }
           W=$(mktemp -d)
 
-          echo "===== SJAVARHITI main bundle: context around sjora / http / fetch"
+          set +e
+          echo "===== SJAVARHITI: how the app fetches data"
           curl -sSL -A "$UA" https://sjavarhiti.hafogvatn.cloud/main-34HM7BUJ.js -o $W/sh.js
-          ctx 'sjora\.hafro\.is' $W/sh.js 20
-          echo "--- quoted paths in bundle"
-          grep -oE '"/[a-zA-Z0-9_/-]{2,60}"' $W/sh.js | sort -u | head -80
-          echo "--- template/concat urls"
-          grep -oE '`[^`]{0,40}(api|\$\{)[^`]{0,120}`' $W/sh.js | sort -u | head -40
-
-          echo "===== SJORA.HAFRO.IS"
-          for p in "" api api/ api/stations stations api/v1 swagger openapi.json docs; do
-            code=$(curl -sS -o $W/sj.out -w '%{http_code} %{content_type}' -A "$UA" "https://sjora.hafro.is/$p")
-            echo "/$p -> $code"; head -c 600 $W/sj.out; echo; echo
+          wc -c $W/sh.js
+          echo "--- .get/.post calls"
+          grep -oE '\.(get|post|request)\([^)]{0,160}' $W/sh.js | grep -vE '^\.get\((t|e|n|i|a|r|s|o|this)\)$' | sort -u | head -60
+          echo "--- strings with api / json / csv / data / gogn"
+          grep -oE '"[^"]{0,80}(api|\.json|\.csv|gogn|data/|Url|URL|url)[^"]{0,80}"' $W/sh.js | sort -u | head -60
+          echo "--- environment / base url"
+          grep -oE '.{0,120}(apiUrl|baseUrl|apiBase|environment|BASE_URL|endpoint).{0,200}' $W/sh.js | head -15
+          echo "--- try likely same-origin data paths"
+          for p in api api/stations api/stodvar api/stations/ assets/stations.json assets/data.json stodvar stations.json data.json; do
+            code=$(curl -sS -o $W/o -w '%{http_code} %{content_type}' -A "$UA" "https://sjavarhiti.hafogvatn.cloud/$p")
+            echo "/$p -> $code"; head -c 300 $W/o | tr '\n' ' '; echo
           done
 
-          echo "===== SJOLAG bundles: context around gagnaveita and /api"
+          echo "===== SJOLAG bundles"
           curl -sSL -A "$UA" https://sjolag.is/dufl -o $W/dufl.html
           for s in $(grep -oE '/_next/static/chunks/[^"]+\.js' $W/dufl.html | sort -u); do curl -sSL -A "$UA" "https://sjolag.is$s" >> $W/sl.js; echo >> $W/sl.js; done
-          ctx 'gagnaveita\.vegagerdin\.is' $W/sl.js 20
+          wc -c $W/sl.js $W/dufl.html
+          echo "--- gagnaveita context"
+          grep -oE '.{0,250}gagnaveita\.vegagerdin\.is.{0,300}' $W/sl.js | head -10
           echo "--- /api context"
-          ctx '"/api/' $W/sl.js 20
-          echo "--- server-rendered page: look for embedded data"
-          grep -oE '.{0,100}(dufl|buoy|Buoy|ölduh|wave|Hs|station|Station|stod)[^<]{0,200}' $W/dufl.html | head -30
-          echo "--- size of page"; wc -c $W/dufl.html
-
-          echo "===== GAGNAVEITA probes"
-          for p in "" api api/ api/sjolag sjolag api/dufl dufl swagger swagger/index.html openapi.json vs; do
-            code=$(curl -sS -o $W/g.out -w '%{http_code} %{content_type}' -A "$UA" "https://gagnaveita.vegagerdin.is/$p")
-            echo "/$p -> $code"; head -c 400 $W/g.out; echo; echo
+          grep -oE '.{0,150}"/api/.{0,250}' $W/sl.js | head -15
+          echo "--- embedded data in the server-rendered buoy page"
+          grep -oE '.{0,80}(ufl|uoy|Hs|wave|ave_|station|tod)[^<]{0,160}' $W/dufl.html | head -25
+          echo "--- try sjolag api paths"
+          for p in api api/dufl api/buoys api/stations api/harbours api/hafnir api/monitor; do
+            code=$(curl -sS -o $W/o -w '%{http_code} %{content_type}' -A "$UA" "https://sjolag.is/$p")
+            echo "/$p -> $code"; head -c 300 $W/o | tr '\n' ' '; echo
           done
+
+          echo "===== GAGNAVEITA"
+          for p in "" api swagger swagger/index.html openapi.json vs sjolag; do
+            code=$(curl -sS -o $W/o -w '%{http_code} %{content_type}' -A "$UA" "https://gagnaveita.vegagerdin.is/$p")
+            echo "/$p -> $code"; head -c 300 $W/o | tr '\n' ' '; echo
+          done
+          exit 0
       - name: Save results to the branch
         if: always()
         run: |
