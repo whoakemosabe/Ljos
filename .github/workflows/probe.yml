@@ -1,0 +1,39 @@
+name: Data feed probe
+
+# Run from the GitHub app: Actions → Data feed probe → Run workflow.
+# Downloads each site's page and JavaScript and prints every URL that looks like data.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [data-probe]
+
+jobs:
+  probe:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Find data URLs
+        shell: bash
+        run: |
+          UA="Mozilla/5.0 (Linux; Android 15) AppleWebKit/537.36 Chrome/141 Mobile Safari/537.36"
+          for site in https://sjavarhiti.hafogvatn.cloud https://sjolag.is https://sjolag.is/dufl https://sjolag.is/hafnir; do
+            echo "::group::$site"
+            dir=$(mktemp -d)
+            curl -sSL -A "$UA" "$site" -o "$dir/page.html" || { echo "page failed"; echo "::endgroup::"; continue; }
+            origin=$(echo "$site" | grep -oE '^https://[^/]+')
+            # Every script the page loads (relative or absolute).
+            grep -oE '<script[^>]+src="[^"]+"' "$dir/page.html" | grep -oE 'src="[^"]+"' | cut -d'"' -f2 | sort -u > "$dir/scripts.txt"
+            echo "Scripts:"; cat "$dir/scripts.txt"
+            i=0
+            while read -r s; do
+              case "$s" in http*) url="$s" ;; //*) url="https:$s" ;; /*) url="$origin$s" ;; *) url="$origin/$s" ;; esac
+              curl -sSL -A "$UA" "$url" -o "$dir/js$i.js" && i=$((i+1))
+            done < "$dir/scripts.txt"
+            echo
+            echo "Data-looking URLs and paths:"
+            cat "$dir"/page.html "$dir"/js*.js 2>/dev/null \
+              | grep -oE '(https?://[A-Za-z0-9._~:/?#@!$&+,;=%-]+|"/[A-Za-z0-9._~/?=&%-]*(api|json|csv|xml|data|gogn|stod|station|dufl|hafn|sjav|temp)[A-Za-z0-9._~/?=&%-]*")' \
+              | grep -viE '\.(png|jpe?g|svg|woff2?|ttf|css|ico|gif)(\?|$)' \
+              | sort -u
+            echo "::endgroup::"
+          done
