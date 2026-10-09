@@ -1,158 +1,151 @@
-===== SJAVARHITI main bundle: context around sjora / http / fetch
-static \u0275fac=function(t){return new(t||n)};static \u0275cmp=Dt({type:n,selectors:[["app-hydrography"]],standalone:!0,features:[At],decls:1,vars:0,consts:[["title","Eldri g\xF6gn","src",Kp`https://sjora.hafro.is/`,"height","100%","width","100%"]],template:function(t,a){t&1&&wt(0,"iframe",0)}})}return n})();var As=(()=>{let e=class e{};e.\u0275fac=function(a){return new(a||e)},e.\u0275mod=re({type:e}),e.\u0275inj=ne({imports:[ye,li,gl,ye]});let n=e;return n})();var Hy=(()=>{let e=class e{};e.\u0275fac=funct
---- quoted paths in bundle
-"/hydrography"
-"/not-allowed"
-"/samanburdur"
-"/stadur"
-"/upload"
---- template/concat urls
-` { ${n.children.map(Ag).join(", ")} } `
-`#${Nw(e.fragment)}`
-`${100/s}%`
-`${50*this.cellAspectRatio/s}%`
-`${Ml(n)}/${i[0]}`
-`${Ml(n)}/(${i.join("//")})`
-`${_.replace(/\B(?=(\d{3})+(?!\d))/g,".")},${g}`
-`${a}-${r}-${s} ${l}:${d}`
-`${a}. ${r} ${s}`
-`${a}:${Mo(r,!1)}`
-`${a}:${Mo(t,!1)}`
-`${e.redirectTo}`
-`${e}-${i}`
-`${e}.transition.${i}`
-`${g}.${v}.${y}`
-`${g}:${v}`
-`${h}`
-`${i}${t}${a}`
-`${i}(${t.join("//")})`
-`${i}Hover`
-`${kl(i)}=${kl(a)}`
-`${kl(i)}=${kl(t)}`
-`${l-(r.x+this._overlayRect.width)}px`
-`${l}`
-`${m}`
-`${n.height}px`
-`${n.id}.${e.id}.${i.stack||i.type}`
-`${n.value}${e}`
-`${n.width}px`
-`${rh(n.path)}${Bw(n.parameters)}`
-`${r}`
-`${s-(r.y+this._overlayRect.height)}px`
-`${s}`
-`${this._cssClassPrefix}-${oy}-`
-`${this._cssClassPrefix}-${oy}`
-`${this._cssClassPrefix}-tooltip-panel-non-interactive`
-`${this._id}-end-date`
-`${this._id}-period-label`
-`${this._id}-start-date`
-`${this._startDateLabelId} ${this._endDateLabelId}`
-===== SJORA.HAFRO.IS
-/ -> 200 text/html; charset=UTF-8
-<html>
-<head>
-<title>HAFRANNS&Oacute;KNASTOFNUN - Oceanographic Group</title>
-<meta name="author" content="John Mortensen">
-<meta name="description" content="HAFRANNSÓKNASTOFNUN - Marine Research Institute, Iceland, Hydrographic Dept.">
-<meta name="keywords" content="HAFRANNSÓKNASTOFNUN, Marine Research Institute, MRI, Iceland, HAFRÓ, HAFRO, ICES,
-Denmark Strait, Oceanography, Hydrography, Iceland Basin, Irminger Sea, Iceland Sea, East Greenland Current, East Iceland Current,
-Irminger Current, Overflow, Atlantic Water, Polar Water, Arctic Water, Deep Water, Intermediate Water, drifters,
-VEI
-
-/api -> 404 text/html; charset=iso-8859-1
-<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
-<html><head>
-<title>404 Not Found</title>
-</head><body>
-<h1>Not Found</h1>
-<p>The requested URL /api was not found on this server.</p>
-<hr>
-<address>Apache/2.2.15 (CentOS) Server at sjora.hafro.is Port 80</address>
-</body></html>
-
-
-/api/ -> 404 text/html; charset=iso-8859-1
-<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
-<html><head>
-<title>404 Not Found</title>
-</head><body>
-<h1>Not Found</h1>
-<p>The requested URL /api/ was not found on this server.</p>
-<hr>
-<address>Apache/2.2.15 (CentOS) Server at sjora.hafro.is Port 80</address>
-</body></html>
-
-
-/api/stations -> 404 text/html; charset=iso-8859-1
-<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
-<html><head>
-<title>404 Not Found</title>
-</head><body>
-<h1>Not Found</h1>
-<p>The requested URL /api/stations was not found on this server.</p>
-<hr>
-<address>Apache/2.2.15 (CentOS) Server at sjora.hafro.is Port 80</address>
-</body></html>
-
-
-/stations -> 404 text/html; charset=iso-8859-1
-<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
-<html><head>
-<title>404 Not Found</title>
-</head><body>
-<h1>Not Found</h1>
-<p>The requested URL /stations was not found on this server.</p>
-<hr>
-<address>Apache/2.2.15 (CentOS) Server at sjora.hafro.is Port 80</address>
-</body></html>
-
-
-/api/v1 -> 404 text/html; charset=iso-8859-1
-<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
-<html><head>
-<title>404 Not Found</title>
-</head><body>
-<h1>Not Found</h1>
-<p>The requested URL /api/v1 was not found on this server.</p>
-<hr>
-<address>Apache/2.2.15 (CentOS) Server at sjora.hafro.is Port 80</address>
-</body></html>
-
-
-/swagger -> 404 text/html; charset=iso-8859-1
-<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
-<html><head>
-<title>404 Not Found</title>
-</head><body>
-<h1>Not Found</h1>
-<p>The requested URL /swagger was not found on this server.</p>
-<hr>
-<address>Apache/2.2.15 (CentOS) Server at sjora.hafro.is Port 80</address>
-</body></html>
-
-
-/openapi.json -> 404 text/html; charset=iso-8859-1
-<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
-<html><head>
-<title>404 Not Found</title>
-</head><body>
-<h1>Not Found</h1>
-<p>The requested URL /openapi.json was not found on this server.</p>
-<hr>
-<address>Apache/2.2.15 (CentOS) Server at sjora.hafro.is Port 80</address>
-</body></html>
-
-
-/docs -> 404 text/html; charset=iso-8859-1
-<!DOCTYPE HTML PUBLIC "-//IETF//DTD HTML 2.0//EN">
-<html><head>
-<title>404 Not Found</title>
-</head><body>
-<h1>Not Found</h1>
-<p>The requested URL /docs was not found on this server.</p>
-<hr>
-<address>Apache/2.2.15 (CentOS) Server at sjora.hafro.is Port 80</address>
-</body></html>
-
-
-===== SJOLAG bundles: context around gagnaveita and /api
+===== SJAVARHITI: how the app fetches data
+879770 /tmp/tmp.Z7B3ncQiXK/sh.js
+--- .get/.post calls
+.get(
+.get("rgba"
+.get($g
+.get(0
+.get(Aa
+.get(Ce
+.get(Ei
+.get(Oh
+.get(Rh
+.get(Vg
+.get(Vo,[],{optional:!0,self:!0}
+.get(Wg,null,Bd.Optional
+.get(Wt
+.get(a
+.get(d
+.get(dl
+.get(e
+.get(e,i
+.get(h
+.get(i
+.get(i.name
+.get(n
+.get(n,i
+.get(qg,null,Bd.Optional
+.get(t
+.get(this.currentLocationInfo.name
+.get(uf,Promise.resolve(
+--- strings with api / json / csv / data / gogn
+"))}onClick(t,a,r,s,l){let d=this.urlTree;if(d===null||this.isAnchorElement&&(t!==0||a||r||s||l||typeof this.target=="
+"),Q()())}var Ay=(()=>{class n{showSidenav=!0;activeRoute;isInternalUrl=window.location.hostname==="
+"),c.src=o,c},_getIconUrl:function(o){return Pt.retina&&this.options[o+"
+");if(document.body.removeChild(o),c=this._stripUrl(c),c)return c;var u=document.querySelector('link[href$="
+",Te],replaceUrl:[2,"
+",burlywood:"
+",c=this._image=o?this._url:ue("
+",errorTileUrl:"
+",iconRetinaUrl:"
+",interactive:!1,crossOrigin:!1,errorOverlayUrl:"
+",n[n.IgnoredByUrlHandlingStrategy=1]="
+",n}(Ti||{}),Tl=function(n){return n[n.IgnoredSameUrlNavigation=0]="
+",n}(ii||{}),ji=class{constructor(e,i){this.id=e,this.url=i}},Sr=class extends ji{constructor(e,i,t="
+",o)},_createIcon:function(o,c){var u=this._getIconUrl(o);if(!u){if(o==="
+",shadowUrl:"
+",this.urlHandlingStrategy=bt(Lh),this.urlUpdateStrategy=this.options.urlUpdateStrategy||"
+",u.src=this.getTileUrl(o),u},getTileUrl:function(o){var c={r:Pt.retina?"
+":f=kt(kt({},this.currentUrlTree.queryParams),s);break;case"
+":return!ja(n.url,e.url);case"
+":return!ja(n.url,e.url)||!mn(n.queryParams,e.queryParams);case"
+":return`${this.capitalizeFirstLetter(r)} ${s}`;case"
+"?!0:i.parseUrl("
+"Url"
+"iconUrl not set in Icon options (see the docs)."
+"replaceUrl"
+"url(#default#VML)"
+"}var oh=class{constructor(e){this.url=e,this.remaining=e}parseRootSegment(){return this.consumeOptional("
+--- environment / base url
+reateContext(this.name).children,h=new wh(t,d,r.injector);this.activated=r.createComponent(l,{index:r.length,injector:h,environmentInjector:a}),this.changeDetector.markForCheck(),this.inputBinder?.bindActivatedRouteToOutletComponent(this),this.activateEvents.emit(this.activated.instance)}};e.\u0275fac=function(a){return new(a||e)
+,this.lastSuccessfulNavigation=null,this.events=new Kt,this.transitionAbortSubject=new Kt,this.configLoader=bt(Eh),this.environmentInjector=bt(Aa),this.urlSerializer=bt(Ho),this.rootContexts=bt(Wo),this.location=bt(za),this.inputBindingEnabled=bt(jl,{optional:!0})!==null,this.titleStrategy=bt(zg),this.options=bt(Xo,{optional:!0})
+r.serialize(_.extractedUrl),_.source,_.restoredState)),g!==this.transitions?.getValue()?Wn:Promise.resolve(_)}),UC(this.environmentInjector,this.configLoader,this.rootComponentType,t.config,this.urlSerializer,this.paramsInheritanceStrategy),hi(_=>{s.targetSnapshot=_.targetSnapshot,s.urlAfterRedirects=_.urlAfterRedirects,this.curr
+h=>(this.currentTransition=s=qe(kt({},h),{guards:dC(h.targetSnapshot,h.currentSnapshot,this.rootContexts)}),s)),xC(this.environmentInjector,h=>this.events.next(h)),hi(h=>{if(s.guardsResult=h.guardsResult,h.guardsResult&&typeof h.guardsResult!="boolean")throw Nl(this.urlSerializer,h.guardsResult);let m=new ch(h.id,this.urlSerializ
+rects),m.targetSnapshot);this.events.next(f)}),zi(m=>{let f=!1;return Et(m).pipe(ZC(this.paramsInheritanceStrategy,this.environmentInjector),hi({next:()=>f=!0,complete:()=>{f||this.cancelNavigationTransition(m,"",Ti.NoDataFromResolver)}}))}),hi(m=>{let f=new hh(m.id,this.urlSerializer.serialize(m.extractedUrl),this.urlSerializer.
+,ih(()=>this.afterPreactivation()),zi(()=>{let{currentSnapshot:h,targetSnapshot:m}=s,f=this.createViewTransition?.(this.environmentInjector,h.root,m.root);return f?Ai(f).pipe(_e(()=>s)):Et(s)}),_e(h=>{let m=rC(t.routeReuseStrategy,h.targetSnapshot,h.currentRouterState);return this.currentTransition=s=qe(kt({},h),{targetRouterStat
+e(!1);else{let m=new Oo(s.id,this.urlSerializer.serialize(s.extractedUrl),h,s.targetSnapshot??void 0);try{let f=cn(this.environmentInjector,()=>this.navigationErrorHandler?.(m));if(f instanceof zo){let{message:_,cancellationCode:g}=Nl(this.urlSerializer,f);this.events.next(new Tn(s.id,this.urlSerializer.serialize(s.extractedUrl),
+--- try likely same-origin data paths
+/api -> 200 text/html
+<!doctype html> <html lang="en" data-critters-container> <head><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>   <meta charset="utf-8">   <title>Sjávarhiti</title>   <base href="/">   <meta name="viewport" content="width=device-width, initial-scale=1">   <link rel="icon" type="
+/api/stations -> 200 text/html
+<!doctype html> <html lang="en" data-critters-container> <head><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>   <meta charset="utf-8">   <title>Sjávarhiti</title>   <base href="/">   <meta name="viewport" content="width=device-width, initial-scale=1">   <link rel="icon" type="
+/api/stodvar -> 200 text/html
+<!doctype html> <html lang="en" data-critters-container> <head><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>   <meta charset="utf-8">   <title>Sjávarhiti</title>   <base href="/">   <meta name="viewport" content="width=device-width, initial-scale=1">   <link rel="icon" type="
+/api/stations/ -> 200 text/html
+<!doctype html> <html lang="en" data-critters-container> <head><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>   <meta charset="utf-8">   <title>Sjávarhiti</title>   <base href="/">   <meta name="viewport" content="width=device-width, initial-scale=1">   <link rel="icon" type="
+/assets/stations.json -> 200 text/html
+<!doctype html> <html lang="en" data-critters-container> <head><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>   <meta charset="utf-8">   <title>Sjávarhiti</title>   <base href="/">   <meta name="viewport" content="width=device-width, initial-scale=1">   <link rel="icon" type="
+/assets/data.json -> 200 text/html
+<!doctype html> <html lang="en" data-critters-container> <head><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>   <meta charset="utf-8">   <title>Sjávarhiti</title>   <base href="/">   <meta name="viewport" content="width=device-width, initial-scale=1">   <link rel="icon" type="
+/stodvar -> 200 text/html
+<!doctype html> <html lang="en" data-critters-container> <head><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>   <meta charset="utf-8">   <title>Sjávarhiti</title>   <base href="/">   <meta name="viewport" content="width=device-width, initial-scale=1">   <link rel="icon" type="
+/stations.json -> 200 text/html
+<!doctype html> <html lang="en" data-critters-container> <head><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>   <meta charset="utf-8">   <title>Sjávarhiti</title>   <base href="/">   <meta name="viewport" content="width=device-width, initial-scale=1">   <link rel="icon" type="
+/data.json -> 200 text/html
+<!doctype html> <html lang="en" data-critters-container> <head><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>   <meta charset="utf-8">   <title>Sjávarhiti</title>   <base href="/">   <meta name="viewport" content="width=device-width, initial-scale=1">   <link rel="icon" type="
+===== SJOLAG bundles
+1707608 /tmp/tmp.Z7B3ncQiXK/sl.js
+ 906961 /tmp/tmp.Z7B3ncQiXK/dufl.html
+2614569 total
+--- gagnaveita context
+--- /api context
+lue:!0}),Object.assign(n.default,n),t.exports=n.default)},10648,(e,t,n)=>{"use strict";function r(e){return"/api"===e||!!(null==e?void 0:e.startsWith("/api/"))}Object.defineProperty(n,"__esModule",{value:!0}),Object.defineProperty(n,"isAPIRoute",{enumerable:!0,get:function(){return r}})},57979,(e,t,n)=>{"use strict";Object.defineProperty(n,"__esModule",{value:!0}),Object.defineProperty(n,"removePathPref
+,{"path":"/lighthouses"},{"path":"/weather-stations"}],"isrRoutes":[]}',globalThis._sentryNextJsVersion="16.2.4",globalThis._sentryRewritesTunnelPath="/api/monitor",function(e){let t,n,r,a,i,o,l;rM&&(0,g.consoleSandbox)(()=>{console.warn("[@sentry/nextjs] You are calling `Sentry.init()` more than once on the client. This can happen if you have both a `sentry.client.config.ts` and a `instrumentation-clie
+teFramesAssetPrefixPath:a,experimentalThirdPartyOriginStackFrames:l})),r),release:"0c4ae16426d81b1ec03858e69959061fa26010cf",...e};!function(e){let t="/api/monitor";if(t&&e.dsn){let n=(0,$.dsnFromString)(e.dsn);if(!n)return;let r=n.host.match(/^o(\d+)\.ingest(?:\.([a-z]{2}))?\.sentry\.io$/);if(r){let a=r[1],i=r[2],o=`${t}?o=${a}&p=${n.projectId}`;i&&(o+=`&r=${i}`),e.tunnel=o,tB&&g.debug.log(`Tunneling e
+--- embedded data in the server-rendered buoy page
+.weather-station-module__mM7rSW__container .weather-station-module__mM7rSW__headline{margin-bottom:.5rem}.weather-station-module__mM7rSW__container .weather-station-module__mM7rSW__tabs [role=tablist]{padding:.5rem var(
+--panelPadding) 1rem var(--panelPadding)}.weather-station-module__mM7rSW__skeleton{margin-bottom:1rem;animation:3s infinite weather-station-module__mM7rSW__flickerAnimation}.weather-station-module__mM7rSW__datePickerR
+ange{margin:0 var(--panelPadding) 1rem var(--panelPadding)}.weather-station-module__mM7rSW__container .weather-station-module__mM7rSW__table{--tableStickyHeaderOffset:2.5rem;margin-left:0;margin-right:-1.5rem}.weather-station-module__m
+M7rSW__container .weather-station-module__mM7rSW__table tr td{background-color:var(--color-white)}.weather-station-module__mM7rSW__container .weather-station-module__mM7rSW__table>div{padding-l
+c(var(--panelPadding) / 2);padding-right:calc(var(--panelPadding) / 2)}.weather-station-module__mM7rSW__container .weather-station-module__mM7rSW__overviewTitle span{font-size:var(--body-1);color:var(--color-gray-5);font-weight:100;display:block}@
+keyframes weather-station-module__mM7rSW__flickerAnimation{0%{opacity:1}50%{opacity:.2}to{opacity:1}}
+.buoy-module__9zS-0G__skeleton{margin-bottom:1rem;animation:3s infinite buoy-module__9zS-0G__flickerAnimation}.buoy-module__9zS-0G__container .buoy-module__9zS-0G__datePickerRange{padding:0 var(--panelPadding);margin-bottom:1rem}.buoy-m
+odule__9zS-0G__container .buoy-module__9zS-0G__headline{margin-bottom:.5rem}.buoy-module__9zS-0G__container .buoy-module__9zS-0G__summary{margin-bottom:1rem}.buoy-module__9zS-0G__container .buoy-module__9zS-0G__tabs [role=tablist]{padding:.5
+rem var(--panelPadding) 1rem var(--panelPadding)}.buoy-module__9zS-0G__container h1{background-color:var(--color-black)}.buoy-module__9zS-0G__staleNotice{padding:.625rem var(--panelPadding);background-color:var(--c
+space-between;align-items:center;gap:.75rem;margin-bottom:.75rem;display:flex}.buoy-module__9zS-0G__container .buoy-module__9zS-0G__table{--tableStickyHeaderOffset:2.5rem;margin-left:0;margin-right:-1.5rem}.buoy-module__9zS-0G__container .buoy
+eft:calc(var(--panelPadding) / 2);padding-right:calc(var(--panelPadding) / 2)}.buoy-module__9zS-0G__container .buoy-module__9zS-0G__oldDataNotice.buoy-module__9zS-0G__displayTitle{margin-top:-.5rem}.buoy-module__9zS-0G__container .buoy-module_
+_9zS-0G__table tr td{background-color:var(--color-white)}.buoy-module__9zS-0G__container .buoy-module__9zS-0G__overviewTitle span{font-size:var(--body-1);color:var(--color-gray-5);font-weight:100;display:block}@keyframes b
+uoy-module__9zS-0G__flickerAnimation{0%{opacity:1}50%{opacity:.2}to{opacity:1}}
+m;padding-top:.5rem}.default-module__Cro2GW__container .default-module__Cro2GW__waveHeightTitle{align-items:center;column-gap:.5rem;padding:1rem 0;display:flex}.default-module__Cro2GW__container .default-module__Cro2GW__waveHeightTitleColor{bor
+_Cro2GW__accordionItem.default-module__Cro2GW__no_data .default-module__Cro2GW__waveHeightTitleColor{border:.0625rem solid var(--color-gray-1)}.default-module__Cro2GW__container .default-module__Cro2GW__accordion .default-module__Cro2GW__accord
+.buoys-module__3D7Cyq__tooltip{pointer-events:none}.buoys-module__3D7Cyq__tooltip .buoys-module__3D7Cyq__content{color:var(--color-white);pointer-events:all;text-decoration:none;display:block}.buoys-module__3D7Cyq__t
+ooltip .buoys-module__3D7Cyq__content>div{border:.0625rem solid var(--color-white);filter:0 .125rem .0625rem #00000026;cursor:pointer;pointer-events:all;background-color:#0
+ition:background-color .15s linear;position:relative}@media (max-width:768px){.buoys-module__3D7Cyq__tooltip .buoys-module__3D7Cyq__content>div{font-size:.625rem}}.buoys-module__3D7Cyq__tooltip .buoys-module__3D7Cyq__content>div:hover{outline:
+.0625rem solid var(--color-gray-1);background-color:#000}.buoys-module__3D7Cyq__line{background-color:var(--color-gray-5);transform-origin:bottom;width:.0625rem;height:100%;position:absolute;top:0;left:0}.buoys-module__3D7
+grid-template-columns:min-content min-content;align-items:center;display:grid}.buoys-module__3D7Cyq__time .buoys-module__3D7Cyq__lastUpdate{grid-template-columns:1rem auto;align-items:center;column-gap:.25rem;padding-left:.125rem;padding-right
+:.125rem;font-weight:100;display:grid}.buoys-module__3D7Cyq__line.buoys-module__3D7Cyq__lineBottom{top:auto;bottom:0}.buoys-module__3D7Cyq__line.buoys-module__3D7Cyq__lineRight{left:auto;right:0}.buoys-module__3D7Cyq__offset{point
+er-events:none;display:block;position:absolute}.buoys-module__3D7Cyq__offset svg{width:100%;height:100%;position:absolute;top:0;left:0}.buoys-module__3D7Cyq__topLeft .buoys-module__3D7Cyq__offset{top:.3125rem;lef
+t:.3125rem}.buoys-module__3D7Cyq__topRight .buoys-module__3D7Cyq__offset{top:.3125rem;right:.3125rem}.buoys-module__3D7Cyq__bottomLeft .buoys-module__3D7Cyq__offset{bottom:.3125rem;left:.3125rem}.buoys-module
+__3D7Cyq__bottomRight .buoys-module__3D7Cyq__offset{bottom:.3125rem;right:.3125rem}.buoys-module__3D7Cyq__bottom .buoys-module__3D7Cyq__offset{bottom:.4375rem;left:50%;transform:translate
+(-50%)}.buoys-module__3D7Cyq__right .buoys-module__3D7Cyq__offset{bottom:calc(50% - .0625rem);right:.4375rem;transform:translateY(-50%)}.buoys-module__3D7Cyq__left .buoys-module__3D7Cyq__offset{top:cal
+grep: write error: Broken pipe
+--- try sjolag api paths
+/api -> 200 text/html; charset=utf-8
+<!DOCTYPE html><html lang="is" class="layout-module__bgqSbW__html" data-version="v3.1.1"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, viewport-fit=cover"/><style data-precedence="next" data-href="/_next/static/chunks/062zvfjtl
+/api/dufl -> 200 text/html; charset=utf-8
+<!DOCTYPE html><html lang="is" class="layout-module__bgqSbW__html" data-version="v3.1.1"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, viewport-fit=cover"/><style data-precedence="next" data-href="/_next/static/chunks/062zvfjtl
+/api/buoys -> 200 text/html; charset=utf-8
+<!DOCTYPE html><html lang="is" class="layout-module__bgqSbW__html" data-version="v3.1.1"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, viewport-fit=cover"/><style data-precedence="next" data-href="/_next/static/chunks/062zvfjtl
+/api/stations -> 200 text/html; charset=utf-8
+<!DOCTYPE html><html lang="is" class="layout-module__bgqSbW__html" data-version="v3.1.1"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, viewport-fit=cover"/><style data-precedence="next" data-href="/_next/static/chunks/062zvfjtl
+/api/harbours -> 200 text/html; charset=utf-8
+<!DOCTYPE html><html lang="is" class="layout-module__bgqSbW__html" data-version="v3.1.1"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, viewport-fit=cover"/><style data-precedence="next" data-href="/_next/static/chunks/062zvfjtl
+/api/hafnir -> 200 text/html; charset=utf-8
+<!DOCTYPE html><html lang="is" class="layout-module__bgqSbW__html" data-version="v3.1.1"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, viewport-fit=cover"/><style data-precedence="next" data-href="/_next/static/chunks/062zvfjtl
+/api/monitor -> 200 text/html; charset=utf-8
+<!DOCTYPE html><html lang="is" class="layout-module__bgqSbW__html" data-version="v3.1.1"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, viewport-fit=cover"/><style data-precedence="next" data-href="/_next/static/chunks/062zvfjtl
+===== GAGNAVEITA
+/ -> 302 text/html
+<html> <head><title>302 Found</title></head> <body> <center><h1>302 Found</h1></center> <hr><center>nginx/1.20.1</center> </body> </html> 
+/api -> 302 text/html
+<html> <head><title>302 Found</title></head> <body> <center><h1>302 Found</h1></center> <hr><center>nginx/1.20.1</center> </body> </html> 
+/swagger -> 302 text/html
+<html> <head><title>302 Found</title></head> <body> <center><h1>302 Found</h1></center> <hr><center>nginx/1.20.1</center> </body> </html> 
+/swagger/index.html -> 302 text/html
+<html> <head><title>302 Found</title></head> <body> <center><h1>302 Found</h1></center> <hr><center>nginx/1.20.1</center> </body> </html> 
+/openapi.json -> 302 text/html
+<html> <head><title>302 Found</title></head> <body> <center><h1>302 Found</h1></center> <hr><center>nginx/1.20.1</center> </body> </html> 
+/vs -> 302 text/html
+<html> <head><title>302 Found</title></head> <body> <center><h1>302 Found</h1></center> <hr><center>nginx/1.20.1</center> </body> </html> 
+/sjolag -> 302 text/html
+<html> <head><title>302 Found</title></head> <body> <center><h1>302 Found</h1></center> <hr><center>nginx/1.20.1</center> </body> </html> 
