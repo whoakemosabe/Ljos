@@ -22,18 +22,23 @@ jobs:
           W=$(mktemp -d)
 
           set +e
-          curl -sSL -A "$UA" https://sjavarhiti.hafogvatn.cloud/main-34HM7BUJ.js -o $W/sh.js
-          for c in $(grep -oE 'chunk-[A-Z0-9]+\.js' $W/sh.js | sort -u); do curl -sSL -A "$UA" "https://sjavarhiti.hafogvatn.cloud/$c" >> $W/sh.js; echo >> $W/sh.js; done
-          echo "===== code around the datalogger URL"
-          grep -oE '.{0,700}datalogger\.hafogvatn\.cloud/ext/measurements.{0,900}' $W/sh.js | head -2
-          echo
-          echo "===== other code using the measurements service"
-          grep -oE '.{0,300}(measurements|stations|locations)[`"/?].{0,300}' $W/sh.js | grep -v highcharts | head -12
-          echo
-          B=https://datalogger.hafogvatn.cloud/ext
-          for p in measurements "measurements?limit=5" locations stations sensors "" ; do
-            code=$(curl -sS -o $W/o -w '%{http_code} %{content_type} %{size_download}' -A "$UA" -H 'Accept: application/json' "$B/$p")
-            echo "== $B/$p -> $code"; head -c 1200 $W/o; echo; echo
+          B=https://datalogger.hafogvatn.cloud/ext/measurements
+          curl -sS -A "$UA" -H 'Accept: application/json' "$B/locations/info" -o $W/info.json -w 'info -> %{http_code} %{content_type} %{size_download}\n'
+          echo "===== locations/info (first 3000 chars)"; head -c 3000 $W/info.json; echo
+          echo "===== all location names + coords"
+          python3 - "$W/info.json" <<'PY'
+          import json,sys
+          d=json.load(open(sys.argv[1]))
+          items=d if isinstance(d,list) else d.get('content') or d.get('locations') or list(d.values())
+          print(type(d).__name__, len(items))
+          for x in items:
+              print({k:v for k,v in x.items() if not isinstance(v,(list,dict))} if isinstance(x,dict) else x)
+          PY
+          for name in Keflavík Grindavík Sandgerði Reykjavík Hafnarfjörður; do
+            for vt in TEMPERATURE temperature Temperature; do
+              u="$B/locations/names/newest?locationName=$(python3 -c "import urllib.parse,sys;print(urllib.parse.quote(sys.argv[1]))" $name)&valueType=$vt"
+              code=$(curl -sS -o $W/o -w '%{http_code}' -A "$UA" "$u"); echo "== newest $name $vt -> $code"; head -c 400 $W/o; echo
+            done
           done
           exit 0
       - name: Save results to the branch
