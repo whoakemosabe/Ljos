@@ -1,233 +1,27 @@
-===== SJAVARHITI lazy chunks
-1271634 /tmp/tmp.T574t5ThK1/chunks.js
---- every http(s) URL in all JS
-https://code.highcharts.com/11.4.8/lib/
-https://datalogger.hafogvatn.cloud/ext/measurements
-https://datalogger.internal.hafogvatn.cloud/measurements
-https://export.highcharts.com/
-https://g.co/ng/security#xss
-https://sjora.hafro.is/
-https://www.hafogvatn.is
-https://www.highcharts.com/docs/accessibility/accessibility-module.
-https://www.highcharts.com?credits
---- HttpClient-style calls with strings
-.get("rgba"
-.get("rgba"
-.get("Hours"
-.get("Day"
-.get("Date"
-.get("Month"
-.get("FullYear"
-.get("Minutes"
-.get("Seconds"
-.get("Milliseconds"
-.get("Seconds"
-.get("Minutes"
-.get("Hours"
-.get("Date"
-.get("Month"
-.get("FullYear"
-.get("Day"
-.get("Date"
-.get("FullYear"
-.get("Month"
-fetch(A,je({method:"POST",body:W},N
---- strings ending in json/csv or containing api
-"'}).join(this.csvSeparator)).join(`
-");this.csvTableInfo.push({name:"
-");this.csvTableInfo.unshift({name:"
-",4)),n&2){let e=d();l(),Pe(e.csvInfo.length>0?1:-1)}}function Zt(n,u){n&1&&(a(0,"
-",G=this.getDataRows(),C=this.options.exporting.csv,H=L(C.decimalPoint,C.itemDelimiter!=="
-",e.csvInfo),l(),p("
-",i.csvTableInfo)("
-",value:t[2]}),this.csvTableInfo.push({name:"
-",value:t[3]}),this.csvTableInfo.push({name:"
-".csv"
-".csv, .dat"
-===== SJOLAG server-rendered data
---- dufl: most common JSON keys in the embedded payload
-    486 \"children\":
-    334 \"id\":
-    331 \"className\":
-    241 \"type\":
-    238 \"lon\":
-    238 \"lat\":
-    224 \"pnt_y\":
-    224 \"pnt_x\":
-    224 \"notkunarsvid\":
-    207 \"timi_maelingar\":
-    207 \"stutt_nafn\":
-    207 \"rodun\":
-    207 \"pnt_z\":
-    207 \"pila_sjor_dy\":
-    207 \"pila_sjor_dx\":
-    207 \"pila_dy\":
-    207 \"pila_dx\":
-    207 \"nafn\":
-    207 \"forgangur_sjor\":
-    207 \"forgangur\":
-    207 \"eigandi\":
-    207 \"dags_keyrt_ut\":
-    207 \"aldur_dagar\":
-    205 \"vindhvida\":
-    205 \"vindhradi\":
-    205 \"vindatt\":
-    205 \"hiti\":
-    204 \"vindatttxt\":
-    204 \"raki\":
-    204 \"daggarmark\":
-    197 \"snjom_leid\":
-    175 \"date\":
-    158 \"startOfDay\":
-    158 \"isPast\":
-    153 \"nrvegur\":
-    136 \"nrkafli\":
-    123 \"veghiti\":
-    123 \"slug\":
-    123 \"coordinates\":
-    117 \"umferdframidn\":
---- dufl: sample around first station-like object
-null,{\"children\":[\"$\",\"$23\",null,{\"name\":\"Next.MetadataOutlet\",\"children\":\"$@24\"}]}]]}]\n25:[]\nb:\"$W25\"\nc:[\"$\",\"$1\",\"h\",{\"children\":[null,[\"$\",\"$L26\",null,{\"children\":\"$L27\"}],[\"$\",\"div\",null,{\"hidden\":true,\"children\":[\"$\",\"$L28\",null,{\"children\":[\"$\",\"$23\",null,{\"name\":\"Next.Metadata\",\"children\":\"$L29\"}]}]}],[\"$\",\"meta\",null,{\"name\":\"next-size-adjust\",\"content\":\"\"}]]}]\n2a:
-r\",\"children\":[[\"$\",\"$L34\",null,{\"title\":\"404 villa\",\"icon\":[\"$\",\"svg\",null,{\"xmlns\":\"http://www.w3.org/2000/svg\",\"fill\":\"none\",\"viewBox\":\"0 0 32 32\",\"children\":[[\"$\",\"path\",null,{\"fill\":\"currentColor\",\"d\":\"M17.095 4.421h-2.19L2.315 25.684c.506.842.59 1.053 1.096 1.895H28.59c.505-.842.589-1.053 1.094-1.895zM4.885 25.474 16 6.694l11.116 18.78z\"}],[\"$\",\"path\",null,{\"fill\":\"currentColor\",\"d\":\"M17
-et\":\"utf-8\"}],[\"$\",\"meta\",\"1\",{\"name\":\"viewport\",\"content\":\"width=device-width, height=device-height, initial-scale=1, viewport-fit=cover\"}],[\"$\",\"meta\",\"2\",{\"name\":\"theme-color\",\"content\":\"#fedd00\"}]]\n"])</script><script>self.__next_f.push([1,"35:I[94975,[\"/_next/static/chunks/10agwv65klv3j.js\",\"/_next/static/chunks/06lhuvuj_5793.js\",\"/_next/static/chunks/0h47w2~901hqz.js\",\"/_next/static/chunks/0ftz12zp.pi
-grep: write error: Broken pipe
---- dufl: any absolute data hosts
-http://www.vegagerdin.is/vs/Today.aspx
-https://gagnaveita.vegagerdin.is
-https://minarsidur.vegagerdin.is/MinarSidur/SaekjaUm/TilkynnaTjon/1
-https://sjolag.is
-https://sjolag.is/dufl
-https://sjolag.is/en/buoys
-https://sjolag.is/static/og_image.jpg
-https://umferdin.is
-https://www.vegagerdin.is
-https://www.vegagerdin.is/ferdaupplysingar/faerd-og-vedur/allt-landid-faerd-kort/
-https://www.vegagerdin.is/vgdata/vefmyndavelar/bolungarvikurgong_1.jpg
-https://www.vegagerdin.is/vgdata/vefmyndavelar/bolungarvikurgong_2.jpg
-https://www.vegagerdin.is/vgdata/vefmyndavelar/bulandshofdi_1.jpg
-https://www.vegagerdin.is/vgdata/vefmyndavelar/bulandshofdi_2.jpg
-https://www.vegagerdin.is/vgdata/vefmyndavelar/bulandshofdi_3.jpg
---- hafnir: most common JSON keys in the embedded payload
-    737 \"children\":
-    539 \"className\":
-    334 \"id\":
-    241 \"type\":
-    238 \"lon\":
-    238 \"lat\":
-    224 \"pnt_y\":
-    224 \"pnt_x\":
-    224 \"notkunarsvid\":
-    207 \"timi_maelingar\":
-    207 \"stutt_nafn\":
-    207 \"rodun\":
-    207 \"pnt_z\":
-    207 \"pila_sjor_dy\":
-    207 \"pila_sjor_dx\":
-    207 \"pila_dy\":
-    207 \"pila_dx\":
-    207 \"nafn\":
-    207 \"forgangur_sjor\":
-    207 \"forgangur\":
-    207 \"eigandi\":
-    207 \"dags_keyrt_ut\":
-    207 \"aldur_dagar\":
-    205 \"vindhvida\":
-    205 \"vindhradi\":
-    205 \"vindatt\":
-    205 \"hiti\":
-    204 \"vindatttxt\":
-    204 \"raki\":
-    204 \"daggarmark\":
-    197 \"snjom_leid\":
-    175 \"date\":
-    158 \"startOfDay\":
-    158 \"isPast\":
-    153 \"nrvegur\":
-    136 \"nrkafli\":
-    123 \"veghiti\":
-    123 \"slug\":
-    123 \"coordinates\":
-    117 \"umferdframidn\":
---- hafnir: sample around first station-like object
-null,{\"children\":[\"$\",\"$23\",null,{\"name\":\"Next.MetadataOutlet\",\"children\":\"$@24\"}]}]]}]\n25:[]\nb:\"$W25\"\nc:[\"$\",\"$1\",\"h\",{\"children\":[null,[\"$\",\"$L26\",null,{\"children\":\"$L27\"}],[\"$\",\"div\",null,{\"hidden\":true,\"children\":[\"$\",\"$L28\",null,{\"children\":[\"$\",\"$23\",null,{\"name\":\"Next.Metadata\",\"children\":\"$L29\"}]}]}],[\"$\",\"meta\",null,{\"name\":\"next-size-adjust\",\"content\":\"\"}]]}]\n2a:
-r\",\"children\":[[\"$\",\"$L34\",null,{\"title\":\"404 villa\",\"icon\":[\"$\",\"svg\",null,{\"xmlns\":\"http://www.w3.org/2000/svg\",\"fill\":\"none\",\"viewBox\":\"0 0 32 32\",\"children\":[[\"$\",\"path\",null,{\"fill\":\"currentColor\",\"d\":\"M17.095 4.421h-2.19L2.315 25.684c.506.842.59 1.053 1.096 1.895H28.59c.505-.842.589-1.053 1.094-1.895zM4.885 25.474 16 6.694l11.116 18.78z\"}],[\"$\",\"path\",null,{\"fill\":\"currentColor\",\"d\":\"M17
-et\":\"utf-8\"}],[\"$\",\"meta\",\"1\",{\"name\":\"viewport\",\"content\":\"width=device-width, height=device-height, initial-scale=1, viewport-fit=cover\"}],[\"$\",\"meta\",\"2\",{\"name\":\"theme-color\",\"content\":\"#fedd00\"}]]\n"])</script><script>self.__next_f.push([1,"35:I[94975,[\"/_next/static/chunks/10agwv65klv3j.js\",\"/_next/static/chunks/06lhuvuj_5793.js\",\"/_next/static/chunks/0h47w2~901hqz.js\",\"/_next/static/chunks/0ftz12zp.pi
-grep: write error: Broken pipe
---- hafnir: any absolute data hosts
-http://www.vegagerdin.is/vs/Today.aspx
-https://gagnaveita.vegagerdin.is
-https://minarsidur.vegagerdin.is/MinarSidur/SaekjaUm/TilkynnaTjon/1
-https://sjolag.is
-https://sjolag.is/en/harbours
-https://sjolag.is/hafnir
-https://sjolag.is/static/og_image.jpg
-https://umferdin.is
-https://www.vegagerdin.is
-https://www.vegagerdin.is/ferdaupplysingar/faerd-og-vedur/allt-landid-faerd-kort/
-https://www.vegagerdin.is/vgdata/vefmyndavelar/bolungarvikurgong_1.jpg
-https://www.vegagerdin.is/vgdata/vefmyndavelar/bolungarvikurgong_2.jpg
-https://www.vegagerdin.is/vgdata/vefmyndavelar/bulandshofdi_1.jpg
-https://www.vegagerdin.is/vgdata/vefmyndavelar/bulandshofdi_2.jpg
-https://www.vegagerdin.is/vgdata/vefmyndavelar/bulandshofdi_3.jpg
---- vedurstodvar: most common JSON keys in the embedded payload
-   1683 \"children\":
-   1263 \"className\":
-    334 \"id\":
-    268 \"vindhvida\":
-    268 \"vindhradi\":
-    268 \"hiti\":
-    241 \"type\":
-    238 \"lon\":
-    238 \"lat\":
-    224 \"pnt_y\":
-    224 \"pnt_x\":
-    224 \"notkunarsvid\":
-    207 \"timi_maelingar\":
-    207 \"stutt_nafn\":
-    207 \"rodun\":
-    207 \"pnt_z\":
-    207 \"pila_sjor_dy\":
-    207 \"pila_sjor_dx\":
-    207 \"pila_dy\":
-    207 \"pila_dx\":
-    207 \"nafn\":
-    207 \"forgangur_sjor\":
-    207 \"forgangur\":
-    207 \"eigandi\":
-    207 \"dags_keyrt_ut\":
-    207 \"aldur_dagar\":
-    205 \"vindatt\":
-    204 \"vindatttxt\":
-    204 \"raki\":
-    204 \"daggarmark\":
-    197 \"snjom_leid\":
-    175 \"date\":
-    158 \"startOfDay\":
-    158 \"isPast\":
-    153 \"nrvegur\":
-    140 \"href\":
-    136 \"nrkafli\":
-    123 \"veghiti\":
-    123 \"slug\":
-    123 \"coordinates\":
---- vedurstodvar: sample around first station-like object
-null,{\"children\":[\"$\",\"$23\",null,{\"name\":\"Next.MetadataOutlet\",\"children\":\"$@24\"}]}]]}]\n25:[]\nb:\"$W25\"\nc:[\"$\",\"$1\",\"h\",{\"children\":[null,[\"$\",\"$L26\",null,{\"children\":\"$L27\"}],[\"$\",\"div\",null,{\"hidden\":true,\"children\":[\"$\",\"$L28\",null,{\"children\":[\"$\",\"$23\",null,{\"name\":\"Next.Metadata\",\"children\":\"$L29\"}]}]}],[\"$\",\"meta\",null,{\"name\":\"next-size-adjust\",\"content\":\"\"}]]}]\n2a:
-r\",\"children\":[[\"$\",\"$L35\",null,{\"title\":\"404 villa\",\"icon\":[\"$\",\"svg\",null,{\"xmlns\":\"http://www.w3.org/2000/svg\",\"fill\":\"none\",\"viewBox\":\"0 0 32 32\",\"children\":[[\"$\",\"path\",null,{\"fill\":\"currentColor\",\"d\":\"M17.095 4.421h-2.19L2.315 25.684c.506.842.59 1.053 1.096 1.895H28.59c.505-.842.589-1.053 1.094-1.895zM4.885 25.474 16 6.694l11.116 18.78z\"}],[\"$\",\"path\",null,{\"fill\":\"currentColor\",\"d\":\"M17
-et\":\"utf-8\"}],[\"$\",\"meta\",\"1\",{\"name\":\"viewport\",\"content\":\"width=device-width, height=device-height, initial-scale=1, viewport-fit=cover\"}],[\"$\",\"meta\",\"2\",{\"name\":\"theme-color\",\"content\":\"#fedd00\"}]]\n"])</script><script>self.__next_f.push([1,"36:I[94975,[\"/_next/static/chunks/10agwv65klv3j.js\",\"/_next/static/chunks/06lhuvuj_5793.js\",\"/_next/static/chunks/0h47w2~901hqz.js\",\"/_next/static/chunks/0ftz12zp.pi
-grep: write error: Broken pipe
---- vedurstodvar: any absolute data hosts
-http://www.vegagerdin.is/vs/Today.aspx
-https://gagnaveita.vegagerdin.is
-https://minarsidur.vegagerdin.is/MinarSidur/SaekjaUm/TilkynnaTjon/1
-https://sjolag.is
-https://sjolag.is/en/weather-stations
-https://sjolag.is/static/og_image.jpg
-https://sjolag.is/vedurstodvar
-https://umferdin.is
-https://www.vegagerdin.is
-https://www.vegagerdin.is/ferdaupplysingar/faerd-og-vedur/allt-landid-faerd-kort/
-https://www.vegagerdin.is/vgdata/vefmyndavelar/bolungarvikurgong_1.jpg
-https://www.vegagerdin.is/vgdata/vefmyndavelar/bolungarvikurgong_2.jpg
-https://www.vegagerdin.is/vgdata/vefmyndavelar/bulandshofdi_1.jpg
-https://www.vegagerdin.is/vgdata/vefmyndavelar/bulandshofdi_2.jpg
-https://www.vegagerdin.is/vgdata/vefmyndavelar/bulandshofdi_3.jpg
+===== code around the datalogger URL
+-mirror{transform:scale(-1, 1)}.mat-form-field:not(.mat-form-field-appearance-legacy) .mat-form-field-prefix .mat-icon,.mat-form-field:not(.mat-form-field-appearance-legacy) .mat-form-field-suffix .mat-icon{display:block}.mat-form-field:not(.mat-form-field-appearance-legacy) .mat-form-field-prefix .mat-icon-button .mat-icon,.mat-form-field:not(.mat-form-field-appearance-legacy) .mat-form-field-suffix .mat-icon-button .mat-icon{margin:auto}"],encapsulation:2,changeDetection:0});let s=n;return s})(),AC=(()=>{let n=class n{};n.\u0275fac=function(i){return new(i||n)},n.\u0275mod=qe({type:n}),n.\u0275inj=Xe({imports:[ln,ln]});let s=n;return s})();var Zo={production:!0,dataLogger_baseUrl:"https://datalogger.hafogvatn.cloud/ext/measurements",dataLogger_internalUrl:"https://datalogger.internal.hafogvatn.cloud/measurements"};var Yl=(()=>{class s{http;BASIC_URL=Zo.dataLogger_baseUrl;INTERNAL_URL=Zo.dataLogger_internalUrl;constructor(e){this.http=e}getBoxPlotStatistics(e,t,i,o,r){let c=`${this.BASIC_URL}/locations/boxplotstats?locationName=${encodeURIComponent(e)}&valueType=${encodeURIComponent(t)}&averageBy=${encodeURIComponent(i)}&dateFrom=${encodeURIComponent(o)}&dateTo=${encodeURIComponent(r)}`;return this.http.get(c)}getLatestTempByLocation(e,t){let i=`${this.BASIC_URL}/locations/names/newest?locationName=${encodeURIComponent(e)}&valueType=${encodeURIComponent(t)}`;return this.http.get(i)}getTemperaturesByDateAndLocation(e,t,i){let o=`${this.BASIC_URL}/locations/names/dates?locationName=${encodeURIComponent(e)}&start=${encodeURIComponent(t)}&end=${encodeURIComponent(i)}`;return this.http.get(o)}getAveragesByAverageByAndDa
+
+===== other code using the measurements service
+margin:auto}"],encapsulation:2,changeDetection:0});let s=n;return s})(),AC=(()=>{let n=class n{};n.\u0275fac=function(i){return new(i||n)},n.\u0275mod=qe({type:n}),n.\u0275inj=Xe({imports:[ln,ln]});let s=n;return s})();var Zo={production:!0,dataLogger_baseUrl:"https://datalogger.hafogvatn.cloud/ext/measurements",dataLogger_internalUrl:"https://datalogger.internal.hafogvatn.cloud/measurements"};var Yl=(()=>{class s{http;BASIC_URL=Zo.dataLogger_baseUrl;INTERNAL_URL=Zo.dataLogger_internalUrl;constructor(e){this.http=e}getBoxPlotStatistics(e,t,i,o,r){let c=`${this.BASIC_URL}/locations/boxplotstats?locationName
+=${encodeURIComponent(e)}&valueType=${encodeURIComponent(t)}&averageBy=${encodeURIComponent(i)}&dateFrom=${encodeURIComponent(o)}&dateTo=${encodeURIComponent(r)}`;return this.http.get(c)}getLatestTempByLocation(e,t){let i=`${this.BASIC_URL}/locations/names/newest?locationName=${encodeURIComponent(e)}&valueType=${encodeURIComponent(t)}`;return this.http.get(i)}getTemperaturesByDateAndLocation(e,t,i){let o=`${this.BASIC_URL}/locations/names/dates?locationName=${encodeURIComponent(e)}&start=${encodeURIComponent(t)}&end=${encodeURIComponent(i)}`;ret
+this.http.get(o)}getAveragesByAverageByAndDateAndLocationAndType(e,t,i,o,r){let c=`${this.BASIC_URL}/averages/${o}?averageBy=${encodeURIComponent(e)}&dateFrom=${encodeURIComponent(t)}&dateTo=${encodeURIComponent(i)}&valueType=${r}`;return this.http.get(c)}getLocationsInfo(){let e=`${this.BASIC_URL}/locations/info`;return this.http.get(e)}uploadLoggerData(e){return this.http.post(`${this.INTERNAL_URL}`,e)}getDataLoggers(){let e=`${this.INTERNAL_URL}/dataloggers`;return this.http.get(e)}static \u0275fac=function(t){return new(t||s)(He(In))};static \u0275prov=Je({token:s,factory:s.\u0275fac,providedIn:"roo
+t"})}return s})();var zC=(()=>{class s{dataLoggerService=ct(Yl);getLocationsInfo(){let e=localStorage.getItem("locations");return e?zt(JSON.parse(e)):this.dataLoggerService.getLocationsInfo().pipe(Jt(t=>{localStorage.setItem("locations",JSON.stringify(t))}))}getLatestTempByLocation(e,t){let i=e+"latestTemp",o=sessionStorage.getItem(i);return o?zt(JSON.parse(o)):this.dataLoggerService.getLatestTempByLocation(e,t).pipe(Jt(r=>{sessionStorage.setItem(i,JSON.stringify(r))}))}getTemperaturesByDateAndLocation(e,t,i,o=!1){let r=e+t+i,c=se
+
+== https://datalogger.hafogvatn.cloud/ext/measurements -> 404 application/json 154
+{"timestamp":"2026-10-09T20:57:23.092+00:00","status":404,"error":"Not Found","message":"No static resource ext/measurements.","path":"/ext/measurements"}
+
+== https://datalogger.hafogvatn.cloud/ext/measurements?limit=5 -> 404 application/json 154
+{"timestamp":"2026-10-09T20:57:23.476+00:00","status":404,"error":"Not Found","message":"No static resource ext/measurements.","path":"/ext/measurements"}
+
+== https://datalogger.hafogvatn.cloud/ext/locations -> 404 application/json 148
+{"timestamp":"2026-10-09T20:57:23.850+00:00","status":404,"error":"Not Found","message":"No static resource ext/locations.","path":"/ext/locations"}
+
+== https://datalogger.hafogvatn.cloud/ext/stations -> 404 application/json 146
+{"timestamp":"2026-10-09T20:57:24.235+00:00","status":404,"error":"Not Found","message":"No static resource ext/stations.","path":"/ext/stations"}
+
+== https://datalogger.hafogvatn.cloud/ext/sensors -> 404 application/json 144
+{"timestamp":"2026-10-09T20:57:24.545+00:00","status":404,"error":"Not Found","message":"No static resource ext/sensors.","path":"/ext/sensors"}
+
+== https://datalogger.hafogvatn.cloud/ext/ -> 404 application/json 129
+{"timestamp":"2026-10-09T20:57:24.871+00:00","status":404,"error":"Not Found","message":"No static resource ext.","path":"/ext/"}
+
