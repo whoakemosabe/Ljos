@@ -22,41 +22,29 @@ jobs:
           W=$(mktemp -d)
 
           set +e
-          echo "===== SJAVARHITI: how the app fetches data"
+          echo "===== SJAVARHITI lazy chunks"
           curl -sSL -A "$UA" https://sjavarhiti.hafogvatn.cloud/main-34HM7BUJ.js -o $W/sh.js
-          wc -c $W/sh.js
-          echo "--- .get/.post calls"
-          grep -oE '\.(get|post|request)\([^)]{0,160}' $W/sh.js | grep -vE '^\.get\((t|e|n|i|a|r|s|o|this)\)$' | sort -u | head -60
-          echo "--- strings with api / json / csv / data / gogn"
-          grep -oE '"[^"]{0,80}(api|\.json|\.csv|gogn|data/|Url|URL|url)[^"]{0,80}"' $W/sh.js | sort -u | head -60
-          echo "--- environment / base url"
-          grep -oE '.{0,120}(apiUrl|baseUrl|apiBase|environment|BASE_URL|endpoint).{0,200}' $W/sh.js | head -15
-          echo "--- try likely same-origin data paths"
-          for p in api api/stations api/stodvar api/stations/ assets/stations.json assets/data.json stodvar stations.json data.json; do
-            code=$(curl -sS -o $W/o -w '%{http_code} %{content_type}' -A "$UA" "https://sjavarhiti.hafogvatn.cloud/$p")
-            echo "/$p -> $code"; head -c 300 $W/o | tr '\n' ' '; echo
-          done
+          for c in $(grep -oE 'chunk-[A-Z0-9]+\.js' $W/sh.js | sort -u); do curl -sSL -A "$UA" "https://sjavarhiti.hafogvatn.cloud/$c" >> $W/chunks.js; echo >> $W/chunks.js; done
+          wc -c $W/chunks.js
+          cat $W/sh.js $W/chunks.js > $W/all.js
+          echo "--- every http(s) URL in all JS"
+          grep -oE 'https?://[A-Za-z0-9._~:/?#@!$&+,;=%-]+' $W/all.js | sort -u | grep -viE 'w3\.org|leaflet|openstreetmap|gstatic|angular' | head -40
+          echo "--- HttpClient-style calls with strings"
+          grep -oE '\.get(<[^>]*>)?\(`[^`]{0,150}`' $W/all.js | head -20
+          grep -oE '\.get(<[^>]*>)?\("[^"]{0,150}"' $W/all.js | head -20
+          grep -oE 'fetch\([^)]{0,150}' $W/all.js | head -20
+          echo "--- strings ending in json/csv or containing api"
+          grep -oE '["`][^"`]{0,100}(\.json|\.csv|/api|api/)[^"`]{0,100}["`]' $W/all.js | sort -u | head -30
 
-          echo "===== SJOLAG bundles"
-          curl -sSL -A "$UA" https://sjolag.is/dufl -o $W/dufl.html
-          for s in $(grep -oE '/_next/static/chunks/[^"]+\.js' $W/dufl.html | sort -u); do curl -sSL -A "$UA" "https://sjolag.is$s" >> $W/sl.js; echo >> $W/sl.js; done
-          wc -c $W/sl.js $W/dufl.html
-          echo "--- gagnaveita context"
-          grep -oE '.{0,250}gagnaveita\.vegagerdin\.is.{0,300}' $W/sl.js | head -10
-          echo "--- /api context"
-          grep -oE '.{0,150}"/api/.{0,250}' $W/sl.js | head -15
-          echo "--- embedded data in the server-rendered buoy page"
-          grep -oE '.{0,80}(ufl|uoy|Hs|wave|ave_|station|tod)[^<]{0,160}' $W/dufl.html | head -25
-          echo "--- try sjolag api paths"
-          for p in api api/dufl api/buoys api/stations api/harbours api/hafnir api/monitor; do
-            code=$(curl -sS -o $W/o -w '%{http_code} %{content_type}' -A "$UA" "https://sjolag.is/$p")
-            echo "/$p -> $code"; head -c 300 $W/o | tr '\n' ' '; echo
-          done
-
-          echo "===== GAGNAVEITA"
-          for p in "" api swagger swagger/index.html openapi.json vs sjolag; do
-            code=$(curl -sS -o $W/o -w '%{http_code} %{content_type}' -A "$UA" "https://gagnaveita.vegagerdin.is/$p")
-            echo "/$p -> $code"; head -c 300 $W/o | tr '\n' ' '; echo
+          echo "===== SJOLAG server-rendered data"
+          for page in dufl hafnir vedurstodvar; do
+            curl -sSL -A "$UA" "https://sjolag.is/$page" -o $W/$page.html
+            echo "--- $page: most common JSON keys in the embedded payload"
+            grep -oE '\\"[a-zA-Z_]{2,30}\\":' $W/$page.html | sort | uniq -c | sort -rn | head -40
+            echo "--- $page: sample around first station-like object"
+            grep -oE '.{0,40}\\"(name|Name|nafn|title)\\":.{0,400}' $W/$page.html | head -3
+            echo "--- $page: any absolute data hosts"
+            grep -oE 'https?://[a-z0-9.-]+\.(is|eu|com)[^"\\ ]{0,80}' $W/$page.html | grep -viE 'sentry|google|twitter|qualtrics|nextjs|react' | sort -u | head -15
           done
           exit 0
       - name: Save results to the branch
