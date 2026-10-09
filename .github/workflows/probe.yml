@@ -22,29 +22,18 @@ jobs:
           W=$(mktemp -d)
 
           set +e
-          echo "===== SJAVARHITI lazy chunks"
           curl -sSL -A "$UA" https://sjavarhiti.hafogvatn.cloud/main-34HM7BUJ.js -o $W/sh.js
-          for c in $(grep -oE 'chunk-[A-Z0-9]+\.js' $W/sh.js | sort -u); do curl -sSL -A "$UA" "https://sjavarhiti.hafogvatn.cloud/$c" >> $W/chunks.js; echo >> $W/chunks.js; done
-          wc -c $W/chunks.js
-          cat $W/sh.js $W/chunks.js > $W/all.js
-          echo "--- every http(s) URL in all JS"
-          grep -oE 'https?://[A-Za-z0-9._~:/?#@!$&+,;=%-]+' $W/all.js | sort -u | grep -viE 'w3\.org|leaflet|openstreetmap|gstatic|angular' | head -40
-          echo "--- HttpClient-style calls with strings"
-          grep -oE '\.get(<[^>]*>)?\(`[^`]{0,150}`' $W/all.js | head -20
-          grep -oE '\.get(<[^>]*>)?\("[^"]{0,150}"' $W/all.js | head -20
-          grep -oE 'fetch\([^)]{0,150}' $W/all.js | head -20
-          echo "--- strings ending in json/csv or containing api"
-          grep -oE '["`][^"`]{0,100}(\.json|\.csv|/api|api/)[^"`]{0,100}["`]' $W/all.js | sort -u | head -30
-
-          echo "===== SJOLAG server-rendered data"
-          for page in dufl hafnir vedurstodvar; do
-            curl -sSL -A "$UA" "https://sjolag.is/$page" -o $W/$page.html
-            echo "--- $page: most common JSON keys in the embedded payload"
-            grep -oE '\\"[a-zA-Z_]{2,30}\\":' $W/$page.html | sort | uniq -c | sort -rn | head -40
-            echo "--- $page: sample around first station-like object"
-            grep -oE '.{0,40}\\"(name|Name|nafn|title)\\":.{0,400}' $W/$page.html | head -3
-            echo "--- $page: any absolute data hosts"
-            grep -oE 'https?://[a-z0-9.-]+\.(is|eu|com)[^"\\ ]{0,80}' $W/$page.html | grep -viE 'sentry|google|twitter|qualtrics|nextjs|react' | sort -u | head -15
+          for c in $(grep -oE 'chunk-[A-Z0-9]+\.js' $W/sh.js | sort -u); do curl -sSL -A "$UA" "https://sjavarhiti.hafogvatn.cloud/$c" >> $W/sh.js; echo >> $W/sh.js; done
+          echo "===== code around the datalogger URL"
+          grep -oE '.{0,700}datalogger\.hafogvatn\.cloud/ext/measurements.{0,900}' $W/sh.js | head -2
+          echo
+          echo "===== other code using the measurements service"
+          grep -oE '.{0,300}(measurements|stations|locations)[`"/?].{0,300}' $W/sh.js | grep -v highcharts | head -12
+          echo
+          B=https://datalogger.hafogvatn.cloud/ext
+          for p in measurements "measurements?limit=5" locations stations sensors "" ; do
+            code=$(curl -sS -o $W/o -w '%{http_code} %{content_type} %{size_download}' -A "$UA" -H 'Accept: application/json' "$B/$p")
+            echo "== $B/$p -> $code"; head -c 1200 $W/o; echo; echo
           done
           exit 0
       - name: Save results to the branch
