@@ -1,151 +1,233 @@
-===== SJAVARHITI: how the app fetches data
-879770 /tmp/tmp.Z7B3ncQiXK/sh.js
---- .get/.post calls
-.get(
+===== SJAVARHITI lazy chunks
+1271634 /tmp/tmp.T574t5ThK1/chunks.js
+--- every http(s) URL in all JS
+https://code.highcharts.com/11.4.8/lib/
+https://datalogger.hafogvatn.cloud/ext/measurements
+https://datalogger.internal.hafogvatn.cloud/measurements
+https://export.highcharts.com/
+https://g.co/ng/security#xss
+https://sjora.hafro.is/
+https://www.hafogvatn.is
+https://www.highcharts.com/docs/accessibility/accessibility-module.
+https://www.highcharts.com?credits
+--- HttpClient-style calls with strings
 .get("rgba"
-.get($g
-.get(0
-.get(Aa
-.get(Ce
-.get(Ei
-.get(Oh
-.get(Rh
-.get(Vg
-.get(Vo,[],{optional:!0,self:!0}
-.get(Wg,null,Bd.Optional
-.get(Wt
-.get(a
-.get(d
-.get(dl
-.get(e
-.get(e,i
-.get(h
-.get(i
-.get(i.name
-.get(n
-.get(n,i
-.get(qg,null,Bd.Optional
-.get(t
-.get(this.currentLocationInfo.name
-.get(uf,Promise.resolve(
---- strings with api / json / csv / data / gogn
-"))}onClick(t,a,r,s,l){let d=this.urlTree;if(d===null||this.isAnchorElement&&(t!==0||a||r||s||l||typeof this.target=="
-"),Q()())}var Ay=(()=>{class n{showSidenav=!0;activeRoute;isInternalUrl=window.location.hostname==="
-"),c.src=o,c},_getIconUrl:function(o){return Pt.retina&&this.options[o+"
-");if(document.body.removeChild(o),c=this._stripUrl(c),c)return c;var u=document.querySelector('link[href$="
-",Te],replaceUrl:[2,"
-",burlywood:"
-",c=this._image=o?this._url:ue("
-",errorTileUrl:"
-",iconRetinaUrl:"
-",interactive:!1,crossOrigin:!1,errorOverlayUrl:"
-",n[n.IgnoredByUrlHandlingStrategy=1]="
-",n}(Ti||{}),Tl=function(n){return n[n.IgnoredSameUrlNavigation=0]="
-",n}(ii||{}),ji=class{constructor(e,i){this.id=e,this.url=i}},Sr=class extends ji{constructor(e,i,t="
-",o)},_createIcon:function(o,c){var u=this._getIconUrl(o);if(!u){if(o==="
-",shadowUrl:"
-",this.urlHandlingStrategy=bt(Lh),this.urlUpdateStrategy=this.options.urlUpdateStrategy||"
-",u.src=this.getTileUrl(o),u},getTileUrl:function(o){var c={r:Pt.retina?"
-":f=kt(kt({},this.currentUrlTree.queryParams),s);break;case"
-":return!ja(n.url,e.url);case"
-":return!ja(n.url,e.url)||!mn(n.queryParams,e.queryParams);case"
-":return`${this.capitalizeFirstLetter(r)} ${s}`;case"
-"?!0:i.parseUrl("
-"Url"
-"iconUrl not set in Icon options (see the docs)."
-"replaceUrl"
-"url(#default#VML)"
-"}var oh=class{constructor(e){this.url=e,this.remaining=e}parseRootSegment(){return this.consumeOptional("
---- environment / base url
-reateContext(this.name).children,h=new wh(t,d,r.injector);this.activated=r.createComponent(l,{index:r.length,injector:h,environmentInjector:a}),this.changeDetector.markForCheck(),this.inputBinder?.bindActivatedRouteToOutletComponent(this),this.activateEvents.emit(this.activated.instance)}};e.\u0275fac=function(a){return new(a||e)
-,this.lastSuccessfulNavigation=null,this.events=new Kt,this.transitionAbortSubject=new Kt,this.configLoader=bt(Eh),this.environmentInjector=bt(Aa),this.urlSerializer=bt(Ho),this.rootContexts=bt(Wo),this.location=bt(za),this.inputBindingEnabled=bt(jl,{optional:!0})!==null,this.titleStrategy=bt(zg),this.options=bt(Xo,{optional:!0})
-r.serialize(_.extractedUrl),_.source,_.restoredState)),g!==this.transitions?.getValue()?Wn:Promise.resolve(_)}),UC(this.environmentInjector,this.configLoader,this.rootComponentType,t.config,this.urlSerializer,this.paramsInheritanceStrategy),hi(_=>{s.targetSnapshot=_.targetSnapshot,s.urlAfterRedirects=_.urlAfterRedirects,this.curr
-h=>(this.currentTransition=s=qe(kt({},h),{guards:dC(h.targetSnapshot,h.currentSnapshot,this.rootContexts)}),s)),xC(this.environmentInjector,h=>this.events.next(h)),hi(h=>{if(s.guardsResult=h.guardsResult,h.guardsResult&&typeof h.guardsResult!="boolean")throw Nl(this.urlSerializer,h.guardsResult);let m=new ch(h.id,this.urlSerializ
-rects),m.targetSnapshot);this.events.next(f)}),zi(m=>{let f=!1;return Et(m).pipe(ZC(this.paramsInheritanceStrategy,this.environmentInjector),hi({next:()=>f=!0,complete:()=>{f||this.cancelNavigationTransition(m,"",Ti.NoDataFromResolver)}}))}),hi(m=>{let f=new hh(m.id,this.urlSerializer.serialize(m.extractedUrl),this.urlSerializer.
-,ih(()=>this.afterPreactivation()),zi(()=>{let{currentSnapshot:h,targetSnapshot:m}=s,f=this.createViewTransition?.(this.environmentInjector,h.root,m.root);return f?Ai(f).pipe(_e(()=>s)):Et(s)}),_e(h=>{let m=rC(t.routeReuseStrategy,h.targetSnapshot,h.currentRouterState);return this.currentTransition=s=qe(kt({},h),{targetRouterStat
-e(!1);else{let m=new Oo(s.id,this.urlSerializer.serialize(s.extractedUrl),h,s.targetSnapshot??void 0);try{let f=cn(this.environmentInjector,()=>this.navigationErrorHandler?.(m));if(f instanceof zo){let{message:_,cancellationCode:g}=Nl(this.urlSerializer,f);this.events.next(new Tn(s.id,this.urlSerializer.serialize(s.extractedUrl),
---- try likely same-origin data paths
-/api -> 200 text/html
-<!doctype html> <html lang="en" data-critters-container> <head><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>   <meta charset="utf-8">   <title>Sjávarhiti</title>   <base href="/">   <meta name="viewport" content="width=device-width, initial-scale=1">   <link rel="icon" type="
-/api/stations -> 200 text/html
-<!doctype html> <html lang="en" data-critters-container> <head><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>   <meta charset="utf-8">   <title>Sjávarhiti</title>   <base href="/">   <meta name="viewport" content="width=device-width, initial-scale=1">   <link rel="icon" type="
-/api/stodvar -> 200 text/html
-<!doctype html> <html lang="en" data-critters-container> <head><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>   <meta charset="utf-8">   <title>Sjávarhiti</title>   <base href="/">   <meta name="viewport" content="width=device-width, initial-scale=1">   <link rel="icon" type="
-/api/stations/ -> 200 text/html
-<!doctype html> <html lang="en" data-critters-container> <head><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>   <meta charset="utf-8">   <title>Sjávarhiti</title>   <base href="/">   <meta name="viewport" content="width=device-width, initial-scale=1">   <link rel="icon" type="
-/assets/stations.json -> 200 text/html
-<!doctype html> <html lang="en" data-critters-container> <head><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>   <meta charset="utf-8">   <title>Sjávarhiti</title>   <base href="/">   <meta name="viewport" content="width=device-width, initial-scale=1">   <link rel="icon" type="
-/assets/data.json -> 200 text/html
-<!doctype html> <html lang="en" data-critters-container> <head><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>   <meta charset="utf-8">   <title>Sjávarhiti</title>   <base href="/">   <meta name="viewport" content="width=device-width, initial-scale=1">   <link rel="icon" type="
-/stodvar -> 200 text/html
-<!doctype html> <html lang="en" data-critters-container> <head><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>   <meta charset="utf-8">   <title>Sjávarhiti</title>   <base href="/">   <meta name="viewport" content="width=device-width, initial-scale=1">   <link rel="icon" type="
-/stations.json -> 200 text/html
-<!doctype html> <html lang="en" data-critters-container> <head><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>   <meta charset="utf-8">   <title>Sjávarhiti</title>   <base href="/">   <meta name="viewport" content="width=device-width, initial-scale=1">   <link rel="icon" type="
-/data.json -> 200 text/html
-<!doctype html> <html lang="en" data-critters-container> <head><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>   <meta charset="utf-8">   <title>Sjávarhiti</title>   <base href="/">   <meta name="viewport" content="width=device-width, initial-scale=1">   <link rel="icon" type="
-===== SJOLAG bundles
-1707608 /tmp/tmp.Z7B3ncQiXK/sl.js
- 906961 /tmp/tmp.Z7B3ncQiXK/dufl.html
-2614569 total
---- gagnaveita context
---- /api context
-lue:!0}),Object.assign(n.default,n),t.exports=n.default)},10648,(e,t,n)=>{"use strict";function r(e){return"/api"===e||!!(null==e?void 0:e.startsWith("/api/"))}Object.defineProperty(n,"__esModule",{value:!0}),Object.defineProperty(n,"isAPIRoute",{enumerable:!0,get:function(){return r}})},57979,(e,t,n)=>{"use strict";Object.defineProperty(n,"__esModule",{value:!0}),Object.defineProperty(n,"removePathPref
-,{"path":"/lighthouses"},{"path":"/weather-stations"}],"isrRoutes":[]}',globalThis._sentryNextJsVersion="16.2.4",globalThis._sentryRewritesTunnelPath="/api/monitor",function(e){let t,n,r,a,i,o,l;rM&&(0,g.consoleSandbox)(()=>{console.warn("[@sentry/nextjs] You are calling `Sentry.init()` more than once on the client. This can happen if you have both a `sentry.client.config.ts` and a `instrumentation-clie
-teFramesAssetPrefixPath:a,experimentalThirdPartyOriginStackFrames:l})),r),release:"0c4ae16426d81b1ec03858e69959061fa26010cf",...e};!function(e){let t="/api/monitor";if(t&&e.dsn){let n=(0,$.dsnFromString)(e.dsn);if(!n)return;let r=n.host.match(/^o(\d+)\.ingest(?:\.([a-z]{2}))?\.sentry\.io$/);if(r){let a=r[1],i=r[2],o=`${t}?o=${a}&p=${n.projectId}`;i&&(o+=`&r=${i}`),e.tunnel=o,tB&&g.debug.log(`Tunneling e
---- embedded data in the server-rendered buoy page
-.weather-station-module__mM7rSW__container .weather-station-module__mM7rSW__headline{margin-bottom:.5rem}.weather-station-module__mM7rSW__container .weather-station-module__mM7rSW__tabs [role=tablist]{padding:.5rem var(
---panelPadding) 1rem var(--panelPadding)}.weather-station-module__mM7rSW__skeleton{margin-bottom:1rem;animation:3s infinite weather-station-module__mM7rSW__flickerAnimation}.weather-station-module__mM7rSW__datePickerR
-ange{margin:0 var(--panelPadding) 1rem var(--panelPadding)}.weather-station-module__mM7rSW__container .weather-station-module__mM7rSW__table{--tableStickyHeaderOffset:2.5rem;margin-left:0;margin-right:-1.5rem}.weather-station-module__m
-M7rSW__container .weather-station-module__mM7rSW__table tr td{background-color:var(--color-white)}.weather-station-module__mM7rSW__container .weather-station-module__mM7rSW__table>div{padding-l
-c(var(--panelPadding) / 2);padding-right:calc(var(--panelPadding) / 2)}.weather-station-module__mM7rSW__container .weather-station-module__mM7rSW__overviewTitle span{font-size:var(--body-1);color:var(--color-gray-5);font-weight:100;display:block}@
-keyframes weather-station-module__mM7rSW__flickerAnimation{0%{opacity:1}50%{opacity:.2}to{opacity:1}}
-.buoy-module__9zS-0G__skeleton{margin-bottom:1rem;animation:3s infinite buoy-module__9zS-0G__flickerAnimation}.buoy-module__9zS-0G__container .buoy-module__9zS-0G__datePickerRange{padding:0 var(--panelPadding);margin-bottom:1rem}.buoy-m
-odule__9zS-0G__container .buoy-module__9zS-0G__headline{margin-bottom:.5rem}.buoy-module__9zS-0G__container .buoy-module__9zS-0G__summary{margin-bottom:1rem}.buoy-module__9zS-0G__container .buoy-module__9zS-0G__tabs [role=tablist]{padding:.5
-rem var(--panelPadding) 1rem var(--panelPadding)}.buoy-module__9zS-0G__container h1{background-color:var(--color-black)}.buoy-module__9zS-0G__staleNotice{padding:.625rem var(--panelPadding);background-color:var(--c
-space-between;align-items:center;gap:.75rem;margin-bottom:.75rem;display:flex}.buoy-module__9zS-0G__container .buoy-module__9zS-0G__table{--tableStickyHeaderOffset:2.5rem;margin-left:0;margin-right:-1.5rem}.buoy-module__9zS-0G__container .buoy
-eft:calc(var(--panelPadding) / 2);padding-right:calc(var(--panelPadding) / 2)}.buoy-module__9zS-0G__container .buoy-module__9zS-0G__oldDataNotice.buoy-module__9zS-0G__displayTitle{margin-top:-.5rem}.buoy-module__9zS-0G__container .buoy-module_
-_9zS-0G__table tr td{background-color:var(--color-white)}.buoy-module__9zS-0G__container .buoy-module__9zS-0G__overviewTitle span{font-size:var(--body-1);color:var(--color-gray-5);font-weight:100;display:block}@keyframes b
-uoy-module__9zS-0G__flickerAnimation{0%{opacity:1}50%{opacity:.2}to{opacity:1}}
-m;padding-top:.5rem}.default-module__Cro2GW__container .default-module__Cro2GW__waveHeightTitle{align-items:center;column-gap:.5rem;padding:1rem 0;display:flex}.default-module__Cro2GW__container .default-module__Cro2GW__waveHeightTitleColor{bor
-_Cro2GW__accordionItem.default-module__Cro2GW__no_data .default-module__Cro2GW__waveHeightTitleColor{border:.0625rem solid var(--color-gray-1)}.default-module__Cro2GW__container .default-module__Cro2GW__accordion .default-module__Cro2GW__accord
-.buoys-module__3D7Cyq__tooltip{pointer-events:none}.buoys-module__3D7Cyq__tooltip .buoys-module__3D7Cyq__content{color:var(--color-white);pointer-events:all;text-decoration:none;display:block}.buoys-module__3D7Cyq__t
-ooltip .buoys-module__3D7Cyq__content>div{border:.0625rem solid var(--color-white);filter:0 .125rem .0625rem #00000026;cursor:pointer;pointer-events:all;background-color:#0
-ition:background-color .15s linear;position:relative}@media (max-width:768px){.buoys-module__3D7Cyq__tooltip .buoys-module__3D7Cyq__content>div{font-size:.625rem}}.buoys-module__3D7Cyq__tooltip .buoys-module__3D7Cyq__content>div:hover{outline:
-.0625rem solid var(--color-gray-1);background-color:#000}.buoys-module__3D7Cyq__line{background-color:var(--color-gray-5);transform-origin:bottom;width:.0625rem;height:100%;position:absolute;top:0;left:0}.buoys-module__3D7
-grid-template-columns:min-content min-content;align-items:center;display:grid}.buoys-module__3D7Cyq__time .buoys-module__3D7Cyq__lastUpdate{grid-template-columns:1rem auto;align-items:center;column-gap:.25rem;padding-left:.125rem;padding-right
-:.125rem;font-weight:100;display:grid}.buoys-module__3D7Cyq__line.buoys-module__3D7Cyq__lineBottom{top:auto;bottom:0}.buoys-module__3D7Cyq__line.buoys-module__3D7Cyq__lineRight{left:auto;right:0}.buoys-module__3D7Cyq__offset{point
-er-events:none;display:block;position:absolute}.buoys-module__3D7Cyq__offset svg{width:100%;height:100%;position:absolute;top:0;left:0}.buoys-module__3D7Cyq__topLeft .buoys-module__3D7Cyq__offset{top:.3125rem;lef
-t:.3125rem}.buoys-module__3D7Cyq__topRight .buoys-module__3D7Cyq__offset{top:.3125rem;right:.3125rem}.buoys-module__3D7Cyq__bottomLeft .buoys-module__3D7Cyq__offset{bottom:.3125rem;left:.3125rem}.buoys-module
-__3D7Cyq__bottomRight .buoys-module__3D7Cyq__offset{bottom:.3125rem;right:.3125rem}.buoys-module__3D7Cyq__bottom .buoys-module__3D7Cyq__offset{bottom:.4375rem;left:50%;transform:translate
-(-50%)}.buoys-module__3D7Cyq__right .buoys-module__3D7Cyq__offset{bottom:calc(50% - .0625rem);right:.4375rem;transform:translateY(-50%)}.buoys-module__3D7Cyq__left .buoys-module__3D7Cyq__offset{top:cal
+.get("rgba"
+.get("Hours"
+.get("Day"
+.get("Date"
+.get("Month"
+.get("FullYear"
+.get("Minutes"
+.get("Seconds"
+.get("Milliseconds"
+.get("Seconds"
+.get("Minutes"
+.get("Hours"
+.get("Date"
+.get("Month"
+.get("FullYear"
+.get("Day"
+.get("Date"
+.get("FullYear"
+.get("Month"
+fetch(A,je({method:"POST",body:W},N
+--- strings ending in json/csv or containing api
+"'}).join(this.csvSeparator)).join(`
+");this.csvTableInfo.push({name:"
+");this.csvTableInfo.unshift({name:"
+",4)),n&2){let e=d();l(),Pe(e.csvInfo.length>0?1:-1)}}function Zt(n,u){n&1&&(a(0,"
+",G=this.getDataRows(),C=this.options.exporting.csv,H=L(C.decimalPoint,C.itemDelimiter!=="
+",e.csvInfo),l(),p("
+",i.csvTableInfo)("
+",value:t[2]}),this.csvTableInfo.push({name:"
+",value:t[3]}),this.csvTableInfo.push({name:"
+".csv"
+".csv, .dat"
+===== SJOLAG server-rendered data
+--- dufl: most common JSON keys in the embedded payload
+    486 \"children\":
+    334 \"id\":
+    331 \"className\":
+    241 \"type\":
+    238 \"lon\":
+    238 \"lat\":
+    224 \"pnt_y\":
+    224 \"pnt_x\":
+    224 \"notkunarsvid\":
+    207 \"timi_maelingar\":
+    207 \"stutt_nafn\":
+    207 \"rodun\":
+    207 \"pnt_z\":
+    207 \"pila_sjor_dy\":
+    207 \"pila_sjor_dx\":
+    207 \"pila_dy\":
+    207 \"pila_dx\":
+    207 \"nafn\":
+    207 \"forgangur_sjor\":
+    207 \"forgangur\":
+    207 \"eigandi\":
+    207 \"dags_keyrt_ut\":
+    207 \"aldur_dagar\":
+    205 \"vindhvida\":
+    205 \"vindhradi\":
+    205 \"vindatt\":
+    205 \"hiti\":
+    204 \"vindatttxt\":
+    204 \"raki\":
+    204 \"daggarmark\":
+    197 \"snjom_leid\":
+    175 \"date\":
+    158 \"startOfDay\":
+    158 \"isPast\":
+    153 \"nrvegur\":
+    136 \"nrkafli\":
+    123 \"veghiti\":
+    123 \"slug\":
+    123 \"coordinates\":
+    117 \"umferdframidn\":
+--- dufl: sample around first station-like object
+null,{\"children\":[\"$\",\"$23\",null,{\"name\":\"Next.MetadataOutlet\",\"children\":\"$@24\"}]}]]}]\n25:[]\nb:\"$W25\"\nc:[\"$\",\"$1\",\"h\",{\"children\":[null,[\"$\",\"$L26\",null,{\"children\":\"$L27\"}],[\"$\",\"div\",null,{\"hidden\":true,\"children\":[\"$\",\"$L28\",null,{\"children\":[\"$\",\"$23\",null,{\"name\":\"Next.Metadata\",\"children\":\"$L29\"}]}]}],[\"$\",\"meta\",null,{\"name\":\"next-size-adjust\",\"content\":\"\"}]]}]\n2a:
+r\",\"children\":[[\"$\",\"$L34\",null,{\"title\":\"404 villa\",\"icon\":[\"$\",\"svg\",null,{\"xmlns\":\"http://www.w3.org/2000/svg\",\"fill\":\"none\",\"viewBox\":\"0 0 32 32\",\"children\":[[\"$\",\"path\",null,{\"fill\":\"currentColor\",\"d\":\"M17.095 4.421h-2.19L2.315 25.684c.506.842.59 1.053 1.096 1.895H28.59c.505-.842.589-1.053 1.094-1.895zM4.885 25.474 16 6.694l11.116 18.78z\"}],[\"$\",\"path\",null,{\"fill\":\"currentColor\",\"d\":\"M17
+et\":\"utf-8\"}],[\"$\",\"meta\",\"1\",{\"name\":\"viewport\",\"content\":\"width=device-width, height=device-height, initial-scale=1, viewport-fit=cover\"}],[\"$\",\"meta\",\"2\",{\"name\":\"theme-color\",\"content\":\"#fedd00\"}]]\n"])</script><script>self.__next_f.push([1,"35:I[94975,[\"/_next/static/chunks/10agwv65klv3j.js\",\"/_next/static/chunks/06lhuvuj_5793.js\",\"/_next/static/chunks/0h47w2~901hqz.js\",\"/_next/static/chunks/0ftz12zp.pi
 grep: write error: Broken pipe
---- try sjolag api paths
-/api -> 200 text/html; charset=utf-8
-<!DOCTYPE html><html lang="is" class="layout-module__bgqSbW__html" data-version="v3.1.1"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, viewport-fit=cover"/><style data-precedence="next" data-href="/_next/static/chunks/062zvfjtl
-/api/dufl -> 200 text/html; charset=utf-8
-<!DOCTYPE html><html lang="is" class="layout-module__bgqSbW__html" data-version="v3.1.1"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, viewport-fit=cover"/><style data-precedence="next" data-href="/_next/static/chunks/062zvfjtl
-/api/buoys -> 200 text/html; charset=utf-8
-<!DOCTYPE html><html lang="is" class="layout-module__bgqSbW__html" data-version="v3.1.1"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, viewport-fit=cover"/><style data-precedence="next" data-href="/_next/static/chunks/062zvfjtl
-/api/stations -> 200 text/html; charset=utf-8
-<!DOCTYPE html><html lang="is" class="layout-module__bgqSbW__html" data-version="v3.1.1"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, viewport-fit=cover"/><style data-precedence="next" data-href="/_next/static/chunks/062zvfjtl
-/api/harbours -> 200 text/html; charset=utf-8
-<!DOCTYPE html><html lang="is" class="layout-module__bgqSbW__html" data-version="v3.1.1"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, viewport-fit=cover"/><style data-precedence="next" data-href="/_next/static/chunks/062zvfjtl
-/api/hafnir -> 200 text/html; charset=utf-8
-<!DOCTYPE html><html lang="is" class="layout-module__bgqSbW__html" data-version="v3.1.1"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, viewport-fit=cover"/><style data-precedence="next" data-href="/_next/static/chunks/062zvfjtl
-/api/monitor -> 200 text/html; charset=utf-8
-<!DOCTYPE html><html lang="is" class="layout-module__bgqSbW__html" data-version="v3.1.1"><head><meta charSet="utf-8"/><meta name="viewport" content="width=device-width, height=device-height, initial-scale=1, viewport-fit=cover"/><style data-precedence="next" data-href="/_next/static/chunks/062zvfjtl
-===== GAGNAVEITA
-/ -> 302 text/html
-<html> <head><title>302 Found</title></head> <body> <center><h1>302 Found</h1></center> <hr><center>nginx/1.20.1</center> </body> </html> 
-/api -> 302 text/html
-<html> <head><title>302 Found</title></head> <body> <center><h1>302 Found</h1></center> <hr><center>nginx/1.20.1</center> </body> </html> 
-/swagger -> 302 text/html
-<html> <head><title>302 Found</title></head> <body> <center><h1>302 Found</h1></center> <hr><center>nginx/1.20.1</center> </body> </html> 
-/swagger/index.html -> 302 text/html
-<html> <head><title>302 Found</title></head> <body> <center><h1>302 Found</h1></center> <hr><center>nginx/1.20.1</center> </body> </html> 
-/openapi.json -> 302 text/html
-<html> <head><title>302 Found</title></head> <body> <center><h1>302 Found</h1></center> <hr><center>nginx/1.20.1</center> </body> </html> 
-/vs -> 302 text/html
-<html> <head><title>302 Found</title></head> <body> <center><h1>302 Found</h1></center> <hr><center>nginx/1.20.1</center> </body> </html> 
-/sjolag -> 302 text/html
-<html> <head><title>302 Found</title></head> <body> <center><h1>302 Found</h1></center> <hr><center>nginx/1.20.1</center> </body> </html> 
+--- dufl: any absolute data hosts
+http://www.vegagerdin.is/vs/Today.aspx
+https://gagnaveita.vegagerdin.is
+https://minarsidur.vegagerdin.is/MinarSidur/SaekjaUm/TilkynnaTjon/1
+https://sjolag.is
+https://sjolag.is/dufl
+https://sjolag.is/en/buoys
+https://sjolag.is/static/og_image.jpg
+https://umferdin.is
+https://www.vegagerdin.is
+https://www.vegagerdin.is/ferdaupplysingar/faerd-og-vedur/allt-landid-faerd-kort/
+https://www.vegagerdin.is/vgdata/vefmyndavelar/bolungarvikurgong_1.jpg
+https://www.vegagerdin.is/vgdata/vefmyndavelar/bolungarvikurgong_2.jpg
+https://www.vegagerdin.is/vgdata/vefmyndavelar/bulandshofdi_1.jpg
+https://www.vegagerdin.is/vgdata/vefmyndavelar/bulandshofdi_2.jpg
+https://www.vegagerdin.is/vgdata/vefmyndavelar/bulandshofdi_3.jpg
+--- hafnir: most common JSON keys in the embedded payload
+    737 \"children\":
+    539 \"className\":
+    334 \"id\":
+    241 \"type\":
+    238 \"lon\":
+    238 \"lat\":
+    224 \"pnt_y\":
+    224 \"pnt_x\":
+    224 \"notkunarsvid\":
+    207 \"timi_maelingar\":
+    207 \"stutt_nafn\":
+    207 \"rodun\":
+    207 \"pnt_z\":
+    207 \"pila_sjor_dy\":
+    207 \"pila_sjor_dx\":
+    207 \"pila_dy\":
+    207 \"pila_dx\":
+    207 \"nafn\":
+    207 \"forgangur_sjor\":
+    207 \"forgangur\":
+    207 \"eigandi\":
+    207 \"dags_keyrt_ut\":
+    207 \"aldur_dagar\":
+    205 \"vindhvida\":
+    205 \"vindhradi\":
+    205 \"vindatt\":
+    205 \"hiti\":
+    204 \"vindatttxt\":
+    204 \"raki\":
+    204 \"daggarmark\":
+    197 \"snjom_leid\":
+    175 \"date\":
+    158 \"startOfDay\":
+    158 \"isPast\":
+    153 \"nrvegur\":
+    136 \"nrkafli\":
+    123 \"veghiti\":
+    123 \"slug\":
+    123 \"coordinates\":
+    117 \"umferdframidn\":
+--- hafnir: sample around first station-like object
+null,{\"children\":[\"$\",\"$23\",null,{\"name\":\"Next.MetadataOutlet\",\"children\":\"$@24\"}]}]]}]\n25:[]\nb:\"$W25\"\nc:[\"$\",\"$1\",\"h\",{\"children\":[null,[\"$\",\"$L26\",null,{\"children\":\"$L27\"}],[\"$\",\"div\",null,{\"hidden\":true,\"children\":[\"$\",\"$L28\",null,{\"children\":[\"$\",\"$23\",null,{\"name\":\"Next.Metadata\",\"children\":\"$L29\"}]}]}],[\"$\",\"meta\",null,{\"name\":\"next-size-adjust\",\"content\":\"\"}]]}]\n2a:
+r\",\"children\":[[\"$\",\"$L34\",null,{\"title\":\"404 villa\",\"icon\":[\"$\",\"svg\",null,{\"xmlns\":\"http://www.w3.org/2000/svg\",\"fill\":\"none\",\"viewBox\":\"0 0 32 32\",\"children\":[[\"$\",\"path\",null,{\"fill\":\"currentColor\",\"d\":\"M17.095 4.421h-2.19L2.315 25.684c.506.842.59 1.053 1.096 1.895H28.59c.505-.842.589-1.053 1.094-1.895zM4.885 25.474 16 6.694l11.116 18.78z\"}],[\"$\",\"path\",null,{\"fill\":\"currentColor\",\"d\":\"M17
+et\":\"utf-8\"}],[\"$\",\"meta\",\"1\",{\"name\":\"viewport\",\"content\":\"width=device-width, height=device-height, initial-scale=1, viewport-fit=cover\"}],[\"$\",\"meta\",\"2\",{\"name\":\"theme-color\",\"content\":\"#fedd00\"}]]\n"])</script><script>self.__next_f.push([1,"35:I[94975,[\"/_next/static/chunks/10agwv65klv3j.js\",\"/_next/static/chunks/06lhuvuj_5793.js\",\"/_next/static/chunks/0h47w2~901hqz.js\",\"/_next/static/chunks/0ftz12zp.pi
+grep: write error: Broken pipe
+--- hafnir: any absolute data hosts
+http://www.vegagerdin.is/vs/Today.aspx
+https://gagnaveita.vegagerdin.is
+https://minarsidur.vegagerdin.is/MinarSidur/SaekjaUm/TilkynnaTjon/1
+https://sjolag.is
+https://sjolag.is/en/harbours
+https://sjolag.is/hafnir
+https://sjolag.is/static/og_image.jpg
+https://umferdin.is
+https://www.vegagerdin.is
+https://www.vegagerdin.is/ferdaupplysingar/faerd-og-vedur/allt-landid-faerd-kort/
+https://www.vegagerdin.is/vgdata/vefmyndavelar/bolungarvikurgong_1.jpg
+https://www.vegagerdin.is/vgdata/vefmyndavelar/bolungarvikurgong_2.jpg
+https://www.vegagerdin.is/vgdata/vefmyndavelar/bulandshofdi_1.jpg
+https://www.vegagerdin.is/vgdata/vefmyndavelar/bulandshofdi_2.jpg
+https://www.vegagerdin.is/vgdata/vefmyndavelar/bulandshofdi_3.jpg
+--- vedurstodvar: most common JSON keys in the embedded payload
+   1683 \"children\":
+   1263 \"className\":
+    334 \"id\":
+    268 \"vindhvida\":
+    268 \"vindhradi\":
+    268 \"hiti\":
+    241 \"type\":
+    238 \"lon\":
+    238 \"lat\":
+    224 \"pnt_y\":
+    224 \"pnt_x\":
+    224 \"notkunarsvid\":
+    207 \"timi_maelingar\":
+    207 \"stutt_nafn\":
+    207 \"rodun\":
+    207 \"pnt_z\":
+    207 \"pila_sjor_dy\":
+    207 \"pila_sjor_dx\":
+    207 \"pila_dy\":
+    207 \"pila_dx\":
+    207 \"nafn\":
+    207 \"forgangur_sjor\":
+    207 \"forgangur\":
+    207 \"eigandi\":
+    207 \"dags_keyrt_ut\":
+    207 \"aldur_dagar\":
+    205 \"vindatt\":
+    204 \"vindatttxt\":
+    204 \"raki\":
+    204 \"daggarmark\":
+    197 \"snjom_leid\":
+    175 \"date\":
+    158 \"startOfDay\":
+    158 \"isPast\":
+    153 \"nrvegur\":
+    140 \"href\":
+    136 \"nrkafli\":
+    123 \"veghiti\":
+    123 \"slug\":
+    123 \"coordinates\":
+--- vedurstodvar: sample around first station-like object
+null,{\"children\":[\"$\",\"$23\",null,{\"name\":\"Next.MetadataOutlet\",\"children\":\"$@24\"}]}]]}]\n25:[]\nb:\"$W25\"\nc:[\"$\",\"$1\",\"h\",{\"children\":[null,[\"$\",\"$L26\",null,{\"children\":\"$L27\"}],[\"$\",\"div\",null,{\"hidden\":true,\"children\":[\"$\",\"$L28\",null,{\"children\":[\"$\",\"$23\",null,{\"name\":\"Next.Metadata\",\"children\":\"$L29\"}]}]}],[\"$\",\"meta\",null,{\"name\":\"next-size-adjust\",\"content\":\"\"}]]}]\n2a:
+r\",\"children\":[[\"$\",\"$L35\",null,{\"title\":\"404 villa\",\"icon\":[\"$\",\"svg\",null,{\"xmlns\":\"http://www.w3.org/2000/svg\",\"fill\":\"none\",\"viewBox\":\"0 0 32 32\",\"children\":[[\"$\",\"path\",null,{\"fill\":\"currentColor\",\"d\":\"M17.095 4.421h-2.19L2.315 25.684c.506.842.59 1.053 1.096 1.895H28.59c.505-.842.589-1.053 1.094-1.895zM4.885 25.474 16 6.694l11.116 18.78z\"}],[\"$\",\"path\",null,{\"fill\":\"currentColor\",\"d\":\"M17
+et\":\"utf-8\"}],[\"$\",\"meta\",\"1\",{\"name\":\"viewport\",\"content\":\"width=device-width, height=device-height, initial-scale=1, viewport-fit=cover\"}],[\"$\",\"meta\",\"2\",{\"name\":\"theme-color\",\"content\":\"#fedd00\"}]]\n"])</script><script>self.__next_f.push([1,"36:I[94975,[\"/_next/static/chunks/10agwv65klv3j.js\",\"/_next/static/chunks/06lhuvuj_5793.js\",\"/_next/static/chunks/0h47w2~901hqz.js\",\"/_next/static/chunks/0ftz12zp.pi
+grep: write error: Broken pipe
+--- vedurstodvar: any absolute data hosts
+http://www.vegagerdin.is/vs/Today.aspx
+https://gagnaveita.vegagerdin.is
+https://minarsidur.vegagerdin.is/MinarSidur/SaekjaUm/TilkynnaTjon/1
+https://sjolag.is
+https://sjolag.is/en/weather-stations
+https://sjolag.is/static/og_image.jpg
+https://sjolag.is/vedurstodvar
+https://umferdin.is
+https://www.vegagerdin.is
+https://www.vegagerdin.is/ferdaupplysingar/faerd-og-vedur/allt-landid-faerd-kort/
+https://www.vegagerdin.is/vgdata/vefmyndavelar/bolungarvikurgong_1.jpg
+https://www.vegagerdin.is/vgdata/vefmyndavelar/bolungarvikurgong_2.jpg
+https://www.vegagerdin.is/vgdata/vefmyndavelar/bulandshofdi_1.jpg
+https://www.vegagerdin.is/vgdata/vefmyndavelar/bulandshofdi_2.jpg
+https://www.vegagerdin.is/vgdata/vefmyndavelar/bulandshofdi_3.jpg
