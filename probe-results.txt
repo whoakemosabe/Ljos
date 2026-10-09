@@ -1,27 +1,44 @@
-===== code around the datalogger URL
--mirror{transform:scale(-1, 1)}.mat-form-field:not(.mat-form-field-appearance-legacy) .mat-form-field-prefix .mat-icon,.mat-form-field:not(.mat-form-field-appearance-legacy) .mat-form-field-suffix .mat-icon{display:block}.mat-form-field:not(.mat-form-field-appearance-legacy) .mat-form-field-prefix .mat-icon-button .mat-icon,.mat-form-field:not(.mat-form-field-appearance-legacy) .mat-form-field-suffix .mat-icon-button .mat-icon{margin:auto}"],encapsulation:2,changeDetection:0});let s=n;return s})(),AC=(()=>{let n=class n{};n.\u0275fac=function(i){return new(i||n)},n.\u0275mod=qe({type:n}),n.\u0275inj=Xe({imports:[ln,ln]});let s=n;return s})();var Zo={production:!0,dataLogger_baseUrl:"https://datalogger.hafogvatn.cloud/ext/measurements",dataLogger_internalUrl:"https://datalogger.internal.hafogvatn.cloud/measurements"};var Yl=(()=>{class s{http;BASIC_URL=Zo.dataLogger_baseUrl;INTERNAL_URL=Zo.dataLogger_internalUrl;constructor(e){this.http=e}getBoxPlotStatistics(e,t,i,o,r){let c=`${this.BASIC_URL}/locations/boxplotstats?locationName=${encodeURIComponent(e)}&valueType=${encodeURIComponent(t)}&averageBy=${encodeURIComponent(i)}&dateFrom=${encodeURIComponent(o)}&dateTo=${encodeURIComponent(r)}`;return this.http.get(c)}getLatestTempByLocation(e,t){let i=`${this.BASIC_URL}/locations/names/newest?locationName=${encodeURIComponent(e)}&valueType=${encodeURIComponent(t)}`;return this.http.get(i)}getTemperaturesByDateAndLocation(e,t,i){let o=`${this.BASIC_URL}/locations/names/dates?locationName=${encodeURIComponent(e)}&start=${encodeURIComponent(t)}&end=${encodeURIComponent(i)}`;return this.http.get(o)}getAveragesByAverageByAndDa
-
-===== other code using the measurements service
-margin:auto}"],encapsulation:2,changeDetection:0});let s=n;return s})(),AC=(()=>{let n=class n{};n.\u0275fac=function(i){return new(i||n)},n.\u0275mod=qe({type:n}),n.\u0275inj=Xe({imports:[ln,ln]});let s=n;return s})();var Zo={production:!0,dataLogger_baseUrl:"https://datalogger.hafogvatn.cloud/ext/measurements",dataLogger_internalUrl:"https://datalogger.internal.hafogvatn.cloud/measurements"};var Yl=(()=>{class s{http;BASIC_URL=Zo.dataLogger_baseUrl;INTERNAL_URL=Zo.dataLogger_internalUrl;constructor(e){this.http=e}getBoxPlotStatistics(e,t,i,o,r){let c=`${this.BASIC_URL}/locations/boxplotstats?locationName
-=${encodeURIComponent(e)}&valueType=${encodeURIComponent(t)}&averageBy=${encodeURIComponent(i)}&dateFrom=${encodeURIComponent(o)}&dateTo=${encodeURIComponent(r)}`;return this.http.get(c)}getLatestTempByLocation(e,t){let i=`${this.BASIC_URL}/locations/names/newest?locationName=${encodeURIComponent(e)}&valueType=${encodeURIComponent(t)}`;return this.http.get(i)}getTemperaturesByDateAndLocation(e,t,i){let o=`${this.BASIC_URL}/locations/names/dates?locationName=${encodeURIComponent(e)}&start=${encodeURIComponent(t)}&end=${encodeURIComponent(i)}`;ret
-this.http.get(o)}getAveragesByAverageByAndDateAndLocationAndType(e,t,i,o,r){let c=`${this.BASIC_URL}/averages/${o}?averageBy=${encodeURIComponent(e)}&dateFrom=${encodeURIComponent(t)}&dateTo=${encodeURIComponent(i)}&valueType=${r}`;return this.http.get(c)}getLocationsInfo(){let e=`${this.BASIC_URL}/locations/info`;return this.http.get(e)}uploadLoggerData(e){return this.http.post(`${this.INTERNAL_URL}`,e)}getDataLoggers(){let e=`${this.INTERNAL_URL}/dataloggers`;return this.http.get(e)}static \u0275fac=function(t){return new(t||s)(He(In))};static \u0275prov=Je({token:s,factory:s.\u0275fac,providedIn:"roo
-t"})}return s})();var zC=(()=>{class s{dataLoggerService=ct(Yl);getLocationsInfo(){let e=localStorage.getItem("locations");return e?zt(JSON.parse(e)):this.dataLoggerService.getLocationsInfo().pipe(Jt(t=>{localStorage.setItem("locations",JSON.stringify(t))}))}getLatestTempByLocation(e,t){let i=e+"latestTemp",o=sessionStorage.getItem(i);return o?zt(JSON.parse(o)):this.dataLoggerService.getLatestTempByLocation(e,t).pipe(Jt(r=>{sessionStorage.setItem(i,JSON.stringify(r))}))}getTemperaturesByDateAndLocation(e,t,i,o=!1){let r=e+t+i,c=se
-
-== https://datalogger.hafogvatn.cloud/ext/measurements -> 404 application/json 154
-{"timestamp":"2026-10-09T20:57:23.092+00:00","status":404,"error":"Not Found","message":"No static resource ext/measurements.","path":"/ext/measurements"}
-
-== https://datalogger.hafogvatn.cloud/ext/measurements?limit=5 -> 404 application/json 154
-{"timestamp":"2026-10-09T20:57:23.476+00:00","status":404,"error":"Not Found","message":"No static resource ext/measurements.","path":"/ext/measurements"}
-
-== https://datalogger.hafogvatn.cloud/ext/locations -> 404 application/json 148
-{"timestamp":"2026-10-09T20:57:23.850+00:00","status":404,"error":"Not Found","message":"No static resource ext/locations.","path":"/ext/locations"}
-
-== https://datalogger.hafogvatn.cloud/ext/stations -> 404 application/json 146
-{"timestamp":"2026-10-09T20:57:24.235+00:00","status":404,"error":"Not Found","message":"No static resource ext/stations.","path":"/ext/stations"}
-
-== https://datalogger.hafogvatn.cloud/ext/sensors -> 404 application/json 144
-{"timestamp":"2026-10-09T20:57:24.545+00:00","status":404,"error":"Not Found","message":"No static resource ext/sensors.","path":"/ext/sensors"}
-
-== https://datalogger.hafogvatn.cloud/ext/ -> 404 application/json 129
-{"timestamp":"2026-10-09T20:57:24.871+00:00","status":404,"error":"Not Found","message":"No static resource ext.","path":"/ext/"}
-
+info -> 200 application/json 583
+===== locations/info (first 3000 chars)
+[{"name":"Grímsey","latitude":66.53809,"longitude":-18.01749},{"name":"Vestmannaeyjar","latitude":63.4482,"longitude":-20.2487},{"name":"Reykjavík","latitude":64.15188,"longitude":-21.93196},{"name":"Hjalteyri","latitude":65.850295,"longitude":-18.19346},{"name":"Æðey","latitude":66.10539,"longitude":-22.65494},{"name":"Stöðvarfjörður","latitude":64.832347,"longitude":-13.87949},{"name":"Flatey","latitude":65.37111,"longitude":-22.929017},{"name":"Hnífsdalur","latitude":66.10419,"longitude":-23.1053},{"name":"Mjóifjörður","latitude":65.20215,"longitude":-13.79547}]
+===== all location names + coords
+list 9
+{'name': 'Grímsey', 'latitude': 66.53809, 'longitude': -18.01749}
+{'name': 'Vestmannaeyjar', 'latitude': 63.4482, 'longitude': -20.2487}
+{'name': 'Reykjavík', 'latitude': 64.15188, 'longitude': -21.93196}
+{'name': 'Hjalteyri', 'latitude': 65.850295, 'longitude': -18.19346}
+{'name': 'Æðey', 'latitude': 66.10539, 'longitude': -22.65494}
+{'name': 'Stöðvarfjörður', 'latitude': 64.832347, 'longitude': -13.87949}
+{'name': 'Flatey', 'latitude': 65.37111, 'longitude': -22.929017}
+{'name': 'Hnífsdalur', 'latitude': 66.10419, 'longitude': -23.1053}
+{'name': 'Mjóifjörður', 'latitude': 65.20215, 'longitude': -13.79547}
+== newest Keflavík TEMPERATURE -> 404
+{"timestamp":"2026-10-09T20:57:52.544+00:00","status":404,"error":"Not Found","message":"Staður hefur engar mælingar","path":"/ext/measurements/locations/names/newest"}
+== newest Keflavík temperature -> 400
+{"timestamp":"2026-10-09T20:57:53.133+00:00","status":400,"error":"Bad Request","message":"Method parameter 'valueType': Failed to convert value of type 'java.lang.String' to required type 'is.hafro.service.datalogger.controllers.dto.ValueType'; Failed to convert from type [java.lang.String] to type [@org.springframework.web.bind.annotation.RequestParam is.hafro.service.datalogger.controllers.dto.
+== newest Keflavík Temperature -> 400
+{"timestamp":"2026-10-09T20:57:53.686+00:00","status":400,"error":"Bad Request","message":"Method parameter 'valueType': Failed to convert value of type 'java.lang.String' to required type 'is.hafro.service.datalogger.controllers.dto.ValueType'; Failed to convert from type [java.lang.String] to type [@org.springframework.web.bind.annotation.RequestParam is.hafro.service.datalogger.controllers.dto.
+== newest Grindavík TEMPERATURE -> 404
+{"timestamp":"2026-10-09T20:57:54.268+00:00","status":404,"error":"Not Found","message":"Staður hefur engar mælingar","path":"/ext/measurements/locations/names/newest"}
+== newest Grindavík temperature -> 400
+{"timestamp":"2026-10-09T20:57:54.854+00:00","status":400,"error":"Bad Request","message":"Method parameter 'valueType': Failed to convert value of type 'java.lang.String' to required type 'is.hafro.service.datalogger.controllers.dto.ValueType'; Failed to convert from type [java.lang.String] to type [@org.springframework.web.bind.annotation.RequestParam is.hafro.service.datalogger.controllers.dto.
+== newest Grindavík Temperature -> 400
+{"timestamp":"2026-10-09T20:57:55.461+00:00","status":400,"error":"Bad Request","message":"Method parameter 'valueType': Failed to convert value of type 'java.lang.String' to required type 'is.hafro.service.datalogger.controllers.dto.ValueType'; Failed to convert from type [java.lang.String] to type [@org.springframework.web.bind.annotation.RequestParam is.hafro.service.datalogger.controllers.dto.
+== newest Sandgerði TEMPERATURE -> 404
+{"timestamp":"2026-10-09T20:57:56.047+00:00","status":404,"error":"Not Found","message":"Staður hefur engar mælingar","path":"/ext/measurements/locations/names/newest"}
+== newest Sandgerði temperature -> 400
+{"timestamp":"2026-10-09T20:57:56.648+00:00","status":400,"error":"Bad Request","message":"Method parameter 'valueType': Failed to convert value of type 'java.lang.String' to required type 'is.hafro.service.datalogger.controllers.dto.ValueType'; Failed to convert from type [java.lang.String] to type [@org.springframework.web.bind.annotation.RequestParam is.hafro.service.datalogger.controllers.dto.
+== newest Sandgerði Temperature -> 400
+{"timestamp":"2026-10-09T20:57:57.261+00:00","status":400,"error":"Bad Request","message":"Method parameter 'valueType': Failed to convert value of type 'java.lang.String' to required type 'is.hafro.service.datalogger.controllers.dto.ValueType'; Failed to convert from type [java.lang.String] to type [@org.springframework.web.bind.annotation.RequestParam is.hafro.service.datalogger.controllers.dto.
+== newest Reykjavík TEMPERATURE -> 200
+{"name":"Reykjavík","devices":[{"deviceId":"d1a77220-30a3-4c5a-b1ed-b2a28e999009","type":"CR2xx","serialNumber":"0","status":"ONLINE","location":{"type":"Point","crs":{"type":"name","properties":{"name":"EPSG:4326"}},"coordinates":[-21.93196,64.15188]},"measurements":[{"measureDate":"2026-10-09T20:00:00Z","value":9.25571,"valueType":"TEMPERATURE","entryDate":"2026-10-09T20:02:10.046876Z"}]}]}
+== newest Reykjavík temperature -> 400
+{"timestamp":"2026-10-09T20:57:58.576+00:00","status":400,"error":"Bad Request","message":"Method parameter 'valueType': Failed to convert value of type 'java.lang.String' to required type 'is.hafro.service.datalogger.controllers.dto.ValueType'; Failed to convert from type [java.lang.String] to type [@org.springframework.web.bind.annotation.RequestParam is.hafro.service.datalogger.controllers.dto.
+== newest Reykjavík Temperature -> 400
+{"timestamp":"2026-10-09T20:57:59.131+00:00","status":400,"error":"Bad Request","message":"Method parameter 'valueType': Failed to convert value of type 'java.lang.String' to required type 'is.hafro.service.datalogger.controllers.dto.ValueType'; Failed to convert from type [java.lang.String] to type [@org.springframework.web.bind.annotation.RequestParam is.hafro.service.datalogger.controllers.dto.
+== newest Hafnarfjörður TEMPERATURE -> 404
+{"timestamp":"2026-10-09T20:57:59.720+00:00","status":404,"error":"Not Found","message":"Staður hefur engar mælingar","path":"/ext/measurements/locations/names/newest"}
+== newest Hafnarfjörður temperature -> 400
+{"timestamp":"2026-10-09T20:58:00.340+00:00","status":400,"error":"Bad Request","message":"Method parameter 'valueType': Failed to convert value of type 'java.lang.String' to required type 'is.hafro.service.datalogger.controllers.dto.ValueType'; Failed to convert from type [java.lang.String] to type [@org.springframework.web.bind.annotation.RequestParam is.hafro.service.datalogger.controllers.dto.
+== newest Hafnarfjörður Temperature -> 400
+{"timestamp":"2026-10-09T20:58:00.897+00:00","status":400,"error":"Bad Request","message":"Method parameter 'valueType': Failed to convert value of type 'java.lang.String' to required type 'is.hafro.service.datalogger.controllers.dto.ValueType'; Failed to convert from type [java.lang.String] to type [@org.springframework.web.bind.annotation.RequestParam is.hafro.service.datalogger.controllers.dto.
