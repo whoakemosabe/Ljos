@@ -1,6 +1,5 @@
 package app.ljos.ui
 
-import android.graphics.RenderEffect
 import android.os.Build
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -32,7 +31,7 @@ import com.kyant.backdrop.highlight.HighlightStyle
 import com.kyant.backdrop.shadow.Shadow
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.colorControls
-import com.kyant.backdrop.effects.effect
+import com.kyant.backdrop.effects.runtimeShaderEffect
 import com.kyant.backdrop.effects.lens
 
 /*
@@ -61,14 +60,15 @@ half4 main(float2 coord) {
 }
 """
 
+/** Backdrop 2.x dropped effect(RenderEffect); custom shaders go through runtimeShaderEffect. */
 private fun BackdropEffectScope.dissolve(fadeTop: Float, fadeBottom: Float) {
     if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
-    val shader = obtainRuntimeShader("LjosDissolve", Dissolve).apply {
-        setFloatUniform("offset", -padding, -padding)
+    val pad = padding
+    runtimeShaderEffect("LjosDissolve", Dissolve, "content") {
+        setFloatUniform("offset", -pad, -pad)
         setFloatUniform("fadeTop", fadeTop)
         setFloatUniform("fadeBottom", fadeBottom)
     }
-    effect(RenderEffect.createRuntimeShaderEffect(shader, "content"))
 }
 
 /** The glass recipe shared by the header and the sheet. */
