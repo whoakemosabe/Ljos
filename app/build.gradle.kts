@@ -65,7 +65,7 @@ android {
 }
 
 dependencies {
-        val compose = "1.12.1"
+    val compose = "1.12.1"
     implementation("androidx.compose.ui:ui:$compose")
     implementation("androidx.compose.ui:ui-graphics:$compose")
     implementation("androidx.compose.foundation:foundation:$compose")

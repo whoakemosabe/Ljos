@@ -54,7 +54,9 @@ jobs:
         if: failure()
         shell: bash
         run: |
-          grep -E "^e: |FAILED|error:" build.log | head -40 | while IFS= read -r line; do echo "::error::${line}"; done
+          # One annotation holding every error line (GitHub shows at most 10 annotations per step).
+          msg=$(grep -E -A5 "^e: |What went wrong|FAILED|error:|Could not resolve" build.log | grep -v '^--$' | grep -v '^> Task' | head -120 | sed ':a;N;$!ba;s/%/%25/g;s/\r/%0D/g;s/\n/%0A/g')
+          echo "::error title=Build errors::${msg}"
 
       - name: Name the APK
         run: cp app/build/outputs/apk/release/app-release.apk ljos.apk
