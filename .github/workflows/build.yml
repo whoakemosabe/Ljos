@@ -48,7 +48,7 @@ jobs:
         run: |
           chmod +x gradlew
           set -o pipefail
-          ./gradlew --no-daemon testReleaseUnitTest assembleRelease 2>&1 | tee build.log
+          ./gradlew --no-daemon test assembleRelease 2>&1 | tee build.log
 
       - name: Report compile errors
         if: failure()
@@ -65,7 +65,7 @@ jobs:
         continue-on-error: true
         env:
           LIVE_CHECK: "1"
-        run: ./gradlew --no-daemon testReleaseUnitTest --tests app.ljos.LiveCheck --rerun
+        run: ./gradlew --no-daemon testDebugUnitTest --tests app.ljos.LiveCheck --rerun
 
       - name: Release notes
         run: |
