@@ -31,6 +31,7 @@ import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ScrollState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -122,6 +123,7 @@ import app.ljos.data.HOUR_MS
 import app.ljos.data.Inputs
 import app.ljos.data.Locator
 import app.ljos.data.Repo
+import app.ljos.data.Updater
 import app.ljos.data.Spots
 import app.ljos.model.HourScore
 import app.ljos.model.Model
@@ -167,15 +169,21 @@ fun LjosApp() {
     // Settings sheet position: 0 = fully open, 1 = hidden.
     val sheet = remember { Animatable(1f) }
     // A newer version waiting on GitHub (checked at most hourly on open; the background refresh
-    // checks every 6 hours and notifies). Bumping jumpToUpdates scrolls Settings to Updates.
+    // checks every 6 hours and notifies). Bumping jumpToUpdates scrolls Settings to Updates; the update card on home does the updating.
     var updateWaiting by remember { mutableStateOf(app.ljos.work.UpdateWatch.waiting(context)) }
     var jumpToUpdates by remember { mutableIntStateOf(0) }
+    var dismissedUpdate by remember { mutableStateOf(prefs.dismissedUpdate) }
+    // The "update ready" notification lands on home, where the update card lives (shown again
+    // even if it was closed with ×).
     val openUpdates by app.ljos.work.UpdateWatch.openUpdates
     LaunchedEffect(openUpdates) {
         if (openUpdates) {
             app.ljos.work.UpdateWatch.openUpdates.value = false
-            sheet.animateTo(0f, spring(dampingRatio = 0.86f, stiffness = 420f))
-            jumpToUpdates++
+            prefs.dismissedUpdate = ""
+            dismissedUpdate = ""
+            updateWaiting = app.ljos.work.UpdateWatch.waiting(context)
+            sheet.animateTo(1f, tween(240))
+            scroll.animateScrollTo(0)
         }
     }
     LaunchedEffect(Unit) {
@@ -454,13 +462,11 @@ fun LjosApp() {
                     // Order follows the questions people ask: will I see it → when → where →
                     // what to wear → this week.
                     val tonightSummary: @Composable ColumnScope.() -> Unit = {
-                        SoftReveal(updateWaiting != null) {
-                            UpdateBanner(updateWaiting ?: "") {
-                                scope.launch {
-                                    sheet.animateTo(0f, spring(dampingRatio = 0.86f, stiffness = 420f))
-                                    jumpToUpdates++
-                                }
-                            }
+                        SoftReveal(updateWaiting != null && updateWaiting != dismissedUpdate) {
+                            UpdateCard(updateWaiting ?: "", onDismiss = {
+                                prefs.dismissedUpdate = updateWaiting ?: ""
+                                dismissedUpdate = prefs.dismissedUpdate
+                            })
                         }
                         Hero(
                             night, inp, loading,
@@ -1091,21 +1097,139 @@ private fun PullHint(pullFraction: () -> Float, loading: Boolean, top: Dp, intro
 }
 
 
-/** "Ljós 1.0.22 is ready · Update", shown at the top of the page when a new version is out. */
+private sealed class CardState {
+    data object Idle : CardState()
+    data object Working : CardState()
+    data class Downloading(val progress: Float) : CardState()
+    data class Ready(val file: java.io.File, val note: String? = null) : CardState()
+    data class Error(val message: String) : CardState()
+}
+
+/**
+ * The update card at the top of home when a new version is out: what's new, then Update,
+ * which downloads with a progress bar and opens the installer. × hides it until the next version.
+ */
 @Composable
-private fun UpdateBanner(version: String, onClick: () -> Unit) {
+private fun UpdateCard(version: String, onDismiss: () -> Unit) {
+    val context = LocalContext.current
     val view = LocalView.current
-    Row(
+    val scope = rememberCoroutineScope()
+    val notes = remember(version) { Prefs(context).availableNotes }
+    var expanded by remember(version) { mutableStateOf(false) }
+    var state by remember(version) { mutableStateOf<CardState>(CardState.Idle) }
+    val shape = RoundedCornerShape(20.dp)
+
+    fun install(file: java.io.File) {
+        state = if (Updater.install(context, file)) CardState.Ready(file)
+        else CardState.Ready(file, L.t("Allow Ljós to install updates, then tap Install.", "Leyfðu Ljós að setja upp, ýttu svo á Setja upp."))
+    }
+    fun update() {
+        state = CardState.Working
+        scope.launch {
+            when (val r = Updater.check(context, "")) {
+                is Updater.Check.Available -> {
+                    state = CardState.Downloading(0f)
+                    val file = try {
+                        Updater.download(context, r.release, "") { state = CardState.Downloading(it) }
+                    } catch (e: Exception) {
+                        state = CardState.Error(L.t("Download failed. Tap to try again.", "Niðurhal mistókst. Ýttu til að reyna aftur."))
+                        null
+                    }
+                    if (file != null) {
+                        Haptics.settle(view)
+                        install(file)
+                    }
+                }
+                Updater.Check.UpToDate -> {
+                    Prefs(context).availableVersion = ""
+                    onDismiss()
+                }
+                is Updater.Check.Failed -> state = CardState.Error(r.message)
+            }
+        }
+    }
+
+    Column(
         Modifier
-            .clip(RoundedCornerShape(16.dp))
-            .background(Brush.horizontalGradient(listOf(Color(0x263DFFA0), Color(0x1AB79CFF))))
-            .border(1.dp, Color(0x333DFFA0), RoundedCornerShape(16.dp))
-            .clickable { Haptics.tap(view); onClick() }
-            .padding(horizontal = 14.dp, vertical = 10.dp),
-        verticalAlignment = Alignment.CenterVertically,
+            .fillMaxWidth()
+            .clip(shape)
+            .background(Brush.linearGradient(listOf(Color(0x2E3DFFA0), Color(0x1FB79CFF))))
+            .border(1.dp, Color(0x403DFFA0), shape)
+            .padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 14.dp)
+            .animateContentSize(spring(dampingRatio = 0.85f, stiffness = 500f)),
     ) {
-        Text(L.t("Ljós $version is ready", "Ljós $version er tilbúin"), color = Ink, fontSize = 14.sp)
-        Spacer(Modifier.width(10.dp))
-        Text(L.t("Update ›", "Uppfæra ›"), color = Green, fontSize = 14.sp, fontWeight = FontWeight.Medium)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Text(L.t("Ljós $version is ready", "Ljós $version er tilbúin"), color = Ink, fontSize = 16.sp, fontWeight = FontWeight.Medium)
+                Text(
+                    if (notes.isEmpty()) L.t("Installs over this one; your settings and widgets stay.", "Fer yfir þessa; stillingar og græjur haldast.")
+                    else L.t("What's new", "Hvað er nýtt"),
+                    color = Faint, fontSize = 12.sp,
+                )
+            }
+            Text(
+                "×", color = Muted, fontSize = 22.sp,
+                modifier = Modifier
+                    .clip(CircleShape)
+                    .clickable { Haptics.tap(view); onDismiss() }
+                    .padding(horizontal = 10.dp, vertical = 2.dp),
+            )
+        }
+        if (notes.isNotEmpty()) {
+            Spacer(Modifier.height(8.dp))
+            val shownNotes = if (expanded) notes else notes.take(3)
+            Column(Modifier.padding(end = 8.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                shownNotes.forEach { line ->
+                    Row {
+                        Text("•", color = Green, fontSize = 13.sp, modifier = Modifier.padding(end = 8.dp))
+                        Text(line, color = Muted, fontSize = 13.sp, lineHeight = 18.sp)
+                    }
+                }
+            }
+            if (notes.size > 3) {
+                Text(
+                    if (expanded) L.t("Show less", "Sýna minna") else L.t("+ ${notes.size - 3} more", "+ ${notes.size - 3} í viðbót"),
+                    color = Green, fontSize = 12.sp, fontWeight = FontWeight.Medium,
+                    modifier = Modifier
+                        .padding(top = 6.dp)
+                        .clip(RoundedCornerShape(8.dp))
+                        .clickable { expanded = !expanded }
+                        .padding(vertical = 2.dp),
+                )
+            }
+        }
+        Spacer(Modifier.height(12.dp))
+        Row(Modifier.padding(end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            val st = state
+            Box(Modifier.weight(1f)) {
+                when (st) {
+                    is CardState.Downloading -> {
+                        val shown by androidx.compose.animation.core.animateFloatAsState(st.progress, tween(200), label = "dl")
+                        Column {
+                            Text(L.t("Downloading… ", "Sæki… ") + "${(st.progress * 100).toInt()}%", color = Muted, fontSize = 12.sp)
+                            Spacer(Modifier.height(6.dp))
+                            androidx.compose.foundation.Canvas(Modifier.fillMaxWidth().height(5.dp)) {
+                                val r = androidx.compose.ui.geometry.CornerRadius(size.height / 2)
+                                drawRoundRect(Color(0x26FFFFFF), cornerRadius = r)
+                                drawRoundRect(Green, size = androidx.compose.ui.geometry.Size(size.width * shown, size.height), cornerRadius = r)
+                            }
+                        }
+                    }
+                    is CardState.Error -> Text(st.message, color = Warn, fontSize = 12.sp)
+                    is CardState.Ready -> Text(
+                        st.note ?: L.t("Downloaded. Tap Install if the installer didn't open.", "Sótt. Ýttu á Setja upp ef uppsetningin opnaðist ekki."),
+                        color = if (st.note != null) Warn else Faint, fontSize = 12.sp,
+                    )
+                    else -> {}
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+            when (st) {
+                CardState.Idle, is CardState.Error -> Pill(L.t("Update", "Uppfæra"), primary = true) { update() }
+                CardState.Working -> Pill(L.t("Checking…", "Athuga…"), primary = true, busy = true) {}
+                is CardState.Downloading -> {}
+                is CardState.Ready -> Pill(L.t("Install", "Setja upp"), primary = true) { install(st.file) }
+            }
+        }
     }
 }

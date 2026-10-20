@@ -34,3 +34,28 @@ class PlaceAndUpdateTest {
         assertFalse(Updater.isNewer("v1.0.2", "1.0.3"))
     }
 }
+
+class WhatsNewTest {
+    @org.junit.Test
+    fun readsBulletsUnderWhatsNew() {
+        val body = """
+            ## What's new
+
+            - Update card on home with what changed
+            - Pull to refresh checks for updates
+              right away
+
+            Tap **ljos.apk** below on your phone to install or update.
+            - not a change
+        """.trimIndent()
+        org.junit.Assert.assertEquals(
+            listOf("Update card on home with what changed", "Pull to refresh checks for updates right away"),
+            app.ljos.data.Updater.whatsNew(body),
+        )
+    }
+
+    @org.junit.Test
+    fun oldReleasesWithoutSectionGiveNothing() {
+        org.junit.Assert.assertEquals(emptyList<String>(), app.ljos.data.Updater.whatsNew("Tap **ljos.apk** below.\n\n- Kp 1.3"))
+    }
+}

@@ -34,8 +34,14 @@ object UpdateWatch {
         if (force || now - p.lastUpdateCheck >= every) {
             p.lastUpdateCheck = now
             when (val r = Updater.check(context, "")) {
-                is Updater.Check.Available -> p.availableVersion = r.release.version
-                Updater.Check.UpToDate -> p.availableVersion = ""
+                is Updater.Check.Available -> {
+                    p.availableVersion = r.release.version
+                    p.availableNotes = r.release.notes
+                }
+                Updater.Check.UpToDate -> {
+                    p.availableVersion = ""
+                    p.availableNotes = emptyList()
+                }
                 is Updater.Check.Failed -> {}
             }
         }

@@ -18,6 +18,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          # Full history and tags, so the release notes can list the commits since the last release.
+          fetch-depth: 0
 
       - uses: actions/setup-java@v5
         with:
@@ -70,6 +73,8 @@ jobs:
       - name: Release notes
         run: |
           {
+            bash .github/scripts/whats-new.sh
+            echo
             echo "Tap **ljos.apk** below on your phone to install or update."
             echo
             echo "Built from ${GITHUB_SHA}."
