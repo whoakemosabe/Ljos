@@ -71,6 +71,7 @@ import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import app.ljos.L
 import app.ljos.Prefs
+import app.ljos.Perms
 import app.ljos.R
 import app.ljos.data.Locator
 import kotlinx.coroutines.delay
@@ -278,8 +279,16 @@ private fun PermissionsPage() {
     val background = remember(tick) {
         context.getSystemService(PowerManager::class.java)?.isIgnoringBatteryOptimizations(context.packageName) ?: true
     }
-    val askLocation = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { tick++ }
-    val askNotify = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { tick++ }
+    val askLocation = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        Perms.markAsked(context, Manifest.permission.ACCESS_COARSE_LOCATION); tick++
+    }
+    val askNotify = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        Perms.markAsked(context, Manifest.permission.POST_NOTIFICATIONS); tick++
+    }
+    // After two denials Android won't show the prompt again; send people to the settings page instead.
+    fun ask(permission: String, launch: () -> Unit) {
+        if (Perms.blocked(context, permission)) Perms.openAppSettings(context) else launch()
+    }
 
     val compact = LocalCompact.current
     PageColumn {
@@ -294,12 +303,20 @@ private fun PermissionsPage() {
             L.t("Location", "Staðsetning"),
             L.t("Clouds and darkness for where you actually are", "Ský og myrkur þar sem þú ert"),
             location,
-        ) { askLocation.launch(Manifest.permission.ACCESS_COARSE_LOCATION) }
+        ) {
+            val p = Manifest.permission.ACCESS_COARSE_LOCATION
+            ask(p) { askLocation.launch(p) }
+        }
         PermissionRow(
             L.t("Notifications", "Tilkynningar"),
             L.t("Evening heads-up and \"look up now\"", "Kvöldviðvörun og \"líttu upp núna\""),
             notifications,
-        ) { if (Build.VERSION.SDK_INT >= 33) askNotify.launch(Manifest.permission.POST_NOTIFICATIONS) }
+        ) {
+            if (Build.VERSION.SDK_INT >= 33) {
+                val p = Manifest.permission.POST_NOTIFICATIONS
+                ask(p) { askNotify.launch(p) }
+            }
+        }
         PermissionRow(
             L.t("Background refresh", "Uppfærsla í bakgrunni"),
             L.t("OnePlus and Oppo pause apps otherwise, so alerts never arrive", "Annars stöðva OnePlus og Oppo forritið og viðvaranir berast ekki"),

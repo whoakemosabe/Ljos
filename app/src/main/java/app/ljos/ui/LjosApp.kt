@@ -117,6 +117,7 @@ import app.ljos.Fmt
 import app.ljos.L
 import app.ljos.work.Alerts
 import app.ljos.Prefs
+import app.ljos.Perms
 import app.ljos.data.HOUR_MS
 import app.ljos.data.Inputs
 import app.ljos.data.Locator
@@ -217,25 +218,35 @@ fun LjosApp() {
     }
 
     val permissions = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) { result ->
+        result.keys.forEach { Perms.markAsked(context, it) }
         if (result[Manifest.permission.ACCESS_COARSE_LOCATION] == true) scope.launch { detect() }
     }
-    fun askOrDetect(locationToo: Boolean = true) {
+    /**
+     * On open ([fromUser] false) each permission is asked for at most once, ever: a "no" sticks.
+     * The Detect button ([fromUser] true) asks again, or opens the app's settings page once
+     * Android has stopped showing the prompt.
+     */
+    fun askOrDetect(locationToo: Boolean = true, fromUser: Boolean = true) {
+        val location = Manifest.permission.ACCESS_COARSE_LOCATION
         if (locationToo && Locator.hasPermission(context)) {
             scope.launch { detect() }
-        } else {
-            val wanted = buildList {
-                if (locationToo) add(Manifest.permission.ACCESS_COARSE_LOCATION)
-                if (Build.VERSION.SDK_INT >= 33 &&
-                    ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED
-                ) add(Manifest.permission.POST_NOTIFICATIONS)
-            }
-            if (wanted.isNotEmpty()) permissions.launch(wanted.toTypedArray())
+            return
         }
+        if (locationToo && fromUser && Perms.blocked(context, location)) {
+            Perms.openAppSettings(context)
+            return
+        }
+        val wanted = buildList {
+            if (locationToo && (fromUser || !Perms.wasAsked(context, location))) add(location)
+            val notify = Manifest.permission.POST_NOTIFICATIONS
+            if (Build.VERSION.SDK_INT >= 33 && !Perms.granted(context, notify) && !Perms.wasAsked(context, notify)) add(notify)
+        }
+        if (wanted.isNotEmpty()) permissions.launch(wanted.toTypedArray())
     }
 
     LaunchedEffect(Unit) {
         // Auto-detect on open unless home is pinned; Detect in settings always works.
-        askOrDetect(locationToo = prefs.autoDetect)
+        askOrDetect(locationToo = prefs.autoDetect, fromUser = false)
         reload(false)
     }
     // Live while you're looking: every minute the clock moves on, and fresh data is fetched every

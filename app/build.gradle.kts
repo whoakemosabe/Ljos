@@ -39,7 +39,11 @@ android {
 
     buildTypes {
         release {
-            isMinifyEnabled = false
+            // R8 shrinks and optimizes the release APK. Libraries (Compose, Glance, WorkManager,
+            // coroutines) bring their own keep rules; app-specific ones go in proguard-rules.pro.
+            isMinifyEnabled = true
+            isShrinkResources = true
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = if (releaseKeystore.exists() && storePass != null) {
                 signingConfigs.getByName("release")
             } else {
