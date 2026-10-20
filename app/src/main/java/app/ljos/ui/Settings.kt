@@ -32,6 +32,7 @@ import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -160,23 +161,61 @@ private fun WidgetSettings() {
     val placed = remember(checks) { manager.getAppWidgetIds(small).size + manager.getAppWidgetIds(wide).size }
 
     SectionLabel(L.t("WIDGETS", "GRÆJUR"))
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Text(
-            when {
-                !canPin -> L.t(
-                    "Long-press your home screen, tap Widgets, then find Ljós.",
-                    "Haltu inni á heimaskjánum, veldu Græjur og finndu Ljós.",
-                )
-                placed == 0 -> L.t("Tonight's score on your home screen.", "Stigin í kvöld á heimaskjánum.")
-                placed == 1 -> L.t("1 on your home screen.", "1 á heimaskjánum.")
-                else -> L.t("$placed on your home screen.", "$placed á heimaskjánum.")
-            },
-            color = Muted, fontSize = 13.sp, modifier = Modifier.weight(1f).padding(end = 10.dp),
+    // Both previews share one height: widths follow the images (170×170 and 350×170 dp).
+    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        WidgetCard(
+            app.ljos.R.drawable.widget_small_preview, L.t("Small", "Lítil"), canPin,
+            Modifier.weight(170f).aspectRatio(1f),
+        ) { manager.requestPinAppWidget(small, null, null) }
+        WidgetCard(
+            app.ljos.R.drawable.widget_wide_preview, L.t("Wide", "Breið"), canPin,
+            Modifier.weight(350f).aspectRatio(350f / 170f),
+        ) { manager.requestPinAppWidget(wide, null, null) }
+    }
+    Text(
+        when {
+            !canPin -> L.t(
+                "Long-press your home screen, tap Widgets, then find Ljós.",
+                "Haltu inni á heimaskjánum, veldu Græjur og finndu Ljós.",
+            )
+            placed == 0 -> L.t("Tap one to add it to your home screen.", "Ýttu á eina til að bæta henni á heimaskjáinn.")
+            placed == 1 -> L.t("1 on your home screen. Tap to add another.", "1 á heimaskjánum. Ýttu til að bæta við.")
+            else -> L.t("$placed on your home screen. Tap to add another.", "$placed á heimaskjánum. Ýttu til að bæta við.")
+        },
+        color = Faint, fontSize = 12.sp, modifier = Modifier.padding(top = 8.dp),
+    )
+}
+
+/** A widget preview that presses like a button and asks the launcher to add that widget. */
+@Composable
+private fun WidgetCard(image: Int, label: String, enabled: Boolean, modifier: Modifier, onAdd: () -> Unit) {
+    val view = LocalView.current
+    val interaction = remember { MutableInteractionSource() }
+    val pressed by interaction.collectIsPressedAsState()
+    val scale by animateFloatAsState(if (pressed) 0.95f else 1f, spring(dampingRatio = 0.55f, stiffness = 600f), label = "press")
+    Box(
+        modifier
+            .graphicsLayer { scaleX = scale; scaleY = scale }
+            .clip(RoundedCornerShape(18.dp))
+            .clickable(enabled = enabled, interactionSource = interaction, indication = null) { Haptics.tap(view); onAdd() },
+    ) {
+        androidx.compose.foundation.Image(
+            painter = androidx.compose.ui.res.painterResource(image),
+            contentDescription = L.t("Add the $label widget", "Bæta við græju: $label"),
+            contentScale = androidx.compose.ui.layout.ContentScale.FillBounds,
+            modifier = Modifier.fillMaxSize(),
         )
-        if (canPin) {
-            Pill(L.t("Small", "Lítil"), primary = false) { manager.requestPinAppWidget(small, null, null) }
-            Spacer(Modifier.width(8.dp))
-            Pill(L.t("Wide", "Breið"), primary = true) { manager.requestPinAppWidget(wide, null, null) }
+        if (enabled) {
+            Text(
+                "+ $label",
+                color = Color(0xFF03130B), fontSize = 11.sp, fontWeight = FontWeight.Medium,
+                modifier = Modifier
+                    .align(Alignment.TopEnd)
+                    .padding(8.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .background(Green)
+                    .padding(horizontal = 8.dp, vertical = 3.dp),
+            )
         }
     }
 }
