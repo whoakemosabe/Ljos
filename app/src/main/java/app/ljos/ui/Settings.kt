@@ -125,6 +125,8 @@ internal fun SettingsContent(
         Spacer(Modifier.height(20.dp))
         AlertSettings()
         Spacer(Modifier.height(20.dp))
+        WidgetSettings()
+        Spacer(Modifier.height(20.dp))
         DisplaySettings()
         Spacer(Modifier.height(20.dp))
         BackgroundSettings()
@@ -133,6 +135,49 @@ internal fun SettingsContent(
         Spacer(Modifier.height(20.dp))
         Text(L.t("Data: NOAA SWPC · Open-Meteo", "Gögn: NOAA SWPC · Open-Meteo"), color = Faint, fontSize = 11.sp)
         Spacer(Modifier.height(8.dp))
+    }
+}
+
+/**
+ * Adds a widget straight to the home screen. Android shows its own "Add to home screen" sheet;
+ * launchers that can't pin widgets get the manual steps instead.
+ */
+@Composable
+private fun WidgetSettings() {
+    val context = LocalContext.current
+    val manager = remember { android.appwidget.AppWidgetManager.getInstance(context) }
+    val canPin = remember { manager.isRequestPinAppWidgetSupported }
+    var checks by remember { mutableIntStateOf(0) }
+    LaunchedEffect(Unit) {
+        // Notice widgets added while the sheet is open.
+        while (true) {
+            delay(2_000)
+            checks++
+        }
+    }
+    val small = android.content.ComponentName(context, app.ljos.widget.SmallWidgetReceiver::class.java)
+    val wide = android.content.ComponentName(context, app.ljos.widget.WideWidgetReceiver::class.java)
+    val placed = remember(checks) { manager.getAppWidgetIds(small).size + manager.getAppWidgetIds(wide).size }
+
+    SectionLabel(L.t("WIDGETS", "GRÆJUR"))
+    Row(verticalAlignment = Alignment.CenterVertically) {
+        Text(
+            when {
+                !canPin -> L.t(
+                    "Long-press your home screen, tap Widgets, then find Ljós.",
+                    "Haltu inni á heimaskjánum, veldu Græjur og finndu Ljós.",
+                )
+                placed == 0 -> L.t("Tonight's score on your home screen.", "Stigin í kvöld á heimaskjánum.")
+                placed == 1 -> L.t("1 on your home screen.", "1 á heimaskjánum.")
+                else -> L.t("$placed on your home screen.", "$placed á heimaskjánum.")
+            },
+            color = Muted, fontSize = 13.sp, modifier = Modifier.weight(1f).padding(end = 10.dp),
+        )
+        if (canPin) {
+            Pill(L.t("Small", "Lítil"), primary = false) { manager.requestPinAppWidget(small, null, null) }
+            Spacer(Modifier.width(8.dp))
+            Pill(L.t("Wide", "Breið"), primary = true) { manager.requestPinAppWidget(wide, null, null) }
+        }
     }
 }
 
