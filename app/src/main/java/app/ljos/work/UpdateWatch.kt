@@ -23,12 +23,15 @@ object UpdateWatch {
         return v.takeIf { it.isNotBlank() && Updater.isNewer(it, Updater.installedVersion(context)) }
     }
 
-    /** Asks GitHub if it's been long enough; returns the newer version waiting, if any. */
-    suspend fun check(context: Context, background: Boolean): String? {
+    /**
+     * Asks GitHub if it's been long enough (or always when [force], e.g. pull to refresh);
+     * returns the newer version waiting, if any.
+     */
+    suspend fun check(context: Context, background: Boolean, force: Boolean = false): String? {
         val p = Prefs(context)
         val now = System.currentTimeMillis()
         val every = if (background) BACKGROUND_EVERY else OPEN_EVERY
-        if (now - p.lastUpdateCheck >= every) {
+        if (force || now - p.lastUpdateCheck >= every) {
             p.lastUpdateCheck = now
             when (val r = Updater.check(context, "")) {
                 is Updater.Check.Available -> p.availableVersion = r.release.version

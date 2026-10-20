@@ -360,6 +360,14 @@ fun LjosApp() {
         }
         val openness: () -> Float = { 1f - sheet.value }
 
+        /** Pull to refresh or the refresh button: fresh feeds, and ask GitHub right away for a new release. */
+        fun manualRefresh() {
+            scope.launch { reload(true) }
+            scope.launch {
+                updateWaiting = try { app.ljos.work.UpdateWatch.check(context, background = false, force = true) } catch (e: Exception) { updateWaiting }
+            }
+        }
+
         // Pull-to-refresh: pulling past the top stretches the aurora; release past the line refreshes.
         val pullLine = with(density) { 110.dp.toPx() }
         val pullFraction: () -> Float = { pullPx / pullLine }
@@ -390,7 +398,7 @@ fun LjosApp() {
                     if (pullPx <= 0f) return Velocity.Zero
                     if (pullPx >= pullLine && !loading) {
                         Haptics.settle(view)
-                        scope.launch { reload(true) }
+                        manualRefresh()
                     }
                     animate(pullPx, 0f, animationSpec = spring(dampingRatio = 0.62f, stiffness = 260f)) { v, _ -> pullPx = v }
                     return available
@@ -569,7 +577,7 @@ fun LjosApp() {
                 score = heroHour?.score,
                 scoreMorph = scoreMorph,
                 loading = loading,
-                onRefresh = { scope.launch { reload(true) } },
+                onRefresh = { manualRefresh() },
                 onSettings = { openSheet() },
                 onPillTarget = { pillTarget = it },
                 pull = pullFraction,
