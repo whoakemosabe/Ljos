@@ -27,10 +27,16 @@ Every push to `main` builds a signed APK and publishes it as a GitHub Release. O
 ## Layout
 
 ```
+core/src/main/kotlin/app/ljos/     plain Kotlin, no Android: shared by the app and the server
+  data/     feed parsers, data classes, comparison spots
+  model/    sun/moon maths, live solar wind and the scoring model
+
 app/src/main/java/app/ljos/
-  data/     feeds, parsers, on-disk cache
-  model/    sun/moon maths and the scoring model
+  data/     fetching, location, on-disk cache, map tiles, updater
+  model/    the app's wording for score bands
   ui/       Compose screen, GPU aurora shader, hour strip
   widget/   Glance widgets and their bitmap art
   work/     15-minute refresh worker and notifications
 ```
+
+`core/` returns numbers and keys (for example `Chance.GOOD`), never display text, so each screen words things its own way. Its tests run with `./gradlew :core:test`.

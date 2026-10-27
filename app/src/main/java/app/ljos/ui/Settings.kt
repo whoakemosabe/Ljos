@@ -80,6 +80,7 @@ import app.ljos.data.Spot
 import app.ljos.data.Updater
 import app.ljos.model.Geo
 import app.ljos.model.Model
+import app.ljos.model.label
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.io.File

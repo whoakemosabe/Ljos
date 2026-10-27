@@ -40,6 +40,7 @@ import app.ljos.data.HOUR_MS
 import app.ljos.data.Repo
 import app.ljos.model.HourScore
 import app.ljos.model.Model
+import app.ljos.model.label
 import app.ljos.work.Scheduler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext

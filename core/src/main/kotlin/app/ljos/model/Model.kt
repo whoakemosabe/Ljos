@@ -1,6 +1,5 @@
 package app.ljos.model
 
-import app.ljos.L
 import app.ljos.data.CloudSeries
 import app.ljos.data.HOUR_MS
 import app.ljos.data.Inputs
@@ -12,6 +11,9 @@ import app.ljos.data.WindReading
 import java.time.Instant
 import java.time.ZoneId
 import kotlin.math.roundToInt
+
+/** Score bands, strongest first. */
+enum class Chance { EXCELLENT, GOOD, POSSIBLE, UNLIKELY, NOT_TONIGHT }
 
 /** Each factor is 0..1. The score is their product, so clouds or daylight can zero it on their own. */
 data class Factors(val activity: Double, val clear: Double, val moon: Double, val dark: Double)
@@ -266,12 +268,13 @@ object Model {
         }
     }
 
-    fun label(score: Int): String = when {
-        score >= 80 -> L.t("Excellent", "Frábærar líkur")
-        score >= 60 -> L.t("Good chance", "Góðar líkur")
-        score >= 40 -> L.t("Possible", "Mögulegt")
-        score >= 20 -> L.t("Unlikely", "Ólíklegt")
-        else -> L.t("Not tonight", "Ekki í kvöld")
+    /** Which band a score falls in. Wording lives with each screen (app, web), not here. */
+    fun chance(score: Int): Chance = when {
+        score >= 80 -> Chance.EXCELLENT
+        score >= 60 -> Chance.GOOD
+        score >= 40 -> Chance.POSSIBLE
+        score >= 20 -> Chance.UNLIKELY
+        else -> Chance.NOT_TONIGHT
     }
 
     /** When the moon is up between [start] and [end], at 10-minute resolution, plus its brightness. */

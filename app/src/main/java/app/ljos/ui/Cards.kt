@@ -61,6 +61,7 @@ import app.ljos.model.HourScore
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.widthIn
 import app.ljos.model.Model
+import app.ljos.model.label
 import app.ljos.model.Night
 import app.ljos.model.NowState
 import app.ljos.model.SpotScore
