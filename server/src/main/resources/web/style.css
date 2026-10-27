@@ -1,0 +1,434 @@
+/* Ljós web: phone layout by default (iPhone and Android), TV layout under html.tv.
+   Everything is sized in rem so the TV layout scales with the screen. */
+
+:root {
+  --bg: #05070d;
+  --ink: #e8f1ff;
+  --muted: rgba(232, 241, 255, 0.68);
+  --faint: rgba(232, 241, 255, 0.42);
+  --line: rgba(255, 255, 255, 0.12);
+  --glass: rgba(7, 11, 22, 0.42);
+  --glass-hi: rgba(255, 255, 255, 0.07);
+  --green: #3dffa0;
+  --teal: #2fd3c6;
+  --violet: #b79cff;
+  --warn: #ff8a80;
+  --radius: 1.5rem;
+  --gap: 0.875rem;
+  --glow: transparent;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+/* Components set display; the hidden attribute must still win. */
+[hidden] { display: none !important; }
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior: none;
+  background: var(--bg);
+  font-size: 16px;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  color: var(--ink);
+  background: var(--bg);
+  font: 400 1rem/1.4 system-ui, -apple-system, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  font-variant-numeric: tabular-nums;
+}
+
+#sky {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  display: block;
+}
+
+html.no-webgl body {
+  background:
+    radial-gradient(90% 60% at 30% 18%, rgba(61, 255, 160, 0.22), transparent 70%),
+    radial-gradient(70% 50% at 80% 10%, rgba(183, 156, 255, 0.18), transparent 70%),
+    linear-gradient(#040611, #07122a 50%, var(--bg));
+  background-attachment: fixed;
+}
+
+#drift {
+  position: relative;
+  z-index: 1;
+  max-width: 35rem;
+  margin: 0 auto;
+  padding:
+    calc(env(safe-area-inset-top, 0px) + 1rem)
+    calc(env(safe-area-inset-right, 0px) + 1rem)
+    calc(env(safe-area-inset-bottom, 0px) + 1.5rem)
+    calc(env(safe-area-inset-left, 0px) + 1rem);
+  transition: transform 3s ease-in-out;
+}
+
+h1, h2, p, ol, ul { margin: 0; }
+ol, ul { padding: 0; list-style: none; }
+a { color: inherit; }
+
+button {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.tv-only { display: none; }
+html.tv .tv-only { display: block; }
+html.tv .phone-only { display: none !important; }
+
+/* Header -------------------------------------------------------------------------------- */
+
+.top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 0.5rem;
+}
+
+.brand {
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--green);
+}
+
+h1 {
+  font-size: 1.375rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.updated { font-size: 0.8125rem; color: var(--faint); }
+.updated.warn { color: var(--warn); }
+
+.pill {
+  flex: none;
+  padding: 0.55rem 0.9rem;
+  border-radius: 999px;
+  background: var(--glass);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(18px) saturate(140%);
+  -webkit-backdrop-filter: blur(18px) saturate(140%);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: transform 120ms ease-out, background 120ms;
+}
+.pill:active { transform: scale(0.96); background: rgba(255, 255, 255, 0.12); }
+.pill:disabled { color: var(--faint); }
+
+.problem {
+  margin: 0.5rem 0;
+  padding: 0.7rem 0.9rem;
+  border-radius: 1rem;
+  background: rgba(255, 138, 128, 0.12);
+  border: 1px solid rgba(255, 138, 128, 0.3);
+  font-size: 0.875rem;
+}
+
+.banner {
+  display: block;
+  width: 100%;
+  text-align: left;
+  margin: 0.5rem 0 0.75rem;
+  padding: 0.9rem 1rem;
+  border-radius: 1.25rem;
+  background: rgba(61, 255, 160, 0.16);
+  border: 1px solid rgba(61, 255, 160, 0.5);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+.banner-title { display: block; font-weight: 700; color: var(--green); font-size: 1.125rem; }
+.banner-detail { display: block; font-size: 0.875rem; color: var(--muted); }
+
+/* Layout -------------------------------------------------------------------------------- */
+
+.grid {
+  display: flex;
+  flex-direction: column;
+  gap: var(--gap);
+}
+
+.card {
+  position: relative;
+  padding: 1.125rem;
+  border-radius: var(--radius);
+  background: linear-gradient(var(--glass-hi), transparent 40%), var(--glass);
+  border: 1px solid var(--line);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+}
+
+.card-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+}
+h2 { font-size: 1rem; font-weight: 600; }
+.sub { font-size: 0.8125rem; color: var(--faint); }
+.quiet { color: var(--faint); }
+.small { font-size: 0.8125rem; }
+
+/* Hero ---------------------------------------------------------------------------------- */
+
+.hero {
+  padding: 1.5rem 0.25rem 0.75rem;
+  text-align: center;
+}
+.eyebrow {
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.score {
+  line-height: 1;
+  margin: 0.25rem 0 0.25rem;
+}
+#score {
+  font-size: clamp(6rem, 32vw, 9.5rem);
+  font-weight: 200;
+  letter-spacing: -0.04em;
+  text-shadow: 0 0 2.5rem color-mix(in srgb, var(--glow) 45%, transparent);
+  transition: color 400ms;
+}
+.of { font-size: 1.25rem; color: var(--faint); margin-left: 0.25rem; }
+.chance { font-size: 1.375rem; font-weight: 600; }
+.peak-line { margin-top: 0.25rem; color: var(--muted); }
+
+/* Hour strip ---------------------------------------------------------------------------- */
+
+.strip {
+  display: flex;
+  gap: 0.25rem;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  margin: 0 -0.5rem;
+  padding: 0 0.5rem 0.25rem;
+}
+.strip::-webkit-scrollbar { display: none; }
+
+.bar {
+  flex: 0 0 2.375rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.3rem 0;
+  border-radius: 0.75rem;
+  scroll-snap-align: start;
+  transition: background 120ms, transform 120ms ease-out;
+}
+.bar:active { transform: scale(0.95); }
+.bar.selected { background: rgba(255, 255, 255, 0.1); }
+.bar.past { opacity: 0.45; }
+.bar .value { font-size: 0.75rem; color: var(--muted); }
+.bar .track {
+  position: relative;
+  width: 0.875rem;
+  height: 7.5rem;
+  border-radius: 0.5rem;
+  background: rgba(255, 255, 255, 0.06);
+  overflow: hidden;
+}
+.bar .fill {
+  position: absolute;
+  left: 0; right: 0; bottom: 0;
+  border-radius: 0.5rem;
+  transition: height 500ms ease-out;
+}
+.bar .label { font-size: 0.75rem; color: var(--faint); }
+.bar.now .label { color: var(--ink); font-weight: 600; }
+.bar.peak .value { color: var(--ink); font-weight: 700; }
+.bar.peak .track { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35); }
+
+.why {
+  margin-top: 0.875rem;
+  padding-top: 0.875rem;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 0.5rem;
+}
+.why-head { font-weight: 600; }
+.meter { display: grid; grid-template-columns: 6.5rem 1fr auto; align-items: center; gap: 0.6rem; font-size: 0.875rem; }
+.meter-name { color: var(--muted); }
+.meter-track { height: 0.4rem; border-radius: 1rem; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.meter-fill { display: block; height: 100%; border-radius: 1rem; background: linear-gradient(90deg, var(--teal), var(--green)); }
+.meter-note { color: var(--faint); font-size: 0.8125rem; min-width: 6.5rem; text-align: right; }
+
+/* Right now ----------------------------------------------------------------------------- */
+
+.now-score { font-size: 1.5rem; font-weight: 300; }
+.now-state { font-size: 1.25rem; font-weight: 600; margin-bottom: 0.5rem; }
+.now-state[data-tone="go"] { color: var(--green); }
+.now-state[data-tone="quiet"] { color: var(--muted); }
+.lines { display: grid; gap: 0.35rem; font-size: 0.9375rem; color: var(--muted); }
+.lines li::before { content: ""; display: inline-block; width: 0.35rem; height: 0.35rem; border-radius: 50%; background: var(--faint); margin: 0 0.55rem 0.15rem 0; }
+.spark { margin-top: 0.75rem; }
+.spark svg { display: block; width: 100%; height: 4rem; }
+.spark-line { fill: none; stroke: var(--teal); stroke-width: 1.6; vector-effect: non-scaling-stroke; }
+.spark-zero { stroke: rgba(255, 255, 255, 0.2); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.spark-south { fill: rgba(61, 255, 160, 0.22); }
+
+/* Where to go --------------------------------------------------------------------------- */
+
+.spot-list { display: grid; gap: 0.25rem; }
+.spot {
+  display: grid;
+  grid-template-columns: 2.75rem 1fr auto;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.55rem 0.5rem;
+  border-radius: 1rem;
+}
+.spot.best { background: rgba(61, 255, 160, 0.09); box-shadow: inset 0 0 0 1px rgba(61, 255, 160, 0.3); }
+.spot-score { font-size: 1.5rem; font-weight: 300; text-align: center; }
+.spot-body { display: grid; min-width: 0; }
+.spot-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spot-detail { font-size: 0.8125rem; color: var(--faint); }
+.go {
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-decoration: none;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+.go:active { background: rgba(255, 255, 255, 0.12); }
+
+/* Next 3 days --------------------------------------------------------------------------- */
+
+.days { display: grid; gap: 0.6rem; }
+.day { display: grid; grid-template-columns: 5.5rem 1fr 8.5rem; align-items: center; gap: 0.75rem; }
+.day-name { font-weight: 600; }
+.blocks { display: grid; grid-template-columns: repeat(8, 1fr); gap: 0.2rem; }
+.block { height: 0.9rem; border-radius: 0.3rem; }
+.day-kp { text-align: right; font-size: 0.9375rem; }
+
+/* Dress and tips ------------------------------------------------------------------------ */
+
+.dress-main { display: flex; align-items: baseline; gap: 0.75rem; flex-wrap: wrap; }
+.dress-temp { font-size: 2.5rem; font-weight: 300; }
+.dress-feels { color: var(--muted); }
+.dress-advice { margin-top: 0.25rem; }
+
+.foot { margin-top: 1.25rem; font-size: 0.75rem; color: var(--faint); text-align: center; }
+
+/* Look up now takeover (TV) ------------------------------------------------------------- */
+
+.takeover {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  gap: 1rem;
+  background: radial-gradient(60% 55% at 50% 45%, rgba(61, 255, 160, 0.28), rgba(5, 7, 13, 0.78) 70%);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+}
+.takeover[hidden] { display: none; }
+.takeover-title {
+  font-size: 9rem;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  color: var(--green);
+  text-shadow: 0 0 3rem rgba(61, 255, 160, 0.6);
+  animation: breathe 3.2s ease-in-out infinite;
+}
+.takeover-sub { font-size: 2.25rem; font-weight: 500; }
+.takeover-detail { font-size: 1.75rem; color: var(--muted); }
+@keyframes breathe { 50% { opacity: 0.72; } }
+
+/* Wider phones and desktops: two columns ------------------------------------------------ */
+
+@media (min-width: 56rem) {
+  html:not(.tv) #drift { max-width: 64rem; padding-left: 2rem; padding-right: 2rem; }
+  html:not(.tv) .grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    align-items: start;
+  }
+  html:not(.tv) .hero, html:not(.tv) .hours { grid-column: 1 / -1; }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .bar:hover { background: rgba(255, 255, 255, 0.06); }
+  .pill:hover { background: rgba(255, 255, 255, 0.1); }
+  .go:hover { background: rgba(255, 255, 255, 0.08); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+/* TV layout ----------------------------------------------------------------------------- */
+/* One screen, no scrolling, read from across a lobby. 1rem is ~20px on a 1080p screen and
+   scales with it (~40px on 4K); whichever of width or height is tighter wins. */
+
+html.tv { font-size: 1.05vw; font-size: min(1.05vw, 1.87vh); cursor: none; }
+html.tv body { height: 100vh; overflow: hidden; }
+html.tv #drift {
+  max-width: none;
+  height: 100vh;
+  padding: 1.4rem 1.8rem 1rem;
+  display: flex;
+  flex-direction: column;
+}
+html.tv .top { margin-bottom: 0.6rem; align-items: center; }
+html.tv h1 { font-size: 1.9rem; }
+html.tv .brand { font-size: 0.8rem; }
+html.tv .clock { font-size: 2.2rem; font-weight: 300; letter-spacing: 0.02em; }
+html.tv .grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  gap: 0.9rem;
+  grid-template-columns: 1.15fr 1fr 1fr;
+  grid-template-rows: auto auto 1fr;
+  grid-template-areas:
+    "hero now spots"
+    "hours hours spots"
+    "dress outlook outlook";
+}
+html.tv .hero { grid-area: hero; text-align: left; padding: 0.4rem 0.5rem 0; align-self: center; }
+html.tv #score { font-size: 8.5rem; }
+html.tv .chance { font-size: 1.7rem; }
+html.tv .peak-line { font-size: 1.05rem; }
+html.tv .now { grid-area: now; }
+html.tv .spots { grid-area: spots; }
+html.tv .hours { grid-area: hours; }
+html.tv .outlook { grid-area: outlook; }
+html.tv .dress { grid-area: dress; }
+html.tv .tips { display: none; }
+html.tv .strip { overflow: hidden; margin: 0; padding: 0; justify-content: space-between; }
+html.tv .bar { flex: 1 1 0; min-width: 0; }
+html.tv .bar .track { width: 1rem; height: 6rem; }
+html.tv .bar .value, html.tv .bar .label { font-size: 0.8rem; }
+html.tv .foot { margin-top: 0.5rem; text-align: left; }
+html.tv .card { padding: 1rem 1.1rem; }
+html.tv .spot { padding: 0.45rem 0.5rem; }

@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+  <title>Ljós · will I see the aurora tonight?</title>
+  <meta name="description" content="A live northern lights score for where you are: tonight's best hour, where to go, and a look-up-now alert.">
+  <meta name="theme-color" content="#05070d">
+  <meta name="color-scheme" content="dark">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="/icon-180.png">
+  <meta name="mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Ljós">
+  <link rel="stylesheet" href="/style.css">
+  <script type="module" src="/app.js"></script>
+</head>
+<body>
+  <canvas id="sky" aria-hidden="true"></canvas>
+
+  <div id="drift">
+    <header class="top">
+      <div class="where">
+        <p class="brand" id="brand">Ljós</p>
+        <h1 id="place">Aurora tonight</h1>
+        <p class="updated" id="updated"></p>
+      </div>
+      <p class="clock tv-only" id="clock" aria-hidden="true"></p>
+      <button class="pill phone-only" id="locate" type="button">Use my location</button>
+    </header>
+
+    <button class="banner" id="banner" type="button" hidden>
+      <span class="banner-title">Look up now</span>
+      <span class="banner-detail" id="banner-detail"></span>
+    </button>
+
+    <p class="problem" id="problem" role="status" hidden></p>
+
+    <main class="grid">
+      <section class="hero" id="hero" aria-live="polite">
+        <p class="eyebrow" id="eyebrow">Tonight</p>
+        <p class="score"><span id="score">–</span><span class="of">/100</span></p>
+        <p class="chance" id="chance">Reading the sky…</p>
+        <p class="peak-line" id="peak-line"></p>
+      </section>
+
+      <section class="card hours" id="hours-card" hidden>
+        <div class="card-head">
+          <h2>Hour by hour</h2>
+          <p class="sub phone-only">Tap an hour to see why</p>
+        </div>
+        <div class="strip" id="strip" role="list"></div>
+        <div class="why" id="why" hidden></div>
+      </section>
+
+      <section class="card now" id="now-card">
+        <div class="card-head">
+          <h2>Right now</h2>
+          <p class="now-score" id="now-score"></p>
+        </div>
+        <p class="now-state" id="now-state">–</p>
+        <ul class="lines" id="now-lines"></ul>
+        <div class="spark" id="spark" hidden></div>
+      </section>
+
+      <section class="card spots" id="spots-card">
+        <div class="card-head">
+          <h2 id="spots-title">Where to go</h2>
+          <p class="sub" id="spots-sub"></p>
+        </div>
+        <ol class="spot-list" id="spots"></ol>
+      </section>
+
+      <section class="card outlook">
+        <div class="card-head">
+          <h2>Next 3 days</h2>
+          <p class="sub">Solar activity forecast, 3-hour blocks</p>
+        </div>
+        <div class="days" id="outlook"></div>
+      </section>
+
+      <section class="card dress" id="dress-card" hidden>
+        <div class="card-head">
+          <h2>Dress for it</h2>
+          <p class="sub" id="dress-sub"></p>
+        </div>
+        <p class="dress-main"><span class="dress-temp" id="dress-temp"></span><span class="dress-feels" id="dress-feels"></span></p>
+        <p class="dress-advice" id="dress-advice"></p>
+      </section>
+
+      <section class="card tips">
+        <div class="card-head">
+          <h2>Photo tips</h2>
+          <p class="sub">Starting points for tonight's brightness</p>
+        </div>
+        <ul class="lines" id="tips"></ul>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <p>Forecast data: NOAA Space Weather Prediction Center · weather by <a href="https://open-meteo.com/" rel="noopener">Open-Meteo</a> (CC BY 4.0)</p>
+    </footer>
+  </div>
+
+  <div class="takeover" id="lookup" hidden>
+    <p class="takeover-title">Look up now</p>
+    <p class="takeover-sub">The aurora is likely overhead</p>
+    <p class="takeover-detail" id="lookup-detail"></p>
+  </div>
+</body>
+</html>
