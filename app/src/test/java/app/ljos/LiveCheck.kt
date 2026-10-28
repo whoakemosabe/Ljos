@@ -4,6 +4,7 @@ import app.ljos.data.Feeds
 import app.ljos.data.Inputs
 import app.ljos.data.Spots
 import app.ljos.model.Model
+import app.ljos.model.label
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
