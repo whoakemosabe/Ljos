@@ -12,8 +12,6 @@
   <link rel="preload" href="/outfit.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="preload" href="/schibsted-grotesk.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="/lobby.css">
-  <link rel="stylesheet" href="/glasspane.css">
-  <script src="/glasspane.js" defer></script>
   <script type="module" src="/lobby.js"></script>
 </head>
 <body>
@@ -26,14 +24,14 @@
         <h1 id="place">Aurora forecast</h1>
       </div>
       <div class="status">
-        <div class="tile now-tile gp gp-smoky">
+        <div class="tile now-tile">
           <span class="clock" id="clock" aria-hidden="true"></span>
           <span class="now-meta">
             <span class="live" id="live"><span class="dot" aria-hidden="true"></span><span id="live-text">Live</span></span>
             <span class="updated" id="updated"></span>
           </span>
         </div>
-        <div class="tile phone gp gp-smoky">
+        <div class="tile phone">
           <img class="qr" src="/qr.svg" alt="QR code for ljos.up.railway.app" width="33" height="33">
           <p class="phone-text"><span class="phone-title">On your phone</span><span class="phone-sub">Forecast and look-up alerts</span></p>
         </div>
@@ -63,7 +61,7 @@
         <div class="conditions" id="conditions"></div>
       </section>
 
-      <section class="panel gp gp-smoky" id="now-card">
+      <section class="panel" id="now-card">
         <div class="panel-head">
           <h2>Right now</h2>
           <span class="pill" id="now-state">–</span>
