@@ -491,11 +491,11 @@ html.taking-over #drift { visibility: hidden; }
 
 /* Grooves (same recipe on the phone page and in the app, see ui/Groove.kt): each hour's bar
    sits in a channel cut into the pane. Floor behind the fill, shading drawn over it. */
-.tick-groove { position: absolute; left: 27%; right: 27%; bottom: 0; height: 3.4rem; border-radius: 0.3rem; background: rgba(0, 0, 0, 0.3); }
+.tick-groove { position: absolute; left: 27%; right: 27%; bottom: 0; height: 3.4rem; border-radius: 0.3rem 0.3rem 0 0; background: rgba(0, 0, 0, 0.3); }
 .tick-groove::after { content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 2;
   box-shadow: inset 0 2px 3px rgba(0, 0, 0, 0.65), inset 0 0 0 1px rgba(0, 0, 0, 0.28), inset 0 -1px 0 rgba(255, 255, 255, 0.16); }
 .tick-track { overflow: visible; }
-.tick-fill { position: relative; z-index: 1; border-radius: 0.2rem 0.2rem 0.3rem 0.3rem; /* fills the channel from its floor up, mirroring the cloud cap */
+.tick-fill { position: relative; z-index: 1; border-radius: 0.15rem 0.15rem 0 0; /* stands square on the channel floor and fills it upwards, mirroring the cloud cap */
   box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.12), 0 8px 18px -10px rgba(var(--tint), 0.55); }
 .tick-groove::after { z-index: 3; }
 .tick-value { position: absolute; left: 0; right: 0; text-align: center; bottom: calc(3.4rem + 0.35rem); margin: 0; }
