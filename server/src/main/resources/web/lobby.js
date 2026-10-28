@@ -91,6 +91,13 @@ function scoreRgb(score) {
 const rgb = (c, a = 1) => `rgba(${c[0]}, ${c[1]}, ${c[2]}, ${a})`;
 const scoreColor = (score) => rgb(scoreRgb(score));
 const kpScore = (kp) => Math.min(100, (kp / 6) * 100);
+/** A tinted badge with an opaque fill, for badges that sit over a border line. */
+function solidPill(text, score, ic) {
+  const p = pill(text, { cls: "best-bet", tint: score, ic });
+  const c = scoreRgb(score), base = [10, 16, 30];
+  p.style.background = rgb(base.map((v, i) => Math.round(v + (c[i] - v) * 0.2)));
+  return p;
+}
 /** A badge in a score's colour: tinted fill, stronger border, coloured text. */
 function applyTint(node, score) {
   const c = scoreRgb(score);
@@ -240,7 +247,7 @@ function renderNow() {
   }
 
   const facts = [];
-  if (c.etaMinutes != null && c.bzFresh) facts.push([icon("bolt"), "Next wave", `Reaches Earth in about ${c.etaMinutes} min`]);
+  facts.push([icon("bolt"), "Next wave", c.etaMinutes != null ? `In about ${c.etaMinutes} min` : "Waiting for the next reading"]);
   const cloud = c.cloud < 0 ? "Unknown" : `${c.cloud}%`;
   facts.push([icon("cloud"), "Clouds here", c.clearer ? `${cloud}, clearer at ${c.clearer.name}` : cloud]);
   if (c.bz != null && c.bzFresh) {
@@ -315,7 +322,7 @@ function renderPlaces() {
     if (score != null) applyTint(badge, score);
     const clouds = cloud != null && cloud >= 0 ? el("span", { class: "meta" }, icon("cloud"), `${cloud}%`) : null;
     const detail = [here ? el("span", { class: "meta" }, icon("pin"), "You're here") : el("span", { class: "meta" }, icon("car"), `${drive(s.distanceKm)} min`), clouds];
-    const card = el("li", { class: "place" }, best ? pill("Best bet", { cls: "best-bet", tint: Math.max(score, 80), ic: "star" }) : null, badge,
+    const card = el("li", { class: "place" }, best ? solidPill("Best bet", Math.max(score, 80), "star") : null, badge,
       el("span", { class: "place-body" },
         el("span", { class: "place-name" }, here ? data.place.name : s.name),
         el("span", { class: "place-detail" }, detail)));

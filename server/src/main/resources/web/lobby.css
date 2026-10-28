@@ -221,7 +221,7 @@ h1 { font-size: 2rem; font-weight: 600; line-height: 1.15; white-space: nowrap; 
 /* Tonight, hour by hour ----------------------------------------------------------------- */
 
 .timeline { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); }
-.tick { display: grid; grid-template-rows: 1.8rem 5.1rem 0.2rem auto; row-gap: 0; justify-items: center; }
+.tick { display: grid; grid-template-rows: 1.8rem 5.1rem auto auto; row-gap: 0; justify-items: center; }
 .tick-flag { align-self: end; padding-bottom: 0.3rem; }
 .tick-flag .pill { font-size: 1rem; padding: 0.1em 0.7em; font-weight: 700; }
 .pill.now-flag { background: var(--snow); color: var(--night); border-color: var(--snow); }
@@ -239,7 +239,7 @@ h1 { font-size: 2rem; font-weight: 600; line-height: 1.15; white-space: nowrap; 
 .tick.window .tick-track { border-top-color: var(--green); }
 .tick-value { font-size: 1.1rem; font-weight: 500; margin-bottom: 0.3rem; }
 .tick-fill { width: 46%; min-height: 0.2rem; border-radius: 0.3rem 0.3rem 0 0; transition: height 500ms ease-out; }
-.tick-moon { width: 100%; margin-top: 0.25rem; }
+.tick-moon { width: 100%; height: 0.25rem; margin-top: 0.3rem; }
 .tick.moon .tick-moon { background: var(--moon); }
 .tick-hour { margin-top: 0.35rem; font-size: 1.1rem; color: var(--frost); }
 .tick.past .tick-fill { opacity: 0.35; }
@@ -274,13 +274,13 @@ h1 { font-size: 2rem; font-weight: 600; line-height: 1.15; white-space: nowrap; 
 }
 .place-body { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
 /* Best bet sits on the card's top edge, like a tab, so it costs no height. */
-.place .best-bet { position: absolute; top: 0; right: 0.9rem; transform: translateY(-50%); font-size: 0.9rem; padding: 0.1em 0.65em; font-weight: 700; background: #0f2a26; }
+.place .best-bet { position: absolute; top: 0; right: 0.9rem; transform: translateY(-50%); font-size: 0.9rem; padding: 0.1em 0.65em; font-weight: 700; }
 .place-name { font-size: 1.1rem; font-weight: 600; line-height: 1.2; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
 .place-detail { display: flex; flex-wrap: wrap; gap: 0.2rem 0.9rem; font-size: 1rem; color: var(--frost); }
 .meta { display: inline-flex; align-items: center; gap: 0.35rem; white-space: nowrap; }
 .meta .ico { color: var(--dim); }
 
-.foot { position: fixed; right: 3.6rem; bottom: 0.3rem; z-index: 2; font-size: 0.8rem; color: var(--dim); }
+.foot { position: fixed; left: 3.6rem; right: 3.6rem; bottom: 0.3rem; z-index: 2; display: flex; justify-content: space-between; gap: 2rem; font-size: 0.8rem; color: var(--dim); }
 
 /* Look up now --------------------------------------------------------------------------- */
 
