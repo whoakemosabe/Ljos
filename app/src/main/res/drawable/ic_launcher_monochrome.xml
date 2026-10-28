@@ -1,13 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Ljós icon, design A ("curtains"); generated with the web icons so they match. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
     android:width="108dp"
     android:height="108dp"
     android:viewportWidth="108"
     android:viewportHeight="108">
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M28,48 C38,34 48,44 58,36 C66,30 74,32 82,26 L82,34 C74,40 66,38 58,44 C48,52 38,42 28,56 Z" />
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M24,60 C34,42 44,56 54,46 C62,38 72,42 84,32 L84,48 C72,58 62,54 54,62 C44,72 34,60 24,74 Z" />
+    <group android:pivotX="54" android:pivotY="54" android:scaleX="0.8" android:scaleY="0.8">
+        <path android:fillColor="#FFFFFFFF" android:fillAlpha="0.6" android:pathData="M18,50 C32,30 46,46 60,34 C70,26 80,28 92,20 L92,32 C80,40 70,38 60,46 C46,58 32,42 18,60 Z" />
+        <path android:fillColor="#FFFFFFFF" android:pathData="M16,66 C30,44 44,60 56,48 C66,38 78,42 94,30 L94,50 C78,62 66,56 56,66 C44,78 30,62 16,80 Z" />
+        <path android:fillColor="#FFFFFFFF" android:pathData="M70.0,22 a4.0,4.0 0 1,0 8.0,0 a4.0,4.0 0 1,0 -8.0,0" />
+    </group>
 </vector>

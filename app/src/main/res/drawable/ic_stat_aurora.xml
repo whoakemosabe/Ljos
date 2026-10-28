@@ -1,13 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
+<!-- Notification icon: the Ljós curtains and moon (design A), white. -->
 <vector xmlns:android="http://schemas.android.com/apk/res/android"
     android:width="24dp"
     android:height="24dp"
     android:viewportWidth="24"
     android:viewportHeight="24">
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M3,10 C6,6 9,8 12,6 C15,4 18,5 21,2.5 L21,5 C18,7 15,6.5 12,8.5 C9,10.5 6,8.5 3,12.5 Z" />
-    <path
-        android:fillColor="#FFFFFFFF"
-        android:pathData="M2,16 C5,11 8,14 12,11 C15,9 18,10 22,7 L22,11 C18,14 15,13 12,15 C8,18 5,15 2,19.5 Z" />
+    <path android:fillColor="#FFFFFFFF" android:fillAlpha="0.7" android:pathData="M3.36 11.04C6.72 6.24 10.08 10.08 13.44 7.20C15.84 5.28 18.24 5.76 21.12 3.84L21.12 6.72C18.24 8.64 15.84 8.16 13.44 10.08C10.08 12.96 6.72 9.12 3.36 13.44Z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M2.88 14.88C6.24 9.60 9.60 13.44 12.48 10.56C14.88 8.16 17.76 9.12 21.60 6.24L21.60 11.04C17.76 13.92 14.88 12.48 12.48 14.88C9.60 17.76 6.24 13.92 2.88 18.24Z" />
+    <path android:fillColor="#FFFFFFFF" android:pathData="M15.70,4.32 a1.1,1.1 0 1,0 2.2,0 a1.1,1.1 0 1,0 -2.2,0" />
 </vector>

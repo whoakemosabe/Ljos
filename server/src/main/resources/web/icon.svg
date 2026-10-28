@@ -1,12 +1,1 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <defs>
-    <linearGradient id="c" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#b79cff"/>
-      <stop offset="0.55" stop-color="#3dffa0"/>
-      <stop offset="1" stop-color="#3dffa0" stop-opacity="0"/>
-    </linearGradient>
-  </defs>
-  <rect width="64" height="64" rx="14" fill="#05070d"/>
-  <path d="M8 40 C18 18, 30 30, 38 20 S52 14, 56 22 L56 34 C48 28, 42 36, 34 34 S16 30, 8 48 Z" fill="url(#c)"/>
-  <circle cx="47" cy="12" r="2.2" fill="#e8f1ff"/>
-</svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 108 108"><defs><linearGradient id="n" x1="0" y1="0" x2="0" y2="108" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#0b1430"/><stop offset="1" stop-color="#03050b"/></linearGradient><linearGradient id="g" x1="0" y1="30" x2="0" y2="78" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#3dffa0" stop-opacity="0.05"/><stop offset=".55" stop-color="#3dffa0" stop-opacity=".78"/><stop offset="1" stop-color="#3dffa0"/></linearGradient><linearGradient id="v" x1="0" y1="18" x2="0" y2="58" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b79cff" stop-opacity="0"/><stop offset="1" stop-color="#b79cff" stop-opacity=".72"/></linearGradient><linearGradient id="vh" x1="0" y1="18" x2="0" y2="58" gradientUnits="userSpaceOnUse"><stop offset="0" stop-color="#b79cff" stop-opacity="0"/><stop offset="1" stop-color="#b79cff" stop-opacity=".25"/></linearGradient></defs><rect width="108" height="108" rx="22" fill="url(#n)"/><g transform="translate(54 54) scale(0.98) translate(-54 -54)"><path d="M18,50 C32,30 46,46 60,34 C70,26 80,28 92,20 L92,32 C80,40 70,38 60,46 C46,58 32,42 18,60 Z" fill="url(#v)"/><path d="M16,66 C30,44 44,60 56,48 C66,38 78,42 94,30 L94,50 C78,62 66,56 56,66 C44,78 30,62 16,80 Z" fill="url(#g)"/><circle cx="74" cy="22" r="5.0" fill="#f3e7c1"/><circle cx="71.75" cy="20.75" r="4.5" fill="#0a1229"/></g></svg>
