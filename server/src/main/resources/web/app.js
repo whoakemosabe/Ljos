@@ -75,6 +75,7 @@ function ago(ms) {
   if (m < 60) return `${m} min ago`;
   return `${Math.floor(m / 60)} h ago`;
 }
+const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 const signed = (v) => (v < 0 ? "−" : "+") + Math.abs(v).toFixed(1);
 const cloudText = (pct) => (pct < 0 ? "clouds unknown" : `${pct}% cloud`);
 const drive = (km) => Math.max(2, Math.round((km * 1.35) / (km * 1.35 < 6 ? 40 : 70) * 60 + 2));
@@ -83,7 +84,7 @@ const drive = (km) => Math.max(2, Math.round((km * 1.35) / (km * 1.35 < 6 ? 40 :
 function scoreColor(score) {
   const s = Math.min(100, Math.max(0, score));
   const lerp = (a, b, f) => a.map((v, i) => Math.round(v + (b[i] - v) * f));
-  const slate = [46, 74, 96], teal = [47, 211, 198], green = [61, 255, 160], violet = [183, 156, 255];
+  const slate = [92, 110, 138], teal = [96, 196, 196], green = [121, 232, 176], violet = [185, 166, 255];
   const c = s < 40 ? lerp(slate, teal, s / 40) : s < 80 ? lerp(teal, green, (s - 40) / 40) : lerp(green, violet, (s - 80) / 20);
   return `rgb(${c[0]}, ${c[1]}, ${c[2]})`;
 }
@@ -152,13 +153,13 @@ function render() {
 
 function renderHeader() {
   const p = data.place;
-  $("place").textContent = TV && p.title ? p.name : p.name;
   $("brand").textContent = TV && p.title ? p.title : "Ljós";
+  $("place").textContent = TV ? `Aurora forecast for ${p.name}` : p.name;
   const stale = data.stale;
-  $("updated").textContent = (stale ? "Data may be out of date · " : "") + `Updated ${ago(data.updatedAt)}`;
+  $("updated").textContent = stale ? `Data may be out of date. Updated ${ago(data.updatedAt)}.` : `Updated ${ago(data.updatedAt)}`;
   $("updated").classList.toggle("warn", !!stale);
-  const locate = $("locate");
-  if (locate) locate.textContent = store.get("ljos.pos") ? "Update location" : "Use my location";
+  const label = $("locate-label");
+  if (label && !$("locate").disabled) label.textContent = store.get("ljos.pos") ? "Update location" : "Use my location";
 }
 
 function renderHero() {
@@ -170,24 +171,24 @@ function renderHero() {
     $("eyebrow").textContent = "Tonight";
     setScore(null);
     $("chance").textContent = "Too bright for aurora";
-    $("peak-line").textContent = "Nights are too light here this time of year.";
+    $("peak-line").textContent = "The nights here are too light this time of year.";
     return;
   }
   const isPeak = selected == null || selected === peak.time;
-  $("eyebrow").textContent = isPeak ? "Tonight's best" : `At ${hhmm(h.time)}`;
+  $("eyebrow").textContent = isPeak ? "Tonight's best hour" : `At ${hhmm(h.time)}`;
   setScore(h.score);
   $("chance").textContent = CHANCE[h.chance] || "";
   let line = "";
   if (selected != null && !isPeak) {
-    line = `${cloudText(h.cloud)} · Kp ${h.kp?.toFixed(1)}`;
+    line = `${cap(cloudText(h.cloud))}, Kp ${h.kp?.toFixed(1)}.`;
   } else if (n.darkFrom && now < n.darkFrom) {
-    line = `Dark in ${span(n.darkFrom - now)} · peak around ${hhmm(peak.time)}`;
+    line = `Dark in ${span(n.darkFrom - now)}. Best around ${hhmm(peak.time)}.`;
   } else if (now < peak.time) {
-    line = `Peak in ${span(peak.time - now)}, around ${hhmm(peak.time)}`;
+    line = `Best around ${hhmm(peak.time)}, in ${span(peak.time - now)}.`;
   } else if (n.darkUntil && now < n.darkUntil) {
-    line = `Best was around ${hhmm(peak.time)} · dark until ${hhmm(n.darkUntil)}`;
+    line = `The best hour was around ${hhmm(peak.time)}. Dark until ${hhmm(n.darkUntil)}.`;
   } else {
-    line = `Peak around ${hhmm(peak.time)}`;
+    line = `Best around ${hhmm(peak.time)}.`;
   }
   $("peak-line").textContent = line;
 }
@@ -242,9 +243,9 @@ function renderWhy() {
     el("span", { class: "meter-note" }, note),
   );
   box.replaceChildren(
-    el("p", { class: "why-head" }, `${hhmm(h.time)} · ${h.score} · ${CHANCE[h.chance] || ""}`),
-    el("p", { class: "quiet small" }, "Each one multiplies the score, so any one can zero it."),
-    meter("Solar activity", h.activity, `Kp ${h.kp?.toFixed(1)}${h.live ? " · live" : ""}`),
+    el("p", { class: "why-head" }, `${hhmm(h.time)}: ${h.score}, ${(CHANCE[h.chance] || "").toLowerCase()}`),
+    el("p", { class: "sub" }, "The four factors multiply, so any one of them can bring the score to zero."),
+    meter("Solar activity", h.activity, `Kp ${h.kp?.toFixed(1)}${h.live ? ", live" : ""}`),
     meter("Clear sky", h.clear, cloudText(h.cloud)),
     meter("Moon", h.moon, h.moonAlt > 0 ? `${Math.round(h.moonIllum * 100)}% lit, up` : "below the horizon"),
     meter("Darkness", h.dark, h.sunAlt < -15 ? "full dark" : `sun ${Math.round(h.sunAlt)}°`),
@@ -264,17 +265,18 @@ function renderNow() {
   $("now-score").textContent = c.score;
   $("now-score").style.color = scoreColor(c.score);
 
-  const lines = [];
-  if (c.bz == null) lines.push("Solar wind data unavailable");
-  else if (!c.bzFresh) lines.push("Solar wind data is stale");
+  const facts = [];
+  if (c.bz == null) facts.push(["Solar wind", "no data right now"]);
+  else if (!c.bzFresh) facts.push(["Solar wind", "data is out of date"]);
   else {
-    const dir = c.bz <= -3 ? "field pointing south, good" : c.bz >= 3 ? "pointing north, quiet" : "neutral";
-    lines.push(`Bz ${signed(c.bz)} nT · ${dir}${c.etaMinutes != null ? ` · here in ~${c.etaMinutes} min` : ""}`);
+    const dir = c.bz <= -3 ? "pointing south, good" : c.bz >= 3 ? "pointing north, quiet" : "neutral";
+    facts.push(["Bz field", `${signed(c.bz)} nT, ${dir}`]);
+    if (c.etaMinutes != null) facts.push(["Reaches Earth", `in about ${c.etaMinutes} min`]);
   }
-  if (c.bzSustained != null) lines.push(`Arriving now: Bz ${signed(c.bzSustained)} nT on average`);
-  lines.push(`Clouds here: ${cloudText(c.cloud)}`);
-  if (c.clearer) lines.push(`Clearer at ${c.clearer.name} (${cloudText(c.clearer.cloud)})`);
-  $("now-lines").replaceChildren(...lines.map((l) => el("li", {}, l)));
+  if (c.bzSustained != null) facts.push(["Arriving now", `${signed(c.bzSustained)} nT on average`]);
+  facts.push(["Clouds here", c.cloud < 0 ? "unknown" : `${c.cloud}%`]);
+  if (c.clearer) facts.push(["Clearer at", `${c.clearer.name}, ${c.clearer.cloud}% cloud`]);
+  $("now-lines").replaceChildren(...facts.flatMap(([k, v]) => [el("dt", {}, k), el("dd", {}, v)]));
   renderSpark();
 }
 
@@ -307,7 +309,7 @@ function renderSpark() {
   svg.append(mk("path", { d: area, class: "spark-south", "clip-path": `url(#${clipId})` }));
   svg.append(mk("line", { x1: 0, x2: w, y1: hgt / 2, y2: hgt / 2, class: "spark-zero" }));
   svg.append(mk("path", { d: line, class: "spark-line" }));
-  box.append(svg, el("p", { class: "quiet small" }, "Bz at the satellite, last 2 h · shaded = south (good)"));
+  box.append(svg, el("p", {}, "Bz at the satellite over the last 2 hours. Shaded means south, which helps."));
 }
 
 function renderSpots() {
@@ -318,7 +320,7 @@ function renderSpots() {
   const stayPut = top && top[0] === "home";
   const at = h ? hhmm(h.time) : null;
   $("spots-title").textContent = at ? `Where to go at ${at}` : "Where to go";
-  $("spots-sub").textContent = !h ? "" : !top ? "No clear, dark spot nearby at this hour"
+  $("spots-sub").textContent = !h ? "" : !top ? "No clear, dark place nearby at this hour"
     : stayPut ? "Best right where you are" : "Each place has its own clouds";
   const list = $("spots");
   list.replaceChildren();
@@ -328,18 +330,18 @@ function renderSpots() {
     const here = id === "home";
     const best = top && id === top[0] && !here;
     const detail = here
-      ? (s.dark ? "you're here" : "you're here · town lights dim faint aurora")
-      : `${Math.round(s.distanceKm)} km · ≈ ${drive(s.distanceKm)} min drive`;
+      ? (s.dark ? "You're here" : "You're here. Town lights hide faint aurora.")
+      : `${Math.round(s.distanceKm)} km, about ${drive(s.distanceKm)} min by car`;
     const name = here ? data.place.name : s.name;
     const row = el("li", { class: "spot" + (best ? " best" : "") + (here ? " here" : "") },
       el("span", { class: "spot-score", style: score != null ? `color:${scoreColor(score)}` : "" }, score ?? "–"),
       el("span", { class: "spot-body" },
         el("span", { class: "spot-name" }, name),
-        el("span", { class: "spot-detail" }, cloud != null ? `${cloudText(cloud)} · ${detail}` : detail)),
+        el("span", { class: "spot-detail" }, cloud != null ? `${cap(cloudText(cloud))}. ${detail}` : detail)),
     );
     if (!here && !TV) {
       const href = `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}`;
-      row.append(el("a", { class: "go", href, target: "_blank", rel: "noopener", "aria-label": `Directions to ${s.name}` }, "Go"));
+      row.append(el("a", { class: "go", href, target: "_blank", rel: "noopener", "aria-label": `Directions to ${s.name}` }, "Directions"));
     }
     list.append(row);
   });
@@ -355,8 +357,8 @@ function renderOutlook() {
     box.append(el("div", { class: "day" },
       el("span", { class: "day-name" }, label),
       el("span", { class: "blocks", "aria-hidden": "true" },
-        ...d.blocks.map((b) => el("span", { class: "block", style: `background:${kpColor(b.kp)};opacity:${0.35 + Math.min(1, b.kp / 6) * 0.65}` }))),
-      el("span", { class: "day-kp" }, kp == null ? "–" : `Kp ${kp.toFixed(1)}`, el("span", { class: "quiet" }, ` ${word}`)),
+        ...d.blocks.map((b) => el("span", { class: "block-bar", style: `height:${Math.max(8, Math.min(100, (b.kp / 7) * 100))}%;background:${kpColor(b.kp)}` }))),
+      el("span", { class: "day-kp" }, kp == null ? "–" : `Kp ${kp.toFixed(1)}`, el("span", { class: "word" }, `, ${word}`)),
     ));
   });
 }
@@ -372,7 +374,7 @@ function renderDress() {
     : "Mild for an aurora night. A light jacket will do.";
   $("dress-sub").textContent = `At ${hhmm(w.time)} in ${data.place.name}`;
   $("dress-temp").textContent = deg(w.temp);
-  $("dress-feels").textContent = `feels like ${deg(w.feels)}${w.wind != null ? ` · ${Math.round(w.wind)} m/s wind` : ""}`;
+  $("dress-feels").textContent = `Feels like ${deg(w.feels)}${w.wind != null ? `, wind ${Math.round(w.wind)} m/s` : ""}`;
   $("dress-advice").textContent = advice;
 }
 
@@ -399,18 +401,24 @@ function renderLookUp() {
   const bits = [];
   if (c.bz != null && c.bzFresh) bits.push(`Bz ${signed(c.bz)} nT`);
   bits.push(cloudText(c.cloud));
-  if (c.clearer) bits.push(`clearer at ${c.clearer.name}`);
-  $("lookup-detail").textContent = bits.join(" · ");
-  $("banner-detail").textContent = bits.join(" · ");
+  let detail = cap(bits.join(", ")) + ".";
+  if (c.clearer) detail += ` Clearer at ${c.clearer.name}.`;
+  $("lookup-detail").textContent = detail;
+  $("banner-detail").textContent = detail;
   $("banner").hidden = !go || TV;
   document.documentElement.classList.toggle("looking-up", go);
   clearInterval(takeoverTimer);
   if (go && TV) {
     let show = true;
-    $("lookup").hidden = false;
-    takeoverTimer = setInterval(() => { show = !show; $("lookup").hidden = !show; }, 20000);
+    const apply = () => {
+      $("lookup").hidden = !show;
+      document.documentElement.classList.toggle("taking-over", show);
+    };
+    apply();
+    takeoverTimer = setInterval(() => { show = !show; apply(); }, 20000);
   } else {
     $("lookup").hidden = true;
+    document.documentElement.classList.remove("taking-over");
   }
 }
 
@@ -421,11 +429,12 @@ function locate() {
   if (!("geolocation" in navigator)) return showProblem("This browser can't share its location.");
   const btn = $("locate");
   btn.disabled = true;
-  btn.textContent = "Finding you…";
+  $("locate-label").textContent = "Finding you…";
   navigator.geolocation.getCurrentPosition(
     (p) => {
       store.set("ljos.pos", { lat: p.coords.latitude, lon: p.coords.longitude });
       btn.disabled = false;
+      $("locate-label").textContent = "Update location";
       selected = null;
       load();
     },
@@ -457,6 +466,15 @@ if (TV) {
     const dx = Math.round(Math.sin(step / 3) * 6), dy = Math.round(Math.cos(step / 4) * 4);
     $("drift").style.transform = `translate(${dx}px, ${dy}px)`;
   }, 60 * 1000);
+  // Show the pointer while the mouse moves; hide it after 3 s still, so it never sits on screen.
+  let idleTimer = 0;
+  const awake = () => {
+    document.documentElement.classList.remove("idle");
+    clearTimeout(idleTimer);
+    idleTimer = setTimeout(() => document.documentElement.classList.add("idle"), 3000);
+  };
+  ["mousemove", "pointerdown", "keydown"].forEach((ev) => window.addEventListener(ev, awake, { passive: true }));
+  awake();
   // Keep the screen on where the browser allows it.
   const wake = async () => { try { await navigator.wakeLock?.request("screen"); } catch { /* not allowed: fine */ } };
   wake();

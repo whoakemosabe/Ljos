@@ -114,12 +114,16 @@ class App(
         return json(200, JSONObject().put("ok", true).put("problems", JSONArray(problems)))
     }
 
-    private val staticName = Regex("^[a-z0-9-]+\\.(js|css|svg|png|webmanifest|html)$")
+    private val staticName = Regex("^[a-z0-9-]+\\.(js|css|svg|png|webmanifest|html|woff2)$")
 
     private fun staticFile(name: String): Response {
         if (!staticName.matches(name)) return notFound()
         // The service worker must never be cached long, or an old one sticks around.
-        val cache = if (name == "sw.js" || name.endsWith(".html")) "no-cache" else "public, max-age=300"
+        val cache = when {
+            name == "sw.js" || name.endsWith(".html") -> "no-cache"
+            name.endsWith(".woff2") -> "public, max-age=2592000, immutable" // fonts never change in place
+            else -> "public, max-age=300"
+        }
         return page(name, cache)
     }
 
@@ -137,6 +141,7 @@ class App(
         "svg" -> "image/svg+xml"
         "png" -> "image/png"
         "webmanifest" -> "application/manifest+json"
+        "woff2" -> "font/woff2"
         else -> "application/octet-stream"
     }
 
