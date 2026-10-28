@@ -1,5 +1,6 @@
 import { startSky, skyFor, skyDetail } from "/aurora.js";
 import { skyLab, labHour, labExtras } from "/skylab.js";
+import { liquidGlass } from "/liquid.js";
 
 // ---------------------------------------------------------------------------------------------
 // Mode. /lobby and /lobby/{place} are the TV layout; everything else is the phone layout.
@@ -104,6 +105,7 @@ function endpoint() {
   return "/v1/forecast";
 }
 
+let glassOn = false;
 async function load() {
   lastLoad = Date.now();
   try {
@@ -113,6 +115,8 @@ async function load() {
     data = await r.json();
     hideProblem();
     render();
+    // The app's liquid glass: the lens on the cards and the floating controls (Chromium).
+    if (!glassOn) { glassOn = true; requestAnimationFrame(() => liquidGlass([[".card", "card"], ["#locate", "control"], ["#banner", "control"]])); }
   } catch (e) {
     if (data) showProblem("Couldn't reach the forecast. Showing the last one.");
     else showProblem("Reading the sky… the forecast feeds are busy, trying again shortly.");

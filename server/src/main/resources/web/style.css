@@ -433,68 +433,75 @@ html.tv .foot { margin-top: 0.5rem; text-align: left; }
 html.tv .card { padding: 1rem 1.1rem; }
 html.tv .spot { padding: 0.45rem 0.5rem; }
 
-/* Glass finish ---------------------------------------------------------------------------
-   Ljós x Solid Glass, as on the lobby: our night and score colours, with the finish at the
-   edges. A pane has a line of light along its top, a hairline all round, a contact shadow and
-   a soft long one beneath; its face is an even smoky navy, not a gradient. Small coloured
-   things are coloured glass; tracks are grooves cut into the pane. Adapted from
-   deeplethe/solid-glass (MIT). */
+/* Liquid glass -----------------------------------------------------------------------------
+   The Android app's glass (Kyant's Backdrop library, see Glass.kt), rebuilt for the web so the
+   page and the app match. Cards: 10px frost, a colour boost, a lens bending a 16px band around
+   the rounded edge with colour fringing, a rim highlight from the top left, a soft shadow and a
+   dark wash so text stays crisp. Controls: barely frosted, a narrower lens. The lens itself is
+   an SVG filter built per element by liquid.js (Chromium only); elsewhere, and on phones that
+   can't keep up, the same glass without the bend. */
 
 :root {
-  --rim: rgba(255, 255, 255, 0.18);
-  --inner: rgba(255, 255, 255, 0.04);
-  --edge: rgba(190, 210, 255, 0.08);
-  --contact: rgba(0, 0, 0, 0.14);
-  --shade: rgba(0, 0, 8, 0.6);
-  --well-shade: rgba(0, 0, 0, 0.42);
-  --well-rim: rgba(255, 255, 255, 0.08);
+  --lg-wash: rgba(7, 11, 22, 0.3);
+  --lg-sheen: linear-gradient(rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+  --lg-shadow: 0 10px 20px -6px rgba(0, 0, 0, 0.25), 0 2px 6px rgba(0, 0, 0, 0.12);
 }
 
+.card, .pill, .banner, .go, .bar.selected { position: relative; isolation: isolate; border: 0; }
 .card {
-  border: 0;
-  background: rgba(10, 15, 30, 0.5);
-  backdrop-filter: blur(26px);
-  -webkit-backdrop-filter: blur(26px);
-  box-shadow:
-    inset 0 1px 0 var(--rim),
-    inset 0 0 0 1px var(--inner),
-    0 0 0 1px var(--edge),
-    0 1px 2px var(--contact),
-    0 12px 32px -14px var(--shade);
+  background: var(--lg-sheen), var(--lg-wash);
+  -webkit-backdrop-filter: blur(10px) saturate(1.2);
+  backdrop-filter: blur(10px) saturate(1.2);
+  box-shadow: var(--lg-shadow);
 }
-
-/* Clear glass for the small things you press. */
 .pill, .go {
-  border: 0;
-  background: rgba(255, 255, 255, 0.06);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 0 0 1px var(--edge), 0 1px 2px var(--contact);
+  background: rgba(5, 8, 15, 0.15);
+  -webkit-backdrop-filter: blur(2px) saturate(1.25);
+  backdrop-filter: blur(2px) saturate(1.25);
+  box-shadow: 0 8px 14px -6px rgba(0, 0, 0, 0.22);
 }
-.pill:active, .go:active { background: rgba(255, 255, 255, 0.1); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 0 0 1px var(--edge); }
-
-/* Coloured glass: the look-up banner, a problem, the best spot. */
+.pill:active, .go:active { background: rgba(255, 255, 255, 0.1); }
 .banner {
-  border: 0;
-  background: rgba(61, 255, 160, 0.13);
-  box-shadow: inset 0 1.5px 0 rgba(61, 255, 160, 0.7), inset 0 -1px 0 rgba(0, 0, 0, 0.25), inset 0 0 0 1px rgba(61, 255, 160, 0.22), 0 12px 32px -14px var(--shade);
+  background: linear-gradient(rgba(61, 255, 160, 0.2), rgba(61, 255, 160, 0.1));
+  -webkit-backdrop-filter: blur(4px) saturate(1.3);
+  backdrop-filter: blur(4px) saturate(1.3);
+  box-shadow: var(--lg-shadow);
 }
-.problem {
-  border: 0;
-  box-shadow: inset 0 1px 0 rgba(255, 138, 128, 0.55), inset 0 0 0 1px rgba(255, 138, 128, 0.2);
-}
-.spot.best {
-  background: rgba(61, 255, 160, 0.08);
-  box-shadow: inset 0 1px 0 rgba(61, 255, 160, 0.55), inset 0 -1px 0 rgba(0, 0, 0, 0.22), inset 0 0 0 1px rgba(61, 255, 160, 0.2);
+.bar.selected {
+  background: rgba(255, 255, 255, 0.08);
+  -webkit-backdrop-filter: blur(2px) saturate(1.25);
+  backdrop-filter: blur(2px) saturate(1.25);
 }
 
-/* The hour you tapped wears the one state: a small pane of clear glass. */
-.bar.selected { background: rgba(255, 255, 255, 0.07); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 0 0 1px var(--edge); }
+/* With the lens: the same frost, with the bend first. liquid.js sets --lg-filter per element. */
+.lg-lens.card { -webkit-backdrop-filter: var(--lg-filter) blur(10px) saturate(1.2); backdrop-filter: var(--lg-filter) blur(10px) saturate(1.2); }
+.lg-lens.pill { backdrop-filter: var(--lg-filter) blur(2px) saturate(1.25); }
+.lg-lens.banner { backdrop-filter: var(--lg-filter) blur(4px) saturate(1.3); }
 
-/* Grooves, and the marks that stand in them: lit along their top edge. */
-.bar .track, .meter-track {
-  background: rgba(0, 0, 0, 0.24);
-  box-shadow: inset 0 1px 1.5px var(--well-shade), inset 0 -1px 0 var(--well-rim);
+/* The rim highlight: light catching the edge, strongest at the top left (45°, as in the app)
+   and a fainter answer at the bottom right. A gradient border masked to a hairline. */
+.card::before, .pill::before, .banner::before, .go::before, .bar.selected::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  padding: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(135deg,
+    rgba(255, 255, 255, 0.55) 0%, rgba(255, 255, 255, 0.14) 22%, rgba(255, 255, 255, 0.03) 45%,
+    rgba(255, 255, 255, 0.03) 60%, rgba(255, 255, 255, 0.14) 82%, rgba(255, 255, 255, 0.32) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
 }
-.bar.peak .track { box-shadow: inset 0 1px 1.5px var(--well-shade), inset 0 -1px 0 var(--well-rim), 0 0 0 1px rgba(255, 255, 255, 0.3); }
-.bar .fill, .meter-fill, .block {
-  box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+.banner::before { background: linear-gradient(135deg, rgba(160, 255, 210, 0.8), rgba(61, 255, 160, 0.2) 30%, rgba(61, 255, 160, 0.06) 60%, rgba(160, 255, 210, 0.45)); }
+
+/* Coloured details on the glass. */
+.spot.best { background: rgba(61, 255, 160, 0.09); box-shadow: inset 0 0 0 1px rgba(61, 255, 160, 0.3); }
+.problem { border: 0; box-shadow: inset 0 0 0 1px rgba(255, 138, 128, 0.3); }
+.bar.peak .track { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.35); }
+
+@media (prefers-reduced-transparency: reduce) {
+  .card, .pill, .banner, .go { background: rgba(10, 15, 30, 0.92); backdrop-filter: none; -webkit-backdrop-filter: none; }
 }
