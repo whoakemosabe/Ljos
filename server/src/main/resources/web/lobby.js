@@ -155,11 +155,21 @@ function renderSky() {
   });
 }
 
+let lastUpdated = 0;
 function renderHeader() {
   const p = data.place;
   $("brand").textContent = p.title || "Ljós";
   $("place").textContent = `Aurora forecast for ${p.name}`;
   $("live").classList.toggle("stale", !!data.stale);
+  // A brighter pulse when the forecast actually changed, not on every redraw.
+  if (lastUpdated && data.updatedAt !== lastUpdated && !data.stale) {
+    const live = $("live");
+    live.classList.remove("got");
+    void live.offsetWidth;
+    live.classList.add("got");
+    setTimeout(() => live.classList.remove("got"), 1500);
+  }
+  lastUpdated = data.updatedAt;
   $("live-text").textContent = data.stale ? "Data delayed" : "Live";
   $("updated").textContent = `Updated ${ago(data.updatedAt)}`;
 }
