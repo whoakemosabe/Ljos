@@ -119,47 +119,60 @@ h2 { font-size: 1.4rem; font-weight: 600; line-height: 1.2; text-wrap: balance; 
 
 .pill.live { color: var(--green); border-color: rgba(121, 232, 176, 0.45); background: rgba(121, 232, 176, 0.12); }
 .pill.live.stale { color: var(--amber); border-color: rgba(243, 199, 122, 0.45); background: rgba(243, 199, 122, 0.12); }
-/* The live beacon: a lit core that breathes, two soft rings rippling out half a beat apart,
-   and a brighter flash when fresh data arrives (.got, set for one cycle by the script).
-   Rings and glow are transform and opacity only, so they stay smooth on a TV. Stale data:
-   amber, and still. */
+/* The live beacon: a lit core, a soft halo that breathes, and one soft ring that drifts out
+   and fades; a brighter, wider ring when fresh data arrives (.got, set briefly by the script).
+   Everything that moves animates only transform and opacity, so it runs on the GPU; the ring
+   and halo are drawn at their full size and scaled down, so they stay crisp, and their edges
+   are gradients, never a hard border. Stale data: amber, and still. */
 .dot {
   position: relative;
   flex: none;
   width: 0.55em;
   height: 0.55em;
-  margin: 0 0.45em 0 0.3em;
+  margin: 0 0.6em 0 0.35em;
   border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, #effff7 0%, currentColor 55%, color-mix(in srgb, currentColor 70%, #000) 100%);
-  box-shadow: 0 0 0.45em color-mix(in srgb, currentColor 55%, transparent);
+  background: radial-gradient(circle at 38% 32%, #f2fff8 0%, currentColor 58%, color-mix(in srgb, currentColor 72%, #000) 100%);
 }
 .dot::before, .dot::after {
   content: "";
   position: absolute;
-  inset: -1px;
   border-radius: 50%;
-  border: 1.5px solid currentColor;
-  opacity: 0;
   pointer-events: none;
+  will-change: transform, opacity;
 }
-.live:not(.stale) .dot { animation: breathe-dot 3.6s ease-in-out infinite; }
-.live:not(.stale) .dot::before, .live:not(.stale) .dot::after { animation: ripple 3.6s cubic-bezier(0.16, 0.7, 0.3, 1) infinite; }
-.live:not(.stale) .dot::after { animation-delay: 1.8s; }
-.live.got .dot::before { animation: arrived 1.4s cubic-bezier(0.16, 0.7, 0.3, 1) 1; }
-.live.stale .dot { box-shadow: none; opacity: 0.85; }
-@keyframes breathe-dot {
-  0%, 100% { box-shadow: 0 0 0.3em color-mix(in srgb, currentColor 45%, transparent); }
-  50% { box-shadow: 0 0 0.75em color-mix(in srgb, currentColor 80%, transparent); }
+/* Halo: a soft glow just around the core. */
+.dot::before {
+  inset: -0.45em;
+  background: radial-gradient(circle, color-mix(in srgb, currentColor 55%, transparent) 0%, color-mix(in srgb, currentColor 18%, transparent) 45%, transparent 70%);
+  opacity: 0.6;
 }
-@keyframes ripple {
-  0% { transform: scale(1); opacity: 0.55; }
-  70% { opacity: 0.06; }
-  100% { transform: scale(2.9); opacity: 0; }
+/* Ring: a thin band with soft edges, at its widest size; it starts small and grows into it. */
+.dot::after {
+  inset: -0.6em;
+  background: radial-gradient(circle, transparent 60%, color-mix(in srgb, currentColor 70%, transparent) 66%, transparent 72%);
+  opacity: 0;
+  transform: scale(0.3);
+}
+.live:not(.stale) .dot::before { animation: halo 4s cubic-bezier(0.45, 0, 0.55, 1) infinite; }
+.live:not(.stale) .dot::after { animation: ring 4s cubic-bezier(0.22, 1, 0.36, 1) infinite; }
+.live.got .dot::after { inset: -1.1em; animation: arrived 1.6s cubic-bezier(0.22, 1, 0.36, 1) 1; }
+.live.stale .dot::before { opacity: 0.25; }
+@keyframes halo {
+  0%, 100% { opacity: 0.45; transform: scale(0.85); }
+  50% { opacity: 0.85; transform: scale(1); }
+}
+@keyframes ring {
+  0% { opacity: 0; transform: scale(0.3); }
+  10% { opacity: 0.55; }
+  55% { opacity: 0.12; }
+  75%, 100% { opacity: 0; transform: scale(1); }
 }
 @keyframes arrived {
-  0% { transform: scale(1); opacity: 1; border-width: 2.5px; }
-  100% { transform: scale(3.6); opacity: 0; border-width: 1px; }
+  0% { opacity: 0; transform: scale(0.2); }
+  8% { opacity: 0.95; }
+  100% { opacity: 0; transform: scale(1); }
 }
+
 
 /* Header -------------------------------------------------------------------------------- */
 
