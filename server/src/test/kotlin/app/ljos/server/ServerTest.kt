@@ -112,6 +112,31 @@ class ServerTest {
         JSONObject(json.toString())
     }
 
+    @Test fun hoursCarrySkyDetail() {
+        val now = ms("2024-01-11T18:00:00Z")
+        val inp = inputs(now, 3.0, 40)
+        val t0 = now - 24 * HOUR_MS
+        val sky = SkyFeed.parse(
+            """{"hourly":{"time":[${(0 until 72).joinToString(",") { ((t0 + it * HOUR_MS) / 1000).toString() }}],""" +
+                """"wind_direction_10m":[${List(72) { "200" }.joinToString(",")}],"rain":[${List(72) { "0.4" }.joinToString(",")}],""" +
+                """"showers":[${List(72) { "null" }.joinToString(",")}],"snowfall":[${List(72) { "0" }.joinToString(",")}],""" +
+                """"visibility":[${List(72) { "8000" }.joinToString(",")}]}}"""
+        )
+        assertNotNull(sky)
+        val json = Api.forecast(inp, now, zone, Api.Place("x", 63.974, -22.549), emptyList(), sky)
+        val h = json.getJSONObject("tonight").getJSONArray("hours").getJSONObject(0)
+        assertTrue(h.getDouble("sunAz") in 0.0..360.0)
+        assertTrue(h.getDouble("moonAz") in 0.0..360.0)
+        assertEquals(40, h.getInt("cloudLow"))
+        assertEquals(200.0, h.getDouble("windDir"), 0.1)
+        assertEquals(0.4, h.getDouble("rain"), 0.01)
+        assertEquals(8000.0, h.getDouble("visibility"), 0.1)
+        // Without the sky feed the forecast still works, just without weather detail.
+        val plain = Api.forecast(inp, now, zone, Api.Place("x", 63.974, -22.549), emptyList())
+        assertFalse(plain.getJSONObject("tonight").getJSONArray("hours").getJSONObject(0).has("windDir"))
+        assertNull(SkyFeed.parse("""{"error":true}"""))
+    }
+
     @Test fun oldDataIsMarkedStale() {
         val now = ms("2024-01-11T18:00:00Z")
         val inp = inputs(now - 3 * HOUR_MS, 3.0, 0)

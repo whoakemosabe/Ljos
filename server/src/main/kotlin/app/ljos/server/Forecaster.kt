@@ -79,6 +79,13 @@ class Forecaster(
         return Inputs(kp, clouds, mag, wind, updated, home, spots, kpNow, solarWind)
     }
 
+    /** Lobby-sky weather for [home]; null when the fetch fails, which only plainens the sky. */
+    fun sky(home: Spot, cloudKey: String): SkySeries? {
+        val key = "sky:$cloudKey"
+        val e = cache.get(key, SkyFeed.url(home.lat, home.lon), 60 * MIN_MS) { runCatching { SkyFeed.parse(it) }.getOrNull() != null }
+        return parse(key, e) { SkyFeed.parse(it) }
+    }
+
     /** Fetch problems worth showing, in plain words. */
     fun problems(cloudKey: String): List<String> {
         val labels = mapOf(

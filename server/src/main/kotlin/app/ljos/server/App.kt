@@ -95,7 +95,7 @@ class App(
     private fun build(home: Spot, cloudKey: String, zone: ZoneId, place: Api.Place): Response {
         val inp = forecaster.inputs(home, cloudKey)
         if (inp.isEmpty) return json(503, Api.error("NO_DATA", "Forecast feeds are unavailable right now; try again in a minute"))
-        val body = Api.forecast(inp, clock(), zone, place, forecaster.problems(cloudKey))
+        val body = Api.forecast(inp, clock(), zone, place, forecaster.problems(cloudKey), forecaster.sky(home, cloudKey))
         return json(200, body, "public, max-age=60")
     }
 
