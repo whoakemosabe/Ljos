@@ -6,10 +6,10 @@ const path = location.pathname.replace(/\/+$/, "");
 const PLACE_ID = path.startsWith("/lobby/") ? decodeURIComponent(path.split("/")[2] || "") : "njardvik";
 
 const CHANCE = {
-  EXCELLENT: "Excellent",
-  GOOD: "Good chance",
-  POSSIBLE: "Possible",
-  UNLIKELY: "Unlikely",
+  EXCELLENT: "Excellent chance tonight",
+  GOOD: "Good chance tonight",
+  POSSIBLE: "Possible tonight",
+  UNLIKELY: "Unlikely tonight",
   NOT_TONIGHT: "Not tonight",
 };
 
@@ -29,26 +29,8 @@ const el = (tag, attrs = {}, ...kids) => {
   return n;
 };
 
-// Small line icons for the badges, drawn with the badge's own colour.
-const ICONS = {
-  moon: '<path d="M13.5 10.2A5.6 5.6 0 0 1 5.8 2.5a5.8 5.8 0 1 0 7.7 7.7Z"/>',
-  dark: '<circle cx="8" cy="8" r="5.5"/><path class="solid" d="M8 2.5v11a5.5 5.5 0 0 0 0-11Z"/>',
-  cloud: '<path d="M4.5 12.5h7a3 3 0 0 0 .3-6 4 4 0 0 0-7.6 1.2 2.4 2.4 0 0 0 .3 4.8Z"/>',
-  sun: '<circle cx="8" cy="8" r="3"/><path d="M8 1.5v1.5M8 13v1.5M1.5 8H3M13 8h1.5M3.4 3.4l1 1M11.6 11.6l1 1M3.4 12.6l1-1M11.6 4.4l1-1"/>',
-  bolt: '<path d="M9 1.5 3.5 9H8l-1 5.5L12.5 7H8l1-5.5Z"/>',
-  wind: '<path d="M2 6h8.5a2 2 0 1 0-2-2M2 10h10.5a2 2 0 1 1-2 2"/>',
-  feels: '<path d="M8 2v7.2a2.6 2.6 0 1 0 0 0V2Z"/><path d="M6.5 3.5h3M6.5 6h3"/>',
-};
-function icon(name) {
-  const ns = "http://www.w3.org/2000/svg";
-  const svg = document.createElementNS(ns, "svg");
-  svg.setAttribute("viewBox", "0 0 16 16");
-  svg.setAttribute("aria-hidden", "true");
-  svg.innerHTML = ICONS[name] || "";
-  return svg;
-}
-const pill = (content, { tint, cls = "", icon: ic } = {}) => {
-  const p = el("span", { class: `pill ${cls}`.trim() }, ic ? icon(ic) : null, content);
+const pill = (content, { tint, cls = "" } = {}) => {
+  const p = el("span", { class: `pill ${cls}`.trim() }, content);
   if (tint) applyTint(p, tint);
   return p;
 };
@@ -58,7 +40,6 @@ const zone = () => (data && data.tz) || "Atlantic/Reykjavik";
 const fmt = (ms, opts) => { try { return new Intl.DateTimeFormat("en-GB", { timeZone: zone(), ...opts }).format(ms); } catch { return ""; } };
 const hhmm = (ms) => fmt(ms, { hour: "2-digit", minute: "2-digit", hour12: false });
 const hourLabel = (ms) => fmt(ms, { hour: "2-digit", hour12: false });
-const weekday = (ms) => fmt(ms, { weekday: "short" });
 const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
 const signed = (v) => (v < 0 ? "−" : "+") + Math.abs(v).toFixed(1);
 const deg = (c) => { const r = Math.round(c); return `${r < 0 ? "−" : ""}${Math.abs(r)}°`; };
@@ -95,6 +76,9 @@ function applyTint(node, score) {
 
 const sky = startSky($("sky"), { scale: 0.5 });
 const hours = () => data?.tonight?.hours || [];
+const GAUGE = 2 * Math.PI * 110;
+const LEVELS = ["Quiet", "Unsettled", "Active", "Strong", "Storm"];
+const level = (kp) => (kp >= 6 ? 4 : kp >= 5 ? 3 : kp >= 4 ? 2 : kp >= 3 ? 1 : 0);
 
 async function load() {
   try {
@@ -115,10 +99,8 @@ function render() {
   renderHeader();
   renderHero();
   renderNow();
-  renderSpots();
-  renderOutlook();
-  renderDress();
   renderHours();
+  renderPlaces();
   renderLookUp();
   sky.set(skyFor(data.current?.hour, hours(), false));
 }
@@ -127,10 +109,23 @@ function renderHeader() {
   const p = data.place;
   $("brand").textContent = p.title || "Ljós";
   $("place").textContent = `Aurora forecast for ${p.name}`;
-  const live = $("live");
-  live.classList.toggle("stale", !!data.stale);
+  $("live").classList.toggle("stale", !!data.stale);
   $("live-text").textContent = data.stale ? "Data delayed" : "Live";
   $("updated").textContent = `Updated ${ago(data.updatedAt)}`;
+}
+
+/** The run of hours around tonight's peak that score nearly as well, from now on. */
+function bestWindow() {
+  const list = hours();
+  const peak = data.tonight.peak;
+  if (!peak) return null;
+  const i = list.findIndex((h) => h.time === peak.time);
+  if (i < 0) return null;
+  const floor = peak.score - Math.max(4, peak.score * 0.08);
+  let a = i, b = i;
+  while (a > 0 && list[a - 1].score >= floor && list[a - 1].time + HOUR > data.now) a--;
+  while (b < list.length - 1 && list[b + 1].score >= floor) b++;
+  return { from: list[a].time, to: list[b].time + HOUR };
 }
 
 function renderHero() {
@@ -138,59 +133,58 @@ function renderHero() {
   const peak = n.peak;
   const now = data.now;
   const cur = data.current;
+  setGauge(peak ? peak.score : null);
+  const chance = $("chance");
+  chance.style.cssText = "";
   if (!peak) {
-    setScore(null);
-    $("eyebrow").textContent = "Tonight";
-    $("chance").textContent = "Too bright for aurora";
-    $("peak-pill").hidden = true;
-    $("peak-line").textContent = "The nights here are too light this time of year.";
-    $("scale").hidden = true;
+    chance.textContent = "Too bright for aurora";
+    $("best-time").textContent = "The nights are too light here this time of year.";
+    $("hero-line").textContent = "";
     $("conditions").replaceChildren();
     return;
   }
-  setScore(peak.score);
-  $("eyebrow").textContent = "Tonight's best hour";
-  const chance = $("chance");
   chance.textContent = CHANCE[peak.chance] || "";
   applyTint(chance, peak.score);
-  const pp = $("peak-pill");
-  pp.hidden = false;
-  pp.replaceChildren(el("span", { class: "muted" }, "Best at"), hhmm(peak.time));
 
+  const w = bestWindow();
   let line;
-  if (n.darkFrom && now < n.darkFrom) line = `Dark in ${span(n.darkFrom - now)}. Best hour in ${span(peak.time - now)}.`;
-  else if (now < peak.time) line = `The best hour is ${span(peak.time - now)} away.`;
-  else if (n.darkUntil && now < n.darkUntil) line = `Past the best hour. Still dark until ${hhmm(n.darkUntil)}.`;
-  else line = "";
-  $("peak-line").textContent = line;
+  if (peak.score < 20 || !w) line = `Best hour at ${hhmm(peak.time)}`;
+  else if (now >= w.from) line = `Best now, until ${hhmm(w.to)}`;
+  else if (w.to - w.from <= HOUR) line = `Best around ${hhmm(w.from)}`;
+  else line = `Best from ${hhmm(w.from)} to ${hhmm(w.to)}`;
+  $("best-time").textContent = line;
 
-  // Scale: tonight's best (triangle) and right now (ring).
-  $("scale").hidden = false;
-  $("scale-best").style.left = `${peak.score}%`;
-  $("scale-now").style.left = `${cur.score}%`;
-
-  // Conditions: darkness, moon, activity, clouds.
-  const chips = [];
-  if (n.darkFrom && n.darkUntil) {
-    chips.push(cur.isDark
-      ? pill([el("span", { class: "muted" }, "Dark until"), hhmm(n.darkUntil)], { icon: "dark" })
-      : pill([el("span", { class: "muted" }, "Dark from"), hhmm(n.darkFrom)], { icon: "sun" }));
-  }
+  const bits = [];
+  if (n.darkFrom && now < n.darkFrom) bits.push(`Dark in ${span(n.darkFrom - now)}.`);
   const m = data.moon;
   if (m) {
-    const lit = `${Math.round(m.illumination * 100)}%`;
-    const up = cur.hour && cur.hour.moonAlt > 0;
-    const when = up ? (m.set ? `sets ${hhmm(m.set)}` : "up all night") : (m.rise ? `rises ${hhmm(m.rise)}` : "down tonight");
-    chips.push(pill([el("span", { class: "muted" }, "Moon"), lit, el("span", { class: "muted" }, when)], { icon: "moon" }));
+    const lit = `${Math.round(m.illumination * 100)}% lit`;
+    const up = (cur.hour?.moonAlt ?? -1) > 0;
+    if (m.illumination < 0.05) bits.push("New moon, so the sky is properly dark.");
+    else if (up) bits.push(m.set ? `The moon is up, ${lit}, and sets at ${hhmm(m.set)}.` : `The moon is up all night, ${lit}.`);
+    else if (m.rise && m.rise > now) bits.push(`The moon rises at ${hhmm(m.rise)}, ${lit}.`);
+    else bits.push("No moon in the sky tonight.");
   }
-  if (cur.hour?.kp != null) chips.push(pill([el("span", { class: "muted" }, "Kp"), cur.hour.kp.toFixed(1)], { icon: "bolt", tint: kpScore(cur.hour.kp) }));
-  $("conditions").replaceChildren(...chips);
+  $("hero-line").textContent = bits.join(" ");
+
+  const conds = [];
+  const wx = data.weather;
+  if (wx) {
+    conds.push(["Temperature", `${deg(wx.temp)}, feels ${deg(wx.feels)}`]);
+    if (wx.wind != null) conds.push(["Wind", `${Math.round(wx.wind)} m/s`]);
+  }
+  if (n.darkFrom && n.darkUntil) conds.push(now < n.darkFrom ? ["Dark from", hhmm(n.darkFrom)] : ["Dark until", hhmm(n.darkUntil)]);
+  $("conditions").replaceChildren(...conds.map(([k, v]) => el("span", { class: "cond" }, el("span", { class: "cond-k" }, k), el("span", { class: "cond-v" }, v))));
 }
 
-function setScore(score) {
+function setGauge(score) {
   const s = $("score");
   s.textContent = score == null ? "–" : String(score);
   s.style.color = score == null ? "" : scoreColor(score);
+  const fill = $("gauge-fill");
+  fill.setAttribute("stroke-dasharray", `${((score ?? 0) / 100) * GAUGE} ${GAUGE}`);
+  fill.style.stroke = score == null ? "" : scoreColor(score);
+  fill.style.opacity = score ? "1" : "0";
 }
 
 function renderNow() {
@@ -202,118 +196,41 @@ function renderNow() {
   else if (!c.isDark) state.textContent = n.darkFrom && data.now < n.darkFrom ? `Dark from ${hhmm(n.darkFrom)}` : "Too light right now";
   else if (c.bz == null || !c.bzFresh) state.textContent = "No live solar wind";
   else { state.textContent = "Watching the sky"; applyTint(state, 50); }
-  const badge = $("now-score");
-  badge.textContent = c.score;
-  applyTint(badge, c.score);
 
-  // Bz direction: south (down) is what drives aurora.
-  const bz = $("bz");
-  if (c.bz != null && c.bzFresh) {
-    bz.hidden = false;
-    const south = c.bz <= -3, north = c.bz >= 3;
-    const arrow = $("bz-arrow");
-    arrow.replaceChildren(arrowIcon());
-    arrow.firstChild.style.transform = south ? "rotate(180deg)" : north ? "rotate(0deg)" : "rotate(90deg)";
-    arrow.style.color = south ? "var(--green)" : "var(--frost)";
-    arrow.style.borderColor = south ? "rgba(121, 232, 176, 0.5)" : "";
-    $("bz-value").textContent = `Bz ${signed(c.bz)} nT`;
-    $("bz-note").textContent = south ? "Field pointing south, which drives aurora" : north ? "Field pointing north, quiet" : "Field neutral";
-  } else bz.hidden = true;
+  const kp = c.hour?.kp;
+  $("activity").hidden = kp == null;
+  if (kp != null) {
+    const at = level(kp);
+    $("meter").replaceChildren(...LEVELS.map((name, i) => {
+      const bar = el("span", { class: "level-bar" });
+      if (i <= at) bar.style.background = scoreColor(15 + i * 21);
+      return el("span", { class: "level" + (i === at ? " current" : "") }, bar, el("span", { class: "level-name" }, name));
+    }));
+    $("meter").setAttribute("aria-label", `Activity: ${LEVELS[at]}, Kp ${kp.toFixed(1)}`);
+  }
 
   const facts = [];
-  if (c.etaMinutes != null && c.bzFresh) facts.push(["Reaches Earth", `in about ${c.etaMinutes} min`]);
-  if (c.bzSustained != null) facts.push(["Arriving now", `${signed(c.bzSustained)} nT on average`]);
-  facts.push(["Clouds here", c.cloud < 0 ? "unknown" : `${c.cloud}%`]);
-  if (c.clearer) facts.push(["Clearer at", `${c.clearer.name}, ${c.clearer.cloud}% cloud`]);
-  $("now-lines").replaceChildren(...facts.flatMap(([k, v]) => [el("dt", {}, k), el("dd", {}, v)]));
-  renderSpark();
-}
+  if (c.etaMinutes != null && c.bzFresh) facts.push(["Next wave", `Reaches Earth in about ${c.etaMinutes} min`]);
+  const cloud = c.cloud < 0 ? "Unknown" : `${c.cloud}%`;
+  facts.push(["Clouds here", c.clearer ? `${cloud}, clearer at ${c.clearer.name}` : cloud]);
+  if (c.bz != null && c.bzFresh) {
+    const dir = c.bz <= -3 ? "pointing south, good" : c.bz >= 3 ? "pointing north, quiet" : "neutral";
+    facts.push(["Solar wind", `Bz ${signed(c.bz)} nT, ${dir}`]);
+  } else facts.push(["Solar wind", "No live reading"]);
+  $("facts").replaceChildren(...facts.flatMap(([k, v]) => [el("dt", {}, k), el("dd", {}, v)]));
 
-function arrowIcon() {
-  const ns = "http://www.w3.org/2000/svg";
-  const svg = document.createElementNS(ns, "svg");
-  svg.setAttribute("viewBox", "0 0 16 16");
-  svg.innerHTML = '<path d="M8 13V3M3.5 7.5 8 3l4.5 4.5"/>';
-  return svg;
-}
-
-function renderSpark() {
-  const box = $("spark");
-  const pts = data.solarWind || [];
-  if (pts.length < 6) { box.hidden = true; return; }
-  box.hidden = false;
-  const w = 300, h = 64;
-  const t0 = pts[0][0], t1 = pts[pts.length - 1][0];
-  const max = Math.max(5, ...pts.map((p) => Math.abs(p[1])));
-  const x = (t) => ((t - t0) / (t1 - t0 || 1)) * w;
-  const y = (v) => h / 2 - (v / max) * (h / 2 - 4);
-  const line = pts.map((p, i) => `${i ? "L" : "M"}${x(p[0]).toFixed(1)} ${y(p[1]).toFixed(1)}`).join("");
-  const ns = "http://www.w3.org/2000/svg";
-  const mk = (tag, attrs) => { const n = document.createElementNS(ns, tag); for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v); return n; };
-  const svg = mk("svg", { viewBox: `0 0 ${w} ${h}`, preserveAspectRatio: "none", role: "img", "aria-label": "Bz over the last two hours" });
-  const defs = mk("defs", {});
-  const clip = mk("clipPath", { id: "south" });
-  clip.append(mk("rect", { x: 0, y: h / 2, width: w, height: h / 2 }));
-  defs.append(clip);
-  svg.append(defs, mk("path", { d: `${line}L${w} ${h / 2}L0 ${h / 2}Z`, class: "spark-south", "clip-path": "url(#south)" }),
-    mk("line", { x1: 0, x2: w, y1: h / 2, y2: h / 2, class: "spark-zero" }), mk("path", { d: line, class: "spark-line" }));
-  box.replaceChildren(svg, el("p", {}, "Bz at the satellite over the last 2 hours. Shaded means south."));
-}
-
-function renderSpots() {
-  const meta = new Map((data.spots || []).map((s) => [s.id, s]));
-  const h = data.tonight.peak ? hours().find((x) => x.time === data.tonight.peak.time) : null;
-  const ranked = h?.spots?.length ? h.spots : (data.spots || []).map((s) => [s.id, null, null, null]);
-  const top = ranked.find((r) => (r[1] ?? 0) > 0);
-  const stayPut = top && top[0] === "home";
-  $("spots-title").textContent = h ? `Where to go at ${hhmm(h.time)}` : "Where to go";
-  $("spots-sub").textContent = !h ? "" : !top ? "No clear, dark place nearby" : stayPut ? "Best right here" : "Each place has its own clouds";
-  $("spots").replaceChildren(...ranked.slice(0, 5).map(([id, score, cloud]) => {
-    const s = meta.get(id);
-    if (!s) return null;
-    const here = id === "home";
-    const best = top && id === top[0];
-    const badge = el("span", { class: "spot-badge" }, score ?? "–");
-    if (score != null) applyTint(badge, score);
-    const detail = here ? (s.dark ? "You're here" : "You're here. Town lights hide faint aurora.") : `${Math.round(s.distanceKm)} km, about ${drive(s.distanceKm)} min by car`;
-    return el("li", { class: "spot" },
-      badge,
-      el("span", { class: "spot-body" },
-        el("span", { class: "spot-name" }, here ? data.place.name : s.name, best ? pill("Best bet", { tint: 85 }) : null),
-        el("span", { class: "spot-detail" }, detail)),
-      cloud != null ? pill(`${cloud}% cloud`, { cls: "cloud-pill", icon: "cloud" }) : null,
-    );
-  }).filter(Boolean));
-}
-
-function renderOutlook() {
-  $("outlook").replaceChildren(...(data.outlook || []).map((d, i) => {
-    const label = i === 0 ? "Today" : i === 1 ? "Tomorrow" : weekday(d.dayStart);
-    const kp = d.maxKp;
-    const word = kp == null ? "no forecast" : kp >= 5 ? "storm" : kp >= 4 ? "active" : kp >= 3 ? "unsettled" : "quiet";
-    return el("div", { class: "day" },
-      el("span", { class: "day-name" }, label),
-      el("span", { class: "blocks", "aria-hidden": "true" },
-        ...d.blocks.map((b) => el("span", { class: "block-bar", style: `height:${Math.max(8, Math.min(100, (b.kp / 7) * 100))}%;background:${scoreColor(kpScore(b.kp))}` }))),
-      kp == null ? pill("No forecast") : pill([`Kp ${kp.toFixed(1)}`, el("span", { class: "muted" }, word)], { tint: kpScore(kp) }),
-    );
+  $("days-wrap").hidden = !(data.outlook || []).length;
+  $("days").replaceChildren(...(data.outlook || []).slice(0, 3).map((d, i) => {
+    const name = i === 0 ? "Today" : i === 1 ? "Tomorrow" : fmt(d.dayStart, { weekday: "long" });
+    const k = d.maxKp;
+    const day = el("div", { class: "day" }, el("span", { class: "day-name" }, name),
+      el("span", { class: "day-kp" }, k == null ? "No forecast" : `${LEVELS[level(k)]}, Kp ${k.toFixed(1)}`));
+    if (k != null) {
+      applyTint(day, kpScore(k));
+      day.style.background = rgb(scoreRgb(kpScore(k)), 0.1);
+    }
+    return day;
   }));
-}
-
-function renderDress() {
-  const w = data.weather;
-  $("dress-card").hidden = !w;
-  if (!w) return;
-  $("dress-sub").textContent = `At ${hhmm(w.time)}`;
-  $("dress-temp").textContent = deg(w.temp);
-  $("dress-badges").replaceChildren(
-    pill([el("span", { class: "muted" }, "Feels like"), deg(w.feels)], { icon: "feels" }),
-    w.wind != null ? pill([el("span", { class: "muted" }, "Wind"), `${Math.round(w.wind)} m/s`], { icon: "wind" }) : null,
-  );
-  $("dress-advice").textContent = w.feels <= -10 ? "Serious cold. Layers, hat, gloves, warm boots, and a flask."
-    : w.feels <= 0 ? "Cold. Warm jacket, hat and gloves; you'll be standing still."
-    : w.feels <= 6 ? "Chilly. A proper jacket and a hat."
-    : "Mild for an aurora night. A light jacket will do.";
 }
 
 function renderHours() {
@@ -321,18 +238,57 @@ function renderHours() {
   $("hours-card").hidden = list.length === 0;
   if (!list.length) return;
   const n = data.tonight;
-  const peakTime = n.peak?.time;
   const now = data.now;
-  $("hours-sub").textContent = n.darkFrom && n.darkUntil ? `Dark from ${hhmm(n.darkFrom)} to ${hhmm(n.darkUntil)}` : "";
-  $("strip").replaceChildren(...list.map((h) => {
+  const peakTime = n.peak?.time;
+  const w = n.peak && n.peak.score >= 20 ? bestWindow() : null;
+  $("key-window").hidden = !w;
+  $("timeline").replaceChildren(...list.map((h) => {
     const isNow = now >= h.time && now < h.time + HOUR;
     const isPeak = h.time === peakTime;
-    return el("div", { class: "bar" + (isPeak ? " peak" : "") + (isNow ? " now" : "") + (h.time + HOUR <= now ? " past" : ""), role: "listitem", "aria-label": `${hhmm(h.time)}, score ${h.score}` },
-      el("span", { class: "flag" }, isPeak ? pill("Peak", { tint: h.score }) : isNow ? pill("Now") : null),
-      el("span", { class: "value" }, h.score),
-      el("span", { class: "track" }, el("span", { class: "fill", style: `height:${Math.max(3, h.score)}%;background:${scoreColor(h.score)}` })),
-      el("span", { class: "label" }, hourLabel(h.time)),
+    const cls = ["tick"];
+    if (n.darkFrom && n.darkUntil && h.time + HOUR > n.darkFrom && h.time < n.darkUntil) cls.push("dark");
+    if (w && h.time >= w.from && h.time < w.to) cls.push("window");
+    if (h.moonAlt > 0) cls.push("moon");
+    if (h.time + HOUR <= now) cls.push("past");
+    if (isNow) cls.push("now");
+    if (isPeak) cls.push("peak");
+    const flag = isNow ? el("span", { class: "pill now-flag" }, isPeak ? "Peak now" : "Now")
+      : isPeak ? pill("Peak", { tint: h.score }) : null;
+    const fill = el("span", { class: "tick-fill" });
+    fill.style.height = `${Math.max(0.2, h.score * 0.034)}rem`;
+    fill.style.background = scoreColor(h.score);
+    return el("div", { class: cls.join(" "), role: "listitem", "aria-label": `${hhmm(h.time)}, score ${h.score}` },
+      el("span", { class: "tick-flag" }, flag),
+      el("span", { class: "tick-track" }, el("span", { class: "tick-value" }, h.score), fill),
+      el("span", { class: "tick-moon" }),
+      el("span", { class: "tick-hour" }, hourLabel(h.time)),
     );
+  }));
+}
+
+function renderPlaces() {
+  const meta = new Map((data.spots || []).map((s) => [s.id, s]));
+  const h = data.tonight.peak ? hours().find((x) => x.time === data.tonight.peak.time) : null;
+  const ranked = (h?.spots || []).filter((r) => meta.has(r[0]));
+  $("go-card").hidden = ranked.length === 0;
+  if (!ranked.length) return;
+  const top = ranked.find((r) => (r[1] ?? 0) > 0);
+  $("go-title").textContent = `Where to go at ${hhmm(h.time)}`;
+  $("go-sub").textContent = !top ? "No clear, dark place nearby tonight." : top[0] === "home" ? "Best right here. Each place has its own clouds." : "Each place has its own clouds. Best first.";
+  $("places").replaceChildren(...ranked.slice(0, 5).map(([id, score, cloud]) => {
+    const s = meta.get(id);
+    const here = id === "home";
+    const best = top && id === top[0];
+    const badge = el("span", { class: "place-score" }, score ?? "–");
+    if (score != null) applyTint(badge, score);
+    const clouds = cloud != null && cloud >= 0 ? `${cloud}% cloud` : null;
+    const detail = here ? (clouds ? `You're here, ${clouds}` : "You're here") : [clouds, `${drive(s.distanceKm)} min`].filter(Boolean).join(", ");
+    const card = el("li", { class: "place" }, best ? pill("Best bet", { cls: "best-bet", tint: Math.max(score, 80) }) : null, badge,
+      el("span", { class: "place-body" },
+        el("span", { class: "place-name" }, here ? data.place.name : s.name),
+        el("span", { class: "place-detail" }, detail)));
+    if (best) card.style.borderColor = rgb(scoreRgb(score), 0.5);
+    return card;
   }));
 }
 
