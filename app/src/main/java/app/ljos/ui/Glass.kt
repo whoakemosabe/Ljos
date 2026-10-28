@@ -22,11 +22,16 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import app.glasspane.GlassPresets
-import app.glasspane.glass
 import com.kyant.backdrop.BackdropEffectScope
 import com.kyant.backdrop.backdrops.LayerBackdrop
+import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.drawPlainBackdrop
+import com.kyant.backdrop.effects.lens
+import com.kyant.backdrop.shadow.InnerShadow
+import com.kyant.backdrop.shadow.Shadow
+import androidx.compose.ui.graphics.drawOutline
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.unit.DpOffset
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.colorControls
 import com.kyant.backdrop.effects.runtimeShaderEffect
@@ -160,11 +165,46 @@ val LocalGlassAngle = androidx.compose.runtime.staticCompositionLocalOf<State<Fl
  * page and the lobby: clear glass with a refracted edge, plus the solid-glass rim, hairline,
  * inner bottom shade and contact + long shadow.
  */
+@Suppress("UNUSED_PARAMETER")
 fun Modifier.glassCard(
     backdrop: LayerBackdrop,
     shape: androidx.compose.foundation.shape.CornerBasedShape,
     lightAngle: State<Float>? = null,
-): Modifier = glass(backdrop, GlassPresets.Smoky, shape, lightAngle?.let { a -> { a.value } })
+): Modifier = ljosGlass(backdrop, shape)
+
+/**
+ * The one Ljós glass, the same as the phone page and the lobby. Surface: korbenmade's header
+ * pill, clear glass with a light frost, a colour boost and the edge bent by Kyant's lens.
+ * Edges: the lobby's solid-glass finish, a fine light line inset along the top, a hairline all
+ * round, a slight inner bottom shade, a contact shadow and a soft long one. No sheen and no
+ * specular highlight. Older phones get a near-solid tint with the same edges.
+ */
+fun Modifier.ljosGlass(
+    backdrop: LayerBackdrop,
+    shape: androidx.compose.foundation.shape.CornerBasedShape,
+): Modifier = drawBackdrop(
+    backdrop = backdrop,
+    shape = { shape },
+    effects = {
+        colorControls(brightness = 0.03f, saturation = 1.75f)
+        blur(3.dp.toPx())
+        lens(12.dp.toPx(), 21.dp.toPx(), chromaticAberration = true)
+    },
+    highlight = null,
+    shadow = { Shadow(radius = 16.dp, offset = DpOffset(0.dp, 6.dp), color = Color(0xFF000008).copy(alpha = 0.55f)) },
+    innerShadow = { InnerShadow(radius = 1.dp, offset = DpOffset(0.dp, (-1).dp), color = Color.Black.copy(alpha = 0.25f)) },
+    onDrawSurface = {
+        val full = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+        drawRect(Color(0xFF0A0F1E).copy(alpha = if (full) 0.24f else 0.9f))
+        val outline = shape.createOutline(size, layoutDirection, this)
+        // hairline all round (the lobby's --edge plus its faint inner line)
+        drawOutline(outline, Color(0xFFBED2FF).copy(alpha = 0.14f), style = Stroke(1.dp.toPx()))
+        // the fine light line inset along the top
+        val r = minOf(size.height / 2f, shape.topStart.toPx(size, this))
+        val y = 0.5.dp.toPx()
+        drawLine(Color.White.copy(alpha = 0.2f), Offset(r, y), Offset(size.width - r, y), 1.dp.toPx())
+    },
+)
 
 /** Light catches the glass rims from the top left, as on iOS. (Fixed; no tilt sensor.) */
 @Composable
@@ -182,7 +222,7 @@ fun Modifier.glassControl(
     lightAngle: State<Float>? = null,
     lensHeight: Dp = 10.dp,
     lensAmount: Dp = 18.dp,
-): Modifier = glass(backdrop, GlassPresets.Liquid, shape, lightAngle?.let { a -> { a.value } })
+): Modifier = ljosGlass(backdrop, shape)
 
 /**
  * The settings sheet's body: Glasspane's "smoky" glass, a see-through sheet with a refracted
@@ -190,4 +230,4 @@ fun Modifier.glassControl(
  */
 @Suppress("UNUSED_PARAMETER")
 fun Modifier.glassSheet(backdrop: LayerBackdrop, cornerRadius: Dp, tint: Color): Modifier =
-    glass(backdrop, GlassPresets.Smoky, RoundedCornerShape(topStart = cornerRadius, topEnd = cornerRadius))
+    ljosGlass(backdrop, RoundedCornerShape(topStart = cornerRadius, topEnd = cornerRadius))
