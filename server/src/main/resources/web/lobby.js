@@ -1,4 +1,4 @@
-import { startSky, skyFor } from "/aurora.js";
+import { startSky, skyFor, skyDetail, starPositions } from "/aurora.js";
 
 // The lobby screen: /lobby/{place}. One screen, refreshed every minute, nothing to tap.
 
@@ -108,7 +108,7 @@ function applyTint(node, score) {
 
 // ---------------------------------------------------------------------------------------------
 
-const sky = startSky($("sky"), { scale: 0.5 });
+const sky = startSky($("sky"), { scale: 0.5, rich: true, maxWidth: 1280 });
 $("activity-label").prepend(icon("pulse"));
 $("days-label").prepend(icon("days"));
 const hours = () => data?.tonight?.hours || [];
@@ -138,7 +138,19 @@ function render() {
   renderHours();
   renderPlaces();
   renderLookUp();
-  sky.set(skyFor(data.current?.hour, hours(), false));
+  renderSky();
+}
+
+/** The background is the live sky here: this hour's weather, moon, stars and aurora. */
+function renderSky() {
+  if (!data) return;
+  const h = data.current?.hour;
+  const c = data.current;
+  sky.set({
+    ...skyFor(h, hours(), false),
+    ...skyDetail(h, { bz: c?.bzFresh ? c.bz : null, waxing: !!data.moon?.waxing }),
+    stars: starPositions(Date.now(), data.place.lat, data.place.lon),
+  });
 }
 
 function renderHeader() {
@@ -357,7 +369,7 @@ function renderLookUp() {
 
 load();
 setInterval(load, 60 * 1000);
-setInterval(() => { if (data) renderHeader(); }, 30 * 1000);
+setInterval(() => { if (data) { renderHeader(); renderSky(); } }, 30 * 1000);
 
 const tick = () => { $("clock").textContent = fmt(Date.now(), { hour: "2-digit", minute: "2-digit", hour12: false }); };
 tick();

@@ -1,6 +1,6 @@
 // Ljós service worker: the app shell works offline, and the last forecast is shown when the
 // network is down (the page says how old it is). Bump VERSION when shell files change.
-const VERSION = "ljos-v4";
+const VERSION = "ljos-v5";
 const SHELL = ["/", "/style.css", "/app.js", "/aurora.js", "/lobby.html", "/lobby.css", "/lobby.js", "/qr.svg", "/fraunces.woff2", "/schibsted-grotesk.woff2", "/manifest.webmanifest", "/icon.svg", "/icon-192.png", "/icon-180.png"];
 
 self.addEventListener("install", (event) => {

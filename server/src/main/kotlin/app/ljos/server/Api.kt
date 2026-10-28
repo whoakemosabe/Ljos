@@ -3,6 +3,7 @@ package app.ljos.server
 import app.ljos.data.HOUR_MS
 import app.ljos.data.Inputs
 import app.ljos.data.MIN_MS
+import app.ljos.model.Astro
 import app.ljos.model.HourScore
 import app.ljos.model.Model
 import app.ljos.model.Night
@@ -25,7 +26,8 @@ object Api {
 
     data class Place(val name: String, val lat: Double, val lon: Double, val title: String? = null)
 
-    fun forecast(inp: Inputs, now: Long, zone: ZoneId, place: Place, problems: List<String>): JSONObject {
+    fun forecast(inp: Inputs, now: Long, zone: ZoneId, place: Place, problems: List<String>, sky: SkySeries? = null): JSONObject {
+        val ctx = Ctx(inp, now, sky)
         val hourStart = now - now % HOUR_MS
         val tonight = Model.night(now, inp, zone)
         val tomorrow = Model.tomorrow(now, inp, zone)
@@ -61,9 +63,9 @@ object Api {
                     JSONObject().put("id", it.spot.id).put("name", it.spot.name)
                         .put("score", it.score).put("cloud", it.cloud).num("distanceKm", it.distanceKm, 1)
                 })
-                .put("hour", hour(current, inp, now)))
-            .put("tonight", night(tonight, inp, now))
-            .put("tomorrow", night(tomorrow, inp, now, withSpots = false))
+                .put("hour", hour(current, ctx)))
+            .put("tonight", night(tonight, ctx))
+            .put("tomorrow", night(tomorrow, ctx, withSpots = false))
             .put("spots", JSONArray().also { arr ->
                 Model.spotsAt(focus, inp, now).forEach {
                     arr.put(JSONObject().put("id", it.spot.id).put("name", it.spot.name)
@@ -101,17 +103,21 @@ object Api {
             .put("problems", JSONArray(problems))
     }
 
-    private fun night(n: Night, inp: Inputs, now: Long, withSpots: Boolean = true): JSONObject =
+    private class Ctx(val inp: Inputs, val now: Long, val sky: SkySeries?)
+
+    private fun night(n: Night, ctx: Ctx, withSpots: Boolean = true): JSONObject =
         JSONObject()
             .put("start", n.start)
             .put("end", n.end)
             .putOrNull("darkFrom", n.darkFrom)
             .putOrNull("darkUntil", n.darkUntil)
-            .put("peak", n.peak?.let { hour(it, inp, now, withSpots = false) } ?: JSONObject.NULL)
-            .put("hours", JSONArray().also { arr -> n.hours.forEach { arr.put(hour(it, inp, now, withSpots)) } })
+            .put("peak", n.peak?.let { hour(it, ctx, withSpots = false) } ?: JSONObject.NULL)
+            .put("hours", JSONArray().also { arr -> n.hours.forEach { arr.put(hour(it, ctx, withSpots)) } })
 
     /** One hour. With [withSpots], each comparison spot as `[id, score, cloud, rank]`, best first. */
-    private fun hour(h: HourScore, inp: Inputs, now: Long, withSpots: Boolean = false): JSONObject {
+    private fun hour(h: HourScore, ctx: Ctx, withSpots: Boolean = false): JSONObject {
+        val inp = ctx.inp
+        val now = ctx.now
         val o = JSONObject()
             .put("time", h.time)
             .put("score", h.score)
@@ -126,6 +132,25 @@ object Api {
             .num("moonAlt", h.moonAlt, 1)
             .num("moonIllum", h.moonIllum, 3)
             .put("live", h.live)
+        // For the lobby sky: where the sun and moon are, cloud by layer, and the weather.
+        val mid = h.time + HOUR_MS / 2
+        o.num("sunAz", Astro.sunAzimuth(mid, inp.home.lat, inp.home.lon), 1)
+            .num("moonAz", Astro.moonAzimuth(mid, inp.home.lat, inp.home.lon), 1)
+        inp.clouds[inp.home.id]?.let { cs ->
+            val i = cs.indexAt(h.time)
+            if (i >= 0) {
+                o.put("cloudLow", cs.low.getOrElse(i) { -1 }).put("cloudMid", cs.mid.getOrElse(i) { -1 })
+                    .put("cloudHigh", cs.high.getOrElse(i) { -1 })
+                cs.wind.getOrNull(i)?.let { o.num("wind", it.toDouble(), 1) }
+            }
+        }
+        ctx.sky?.let { s ->
+            val i = s.indexAt(h.time)
+            if (i >= 0) {
+                o.num("windDir", s.windDir[i].toDouble(), 0).num("rain", s.rain[i].toDouble(), 2)
+                    .num("snow", s.snow[i].toDouble(), 2).num("visibility", s.visibility[i].toDouble(), 0)
+            }
+        }
         if (withSpots) {
             o.put("spots", JSONArray().also { arr ->
                 Model.spotsAt(h.time, inp, now).forEach {

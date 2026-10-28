@@ -65,6 +65,26 @@ object Astro {
         return altitude(h, RAD * lat, c.dec) / RAD
     }
 
+    /** suncalc's azimuth is measured from south, positive westward; this returns 0..360 from north, clockwise. */
+    private fun azimuthFromNorth(h: Double, phi: Double, dec: Double): Double {
+        val fromSouth = atan2(sin(h), cos(h) * sin(phi) - tan(dec) * cos(phi)) / RAD
+        return ((fromSouth + 180.0) % 360.0 + 360.0) % 360.0
+    }
+
+    /** Compass direction of the sun in degrees: 0 north, 90 east, 180 south, 270 west. */
+    fun sunAzimuth(ms: Long, lat: Double, lon: Double): Double {
+        val d = toDays(ms)
+        val c = sunCoords(d)
+        return azimuthFromNorth(siderealTime(d, RAD * -lon) - c.ra, RAD * lat, c.dec)
+    }
+
+    /** Compass direction of the moon in degrees: 0 north, 90 east, 180 south, 270 west. */
+    fun moonAzimuth(ms: Long, lat: Double, lon: Double): Double {
+        val d = toDays(ms)
+        val c = moonCoords(d)
+        return azimuthFromNorth(siderealTime(d, RAD * -lon) - c.ra, RAD * lat, c.dec)
+    }
+
     /** Lit fraction of the moon, 0 (new) to 1 (full). */
     fun moonIllumination(ms: Long): Double {
         val d = toDays(ms)
