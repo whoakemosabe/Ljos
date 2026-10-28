@@ -122,10 +122,20 @@ fun Modifier.tintedGlass(accent: Color, shape: CornerBasedShape = RoundedCornerS
         val outline = shape.createOutline(size, layoutDirection, this)
         drawOutline(outline, accent.copy(alpha = 0.13f))
         drawOutline(outline, accent.copy(alpha = 0.22f), style = Stroke(1.dp.toPx()))
-        // lit top edge and shaded bottom edge
-        val r = minOf(size.height / 2f, shape.topStart.toPx(size, this))
-        drawLine(accent.copy(alpha = 0.75f), Offset(r, 0.75.dp.toPx()), Offset(size.width - r, 0.75.dp.toPx()), 1.5.dp.toPx())
-        drawLine(Color.Black.copy(alpha = 0.28f), Offset(r, size.height - 0.5.dp.toPx()), Offset(size.width - r, size.height - 0.5.dp.toPx()), 1.dp.toPx())
+        // Lit top edge that follows the rounded corners and fades just past them, and a shaded
+        // bottom edge (the same finish as every other Ljós pane, in the accent colour).
+        val corner = shape.topStart.toPx(size, this).coerceAtMost(size.height / 2f)
+        val fade = ((corner + 6.dp.toPx()) / size.height).coerceIn(0.02f, 1f)
+        drawOutline(
+            outline,
+            Brush.verticalGradient(0f to accent.copy(alpha = 0.75f), fade to accent.copy(alpha = 0f)),
+            style = Stroke(1.5.dp.toPx()),
+        )
+        drawOutline(
+            outline,
+            Brush.verticalGradient((1f - fade) to Color.Black.copy(alpha = 0f), 1f to Color.Black.copy(alpha = 0.28f)),
+            style = Stroke(1.dp.toPx()),
+        )
     }
 
 /** The one solid pane (Ljós Now flag / segmented thumb): lit on top, shaded underneath. */
