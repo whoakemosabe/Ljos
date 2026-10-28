@@ -362,7 +362,8 @@ function renderSpark() {
   box.append(svg, el("p", { class: "quiet small" }, "Bz at the satellite, last 2 h · shaded = south (good)"));
 }
 
-let pickedSpot = null;
+let pickedSpot = null; // the spot picked on the map or list, like the app's WhereCard
+let pickedFor = undefined; // the hour that pick belongs to; a new hour picks the best spot again
 let mapResize = 0;
 addEventListener("resize", () => { clearTimeout(mapResize); mapResize = setTimeout(() => data && renderSpots(), 150); });
 
@@ -373,14 +374,80 @@ function renderSpots() {
   const ranked = h?.spots?.length ? h.spots : (data.spots || []).map((s) => [s.id, null, null, null]);
   const top = ranked.find((r) => (r[1] ?? 0) > 0);
   const stayPut = top && top[0] === "home";
+  const bestId = top && !stayPut ? top[0] : null;
+  const homeName = data.place?.name || "Here";
   const at = h ? hhmm(h.time) : null;
-  $("spots-title").textContent = at ? `Where to go at ${at}` : "Where to go";
+  $("spots-title").textContent = at ? `Where to go ${showTomorrow ? "tomorrow " : ""}at ${at}` : "Where to go";
   $("spots-sub").textContent = !h ? "" : !top ? "No clear, dark spot nearby at this hour"
-    : stayPut ? "Best right where you are" : "Each place has its own clouds";
-  renderSpotMap(meta, ranked, top);
+    : stayPut ? "Best right where you are"
+    : selected == null ? `${showTomorrow ? "Tomorrow's" : "Tonight's"} peak hour. ${homeName} matches the big number; other places have their own clouds.`
+    : "At the hour you picked. Each place has its own clouds.";
+  const hourKey = h?.time ?? null;
+  if (pickedFor !== hourKey) { pickedFor = hourKey; pickedSpot = bestId; }
+  if (TV) return renderSpotList(ranked, meta, top);
+
+  const box = $("spot-map"), pick = $("spot-pick"), list = $("spots");
+  const scores = new Map(ranked.filter((r) => r[1] != null).map((r) => [r[0], r[1]]));
+  const choose = (id) => { pickedSpot = id; renderSpots(); };
+  const home = data.place;
+  if (home?.lat != null && meta.size) {
+    box.hidden = false;
+    renderMap(box, {
+      home, scores, bestId, selectedId: pickedSpot, onSelect: choose, colorFor: scoreColor,
+      spots: [{ id: "home", lat: home.lat, lon: home.lon }, ...[...meta.values()].filter((s) => s.id !== "home")],
+    });
+  } else box.hidden = true;
+
+  // The picked pin: drive time, distance, cloud, score and Go.
+  const row = ranked.find((r) => r[0] === pickedSpot), ps = row && meta.get(row[0]);
+  if (ps) {
+    const [, score, cloud] = row;
+    const bits = [`≈ ${drive(ps.distanceKm)} min drive`, `${Math.round(ps.distanceKm)} km`];
+    if (cloud != null) bits.push(cloudText(cloud));
+    const href = `https://www.google.com/maps/dir/?api=1&destination=${ps.lat},${ps.lon}&travelmode=driving`;
+    const fresh = pick.dataset.id !== ps.id;
+    pick.replaceChildren(
+      el("span", { class: "pick-body" },
+        el("span", { class: "pick-name" }, ps.name),
+        el("span", { class: "pick-detail" }, bits.join(" · "))),
+      el("span", { class: "pick-score", style: score != null ? `color:${scoreColor(score)}` : "" }, score ?? "–"),
+      el("a", { class: "pick-go", href, target: "_blank", rel: "noopener", "aria-label": `Directions to ${ps.name}` }, "Go"),
+    );
+    pick.dataset.id = ps.id;
+    pick.hidden = false;
+    if (fresh) { pick.classList.remove("in"); void pick.offsetWidth; pick.classList.add("in"); }
+  } else { pick.hidden = true; delete pick.dataset.id; }
+
+  // Every place, ranked: dot, name, distance, score. Tap one to pick it.
+  list.replaceChildren();
+  ranked.forEach(([id, score]) => {
+    const s = meta.get(id);
+    if (!s) return;
+    const here = id === "home" || s.distanceKm < 1;
+    const sub = here ? (s.dark ? "you're here" : "you're here · town lights dim faint aurora") : `${Math.round(s.distanceKm)} km · dark sky`;
+    const col = score != null ? scoreColor(score) : "";
+    const li = el("li", { class: "place" + (id === pickedSpot ? " picked" : "") },
+      el("span", { class: "place-dot", style: col ? `background:${col}` : "" }),
+      el("span", { class: "place-body" },
+        el("span", { class: "place-name" }, here && id === "home" ? homeName : s.name),
+        el("span", { class: "place-detail" }, sub)),
+      el("span", { class: "place-score", style: col ? `color:${col}` : "" }, score ?? "–"),
+    );
+    if (!here) {
+      li.tabIndex = 0;
+      li.setAttribute("role", "button");
+      li.addEventListener("click", () => choose(id));
+      li.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); choose(id); } });
+    }
+    list.append(li);
+  });
+}
+
+/** The lobby-sized list (TV mode): unchanged. */
+function renderSpotList(ranked, meta, top) {
   const list = $("spots");
   list.replaceChildren();
-  ranked.slice(0, TV ? 5 : 9).forEach(([id, score, cloud], i) => {
+  ranked.slice(0, 5).forEach(([id, score, cloud]) => {
     const s = meta.get(id);
     if (!s) return;
     const here = id === "home";
@@ -388,50 +455,12 @@ function renderSpots() {
     const detail = here
       ? (s.dark ? "you're here" : "you're here · town lights dim faint aurora")
       : `${Math.round(s.distanceKm)} km · ≈ ${drive(s.distanceKm)} min drive`;
-    const name = here ? data.place.name : s.name;
-    const row = el("li", { class: "spot" + (best ? " best" : "") + (here ? " here" : "") },
+    list.append(el("li", { class: "spot" + (best ? " best" : "") + (here ? " here" : "") },
       el("span", { class: "spot-score", style: score != null ? `color:${scoreColor(score)}` : "" }, score ?? "–"),
       el("span", { class: "spot-body" },
-        el("span", { class: "spot-name" }, name),
-        el("span", { class: "spot-detail" }, cloud != null ? `${cloudText(cloud)} · ${detail}` : detail)),
-    );
-    if (!here && !TV) {
-      const href = `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}`;
-      row.append(el("a", { class: "go gp-tinted", href, target: "_blank", rel: "noopener", "aria-label": `Directions to ${s.name}` }, "Go"));
-    }
-    list.append(row);
+        el("span", { class: "spot-name" }, here ? data.place.name : s.name),
+        el("span", { class: "spot-detail" }, cloud != null ? `${cloudText(cloud)} · ${detail}` : detail))));
   });
-}
-
-function renderSpotMap(meta, ranked, top) {
-  const box = $("spot-map"), pick = $("spot-pick");
-  const home = data.place;
-  if (TV || !home || home.lat == null || !(data.spots || []).length) { box.hidden = true; pick.hidden = true; return; }
-  box.hidden = false;
-  const scores = new Map(ranked.filter((r) => r[1] != null).map((r) => [r[0], r[1]]));
-  const clouds = new Map(ranked.map((r) => [r[0], r[2]]));
-  const spots = [{ id: "home", lat: home.lat, lon: home.lon }, ...data.spots.filter((s) => s.id !== "home")];
-  if (pickedSpot && !meta.has(pickedSpot)) pickedSpot = null;
-  renderMap(box, {
-    home, spots, scores, colorFor: scoreColor,
-    bestId: top && top[0] !== "home" ? top[0] : null,
-    selectedId: pickedSpot,
-    onSelect: (id) => { pickedSpot = pickedSpot === id ? null : id; renderSpots(); },
-  });
-  const s = pickedSpot && meta.get(pickedSpot);
-  if (!s) { pick.hidden = true; return; }
-  const score = scores.get(s.id), cloud = clouds.get(s.id);
-  const bits = [`≈ ${drive(s.distanceKm)} min drive`, `${Math.round(s.distanceKm)} km`];
-  if (cloud != null) bits.push(cloudText(cloud));
-  const href = `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}`;
-  pick.replaceChildren(
-    el("span", { class: "pick-body" },
-      el("span", { class: "spot-name" }, s.name),
-      el("span", { class: "spot-detail" }, bits.join(" · "))),
-    el("span", { class: "pick-score", style: score != null ? `color:${scoreColor(score)}` : "" }, score ?? "–"),
-    el("a", { class: "go gp-tinted", href, target: "_blank", rel: "noopener" }, "Directions"),
-  );
-  pick.hidden = false;
 }
 
 function renderOutlook() {
