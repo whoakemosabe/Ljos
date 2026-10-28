@@ -1,5 +1,6 @@
 import { startSky, skyFor, skyDetail } from "/aurora.js";
 import { skyLab, labHour, labExtras } from "/skylab.js";
+import { renderMap } from "/map.js";
 
 // ---------------------------------------------------------------------------------------------
 // Mode. /lobby and /lobby/{place} are the TV layout; everything else is the phone layout.
@@ -361,6 +362,10 @@ function renderSpark() {
   box.append(svg, el("p", { class: "quiet small" }, "Bz at the satellite, last 2 h · shaded = south (good)"));
 }
 
+let pickedSpot = null;
+let mapResize = 0;
+addEventListener("resize", () => { clearTimeout(mapResize); mapResize = setTimeout(() => data && renderSpots(), 150); });
+
 function renderSpots() {
   const meta = new Map((data.spots || []).map((s) => [s.id, s]));
   const pk = night()?.peak;
@@ -372,6 +377,7 @@ function renderSpots() {
   $("spots-title").textContent = at ? `Where to go at ${at}` : "Where to go";
   $("spots-sub").textContent = !h ? "" : !top ? "No clear, dark spot nearby at this hour"
     : stayPut ? "Best right where you are" : "Each place has its own clouds";
+  renderSpotMap(meta, ranked, top);
   const list = $("spots");
   list.replaceChildren();
   ranked.slice(0, TV ? 5 : 9).forEach(([id, score, cloud], i) => {
@@ -395,6 +401,37 @@ function renderSpots() {
     }
     list.append(row);
   });
+}
+
+function renderSpotMap(meta, ranked, top) {
+  const box = $("spot-map"), pick = $("spot-pick");
+  const home = data.place;
+  if (TV || !home || home.lat == null || !(data.spots || []).length) { box.hidden = true; pick.hidden = true; return; }
+  box.hidden = false;
+  const scores = new Map(ranked.filter((r) => r[1] != null).map((r) => [r[0], r[1]]));
+  const clouds = new Map(ranked.map((r) => [r[0], r[2]]));
+  const spots = [{ id: "home", lat: home.lat, lon: home.lon }, ...data.spots.filter((s) => s.id !== "home")];
+  if (pickedSpot && !meta.has(pickedSpot)) pickedSpot = null;
+  renderMap(box, {
+    home, spots, scores, colorFor: scoreColor,
+    bestId: top && top[0] !== "home" ? top[0] : null,
+    selectedId: pickedSpot,
+    onSelect: (id) => { pickedSpot = pickedSpot === id ? null : id; renderSpots(); },
+  });
+  const s = pickedSpot && meta.get(pickedSpot);
+  if (!s) { pick.hidden = true; return; }
+  const score = scores.get(s.id), cloud = clouds.get(s.id);
+  const bits = [`≈ ${drive(s.distanceKm)} min drive`, `${Math.round(s.distanceKm)} km`];
+  if (cloud != null) bits.push(cloudText(cloud));
+  const href = `https://www.google.com/maps/dir/?api=1&destination=${s.lat},${s.lon}`;
+  pick.replaceChildren(
+    el("span", { class: "pick-body" },
+      el("span", { class: "spot-name" }, s.name),
+      el("span", { class: "spot-detail" }, bits.join(" · "))),
+    el("span", { class: "pick-score", style: score != null ? `color:${scoreColor(score)}` : "" }, score ?? "–"),
+    el("a", { class: "go gp-tinted", href, target: "_blank", rel: "noopener" }, "Directions"),
+  );
+  pick.hidden = false;
 }
 
 function renderOutlook() {

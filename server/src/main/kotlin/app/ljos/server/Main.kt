@@ -8,7 +8,7 @@ import java.util.concurrent.Executors
 
 /** Applied to every response. Everything the page loads comes from this server. */
 private val SECURITY_HEADERS = mapOf(
-    "Content-Security-Policy" to "default-src 'self'; img-src 'self' data:; style-src 'self'; script-src 'self'; " +
+    "Content-Security-Policy" to "default-src 'self'; img-src 'self' data: https://server.arcgisonline.com https://tile.openstreetmap.org; style-src 'self'; script-src 'self'; " +
         "connect-src 'self'; worker-src 'self'; manifest-src 'self'; base-uri 'none'; frame-ancestors 'none'; form-action 'none'",
     "X-Content-Type-Options" to "nosniff",
     "Referrer-Policy" to "no-referrer",
