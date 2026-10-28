@@ -38,6 +38,8 @@
   --moon: #e8dcb0;
   --band: rgba(120, 140, 200, 0.12);
   --serif: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --cols: minmax(0, 1.3fr) minmax(0, 1fr);
+  --col-gap: 2.8rem;
   --numerals: "Outfit", "Schibsted Grotesk", system-ui, sans-serif;
   --sans: "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color-scheme: dark;
@@ -123,7 +125,9 @@ h2 { font-size: 1.4rem; font-weight: 600; line-height: 1.2; text-wrap: balance; 
 
 /* Header -------------------------------------------------------------------------------- */
 
-.top { display: flex; align-items: center; justify-content: space-between; gap: 1.6rem; }
+/* The header uses the same two columns as the layout below, so the clock and QR tiles line up
+   exactly with the Right now panel's edges on any screen shape. */
+.top { display: grid; grid-template-columns: var(--cols); column-gap: var(--col-gap); align-items: center; }
 .where { min-width: 0; }
 .wordmark { font-family: var(--serif); font-size: 1.3rem; font-weight: 600; font-variation-settings: "SOFT" 100, "WONK" 1; color: var(--green); line-height: 1.2; }
 h1 { font-size: 2rem; font-weight: 600; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
@@ -154,7 +158,7 @@ h1 { font-size: 2rem; font-weight: 600; line-height: 1.15; white-space: nowrap; 
 
 /* Hero row ------------------------------------------------------------------------------ */
 
-.layout { display: grid; grid-template-columns: minmax(0, 1.3fr) minmax(0, 1fr); gap: 2.8rem; align-items: stretch; }
+.layout { display: grid; grid-template-columns: var(--cols); gap: var(--col-gap); align-items: stretch; }
 .hero { display: flex; flex-direction: column; justify-content: center; gap: 1.3rem; min-width: 0; }
 .hero-main { display: flex; align-items: center; gap: 2.2rem; }
 
@@ -411,10 +415,11 @@ html.taking-over #drift { visibility: hidden; }
 /* Fixed sizes ------------------------------------------------------------------------------
    Cards never change size with their content: text that changes (the clock, "Updated 12 min
    ago", a long place name) is fitted inside a fixed box and cut with an ellipsis if it must. */
-.status { flex: none; }
-.tile { flex: none; height: 4.6rem; }
-.now-tile { width: 22.5rem; }
-.phone { width: 15rem; }
+/* The two header tiles split the panel's width; their size comes from the column, not the text. */
+.status { display: grid; grid-template-columns: minmax(0, 1.5fr) minmax(0, 1fr); gap: 0.8rem; min-width: 0; }
+.tile { height: 4.6rem; min-width: 0; }
+.phone-text { min-width: 0; max-width: none; }
+.phone-title, .phone-sub { overflow: hidden; text-overflow: ellipsis; }
 .clock { flex: none; width: 8.4rem; white-space: nowrap; }
 .now-meta { flex: 1; min-width: 0; }
 .live, .updated { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
