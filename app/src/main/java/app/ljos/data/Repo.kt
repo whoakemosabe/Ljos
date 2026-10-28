@@ -64,16 +64,14 @@ class Repo(context: Context) {
                 },
             ).awaitAll()
         }
-        // Minute-level solar wind (for travel time, coupling and "sustained" checks) is a bigger
-        // download, so only fetch it once it's getting dark and somewhere is clear enough to matter.
-        val now = System.currentTimeMillis()
-        if (Model.worthLiveCheck(now, inputs())) {
-            coroutineScope {
-                listOf(
-                    async { pull(MAG_RT, liveAge, Feeds.MAG_RTSW_URL, force, errors) { Feeds.parseMagRtsw(it) != null } },
-                    async { pull(WIND_RT, liveAge, Feeds.WIND_RTSW_URL, force, errors) { it.trim().startsWith("[") } },
-                ).awaitAll()
-            }
+        // Minute-level solar wind (travel time, coupling, "sustained", and the chart under the
+        // score). Always fetched so the chart shows on every night; it refreshes quickly only
+        // when a live check is worth it (dark, somewhere clear), otherwise every 10 minutes.
+        coroutineScope {
+            listOf(
+                async { pull(MAG_RT, liveAge, Feeds.MAG_RTSW_URL, force, errors) { Feeds.parseMagRtsw(it) != null } },
+                async { pull(WIND_RT, liveAge, Feeds.WIND_RTSW_URL, force, errors) { it.trim().startsWith("[") } },
+            ).awaitAll()
         }
         errors.toList()
     }

@@ -65,9 +65,8 @@ class Forecaster(
         val updated = listOfNotNull(kpE, cloudsE, magE, windE).maxOfOrNull { it.fetchedAt } ?: 0L
 
         val base = Inputs(kp, clouds, magSummary, wind, updated, home, spots, kpNow)
-        // Minute-level solar wind is a bigger download; like the app, only when it's getting
-        // dark and somewhere nearby is clear enough to matter.
-        if (!Model.worthLiveCheck(now, base)) return base
+        // Minute-level solar wind: always fetched (5-minute cache, shared by every visitor), so
+        // the solar wind chart under the score shows on every night, cloudy or not.
 
         val magRtE = cache.get("mag_rt", Feeds.MAG_RTSW_URL, 5 * MIN_MS) { Feeds.parseMagRtsw(it) != null }
         val windRtE = cache.get("wind_rt", Feeds.WIND_RTSW_URL, 5 * MIN_MS) { it.trim().startsWith("[") }
