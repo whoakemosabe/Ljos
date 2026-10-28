@@ -131,12 +131,16 @@ function hideProblem() { $("problem").hidden = true; }
 const sky = startSky($("sky"), { scale: TV ? 0.5 : 0.6, rich: true, maxWidth: 1280, moonSize: 0.032 });
 skyLab($("brand"), () => setSky());
 
-function hours() { return data?.tonight?.hours || []; }
+let showTomorrow = false; // the Tonight / Tomorrow switch in Hour by hour, as in the app
+const hasTomorrow = () => (data?.tomorrow?.hours?.length || 0) > 0;
+/** The night being shown: tonight, or tomorrow night when the switch says so. */
+function night() { return showTomorrow && hasTomorrow() ? data.tomorrow : data?.tonight; }
+function hours() { return night()?.hours || []; }
 function hourAt(time) { return hours().find((h) => h.time === time) || null; }
 function nowHour() { return data?.current?.hour || null; }
 function focusHour() {
   if (selected != null) return hourAt(selected);
-  return data?.tonight?.peak || null;
+  return night()?.peak || null;
 }
 
 function render() {
@@ -180,26 +184,28 @@ function renderHeader() {
 }
 
 function renderHero() {
-  const n = data.tonight;
+  const n = night();
+  const which = showTomorrow && hasTomorrow() ? "Tomorrow" : "Tonight";
   const peak = n.peak;
   const h = focusHour();
   const now = data.now;
   if (!peak || !h) {
-    $("eyebrow").textContent = "Tonight";
+    $("eyebrow").textContent = which;
     setScore(null);
     $("chance").textContent = "Too bright for aurora";
     $("peak-line").textContent = "Nights are too light here this time of year.";
     return;
   }
   const isPeak = selected == null || selected === peak.time;
-  $("eyebrow").textContent = isPeak ? "Tonight's best" : `At ${hhmm(h.time)}`;
+  $("eyebrow").textContent = isPeak ? `${which}'s best` : `At ${hhmm(h.time)}`;
   setScore(h.score);
   $("chance").textContent = CHANCE[h.chance] || "";
   let line = "";
   if (selected != null && !isPeak) {
     line = `${cloudText(h.cloud)} · Kp ${h.kp?.toFixed(1)}`;
   } else if (peak.score <= 0) {
-    line = n.darkFrom && now < n.darkFrom ? `Dark in ${span(n.darkFrom - now)} · no aurora expected tonight` : "No aurora expected tonight";
+    const when = which === "Tonight" ? "tonight" : "tomorrow night";
+    line = n.darkFrom && now < n.darkFrom ? `Dark in ${span(n.darkFrom - now)} · no aurora expected ${when}` : `No aurora expected ${when}`;
   } else if (n.darkFrom && now < n.darkFrom) {
     line = `Dark in ${span(n.darkFrom - now)} · peak around ${hhmm(peak.time)}`;
   } else if (now < peak.time) {
@@ -219,14 +225,38 @@ function setScore(score) {
   $("hero").style.setProperty("--glow", score == null ? "transparent" : scoreColor(score));
 }
 
+/** Tonight / Tomorrow: a groove with a green thumb that slides, like the app's segments. */
+function renderNightSwitch() {
+  const seg = $("night-seg");
+  seg.hidden = !hasTomorrow();
+  const on = showTomorrow && hasTomorrow() ? 1 : 0;
+  seg.dataset.pos = String(on);
+  seg.querySelectorAll("button").forEach((b, i) => b.setAttribute("aria-selected", i === on ? "true" : "false"));
+}
+$("night-seg").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-i]");
+  if (!b) return;
+  const next = b.dataset.i === "1";
+  if (next === showTomorrow) return;
+  showTomorrow = next;
+  selected = null;
+  render();
+  if (!next) {
+    const strip = $("strip"), cur = strip.querySelector(".bar.now");
+    if (cur) strip.scrollLeft = Math.max(0, cur.offsetLeft - 24);
+  } else $("strip").scrollLeft = 0;
+});
+
 function renderStrip() {
   const strip = $("strip");
   strip.replaceChildren();
   const list = hours();
   $("hours-card").hidden = list.length === 0;
+  renderNightSwitch();
   if (!list.length) return;
   // No peak marker when every hour scores 0.
-  const peakTime = data.tonight.peak?.score > 0 ? data.tonight.peak.time : null;
+  const pk = night()?.peak;
+  const peakTime = pk?.score > 0 ? pk.time : null;
   const now = data.now;
   list.forEach((h) => {
     const isNow = now >= h.time && now < h.time + HOUR;
@@ -333,7 +363,8 @@ function renderSpark() {
 
 function renderSpots() {
   const meta = new Map((data.spots || []).map((s) => [s.id, s]));
-  const h = selected != null ? hourAt(selected) : (data.tonight.peak ? hourAt(data.tonight.peak.time) : null);
+  const pk = night()?.peak;
+  const h = selected != null ? hourAt(selected) : (pk ? hourAt(pk.time) : null);
   const ranked = h?.spots?.length ? h.spots : (data.spots || []).map((s) => [s.id, null, null, null]);
   const top = ranked.find((r) => (r[1] ?? 0) > 0);
   const stayPut = top && top[0] === "home";

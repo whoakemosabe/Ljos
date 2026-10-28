@@ -66,7 +66,7 @@ object Api {
                 })
                 .put("hour", hour(current, ctx)))
             .put("tonight", night(tonight, ctx))
-            .put("tomorrow", night(tomorrow, ctx, withSpots = false))
+            .put("tomorrow", night(tomorrow, ctx))
             .put("spots", JSONArray().also { arr ->
                 Model.spotsAt(focus, inp, now).forEach {
                     arr.put(JSONObject().put("id", it.spot.id).put("name", it.spot.name)
