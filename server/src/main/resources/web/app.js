@@ -473,6 +473,19 @@ function renderFocus() {
   });
 })();
 
+/**
+ * How much the moon lights the sky in hour [h], as the line's opacity: phase × height (full
+ * effect from 20° up, as in the score) × what cloud lets through, with a faint floor while it's up.
+ * The same in the lobby (lobby.js) and the app (ui/Extras.kt MoonLine).
+ */
+function moonlightAlpha(h) {
+  if (!h || !(h.moonAlt > 0)) return 0.3;
+  const lit = Math.max(0, Math.min(1, h.moonIllum ?? 0));
+  const high = Math.max(0, Math.min(1, h.moonAlt / 20));
+  const clear = 1 - 0.8 * Math.max(0, Math.min(1, (h.cloud ?? 0) / 100));
+  return 0.3 + 0.7 * lit * high * clear;
+}
+
 /** The moon line under the strip (the app's MoonLine): when the moon is up, brighter for a brighter moon. */
 function renderMoonLine(list) {
   const box = $("moonline");
@@ -493,11 +506,26 @@ function renderMoonLine(list) {
   track.replaceChildren();
   track.style.setProperty("--glow", String(glow));
   const x = (t) => Math.max(0, Math.min(1, (t - start) / (end - start))) * 100;
+  // Brightness follows the moonlight itself, hour by hour: how lit the moon is, how high it
+  // stands (it eases in after rise and out before set) and whether cloud covers it.
+  const glowAt = (t) => {
+    const h = list.find((q) => t >= q.time && t < q.time + HOUR) || (t < start ? list[0] : list[list.length - 1]);
+    return moonlightAlpha(h);
+  };
+  const gold = (a) => `rgba(243, 231, 193, ${a.toFixed(3)})`;
   segs.forEach(([a, b]) => {
     const x0 = x(a), x1 = x(b);
     if (x1 - x0 < 0.3) return;
+    const span = Math.max(1, b - a);
+    const stops = [[0, glowAt(a)]];
+    list.forEach((h) => { const mid = h.time + HOUR / 2; if (mid > a && mid < b) stops.push([(mid - a) / span, glowAt(mid)]); });
+    stops.push([1, glowAt(b - 1)]);
+    const line = stops.map(([f, al]) => `${gold(al)} ${(f * 100).toFixed(1)}%`).join(", ");
+    const halo = stops.map(([f, al]) => `${gold(0.18 * al)} ${(f * 100).toFixed(1)}%`).join(", ");
     const seg = el("span", { class: "ml-seg" });
     seg.style.cssText = `left:${x0}%;width:${x1 - x0}%`;
+    seg.style.setProperty("--ml-line", `linear-gradient(90deg, ${line})`);
+    seg.style.setProperty("--ml-halo", `linear-gradient(90deg, transparent, ${halo}, transparent)`);
     track.append(seg);
   });
   const pct = Math.round(illum * 100);

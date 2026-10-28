@@ -6,7 +6,7 @@
 //   takes it straight away (nobody is there to tap).
 // - A page that was never saved, with no network, gets offline.html instead of a browser error.
 // Bump VERSION when shell files change.
-const VERSION = "ljos-v35";
+const VERSION = "ljos-v36";
 const DATA = "ljos-data";
 // Only what the phone app needs; the lobby's files are saved the first time a lobby screen loads.
 const SHELL = ["/", "/style.css", "/app.js", "/aurora.js", "/skylab.js", "/skylab.css", "/map.js", "/glasspane.js",

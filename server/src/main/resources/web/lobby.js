@@ -306,7 +306,7 @@ function renderHours() {
   const peakTime = n.peak?.score > 0 ? n.peak.time : null;
   const w = n.peak && n.peak.score >= 20 ? bestWindow() : null;
   $("key-window").hidden = !w;
-  $("timeline").replaceChildren(...list.map((h) => {
+  $("timeline").replaceChildren(...list.map((h, i) => {
     const isNow = now >= h.time && now < h.time + HOUR;
     const isPeak = h.time === peakTime;
     const cls = ["tick"];
@@ -327,10 +327,37 @@ function renderHours() {
     return el("div", { class: cls.join(" "), role: "listitem", "aria-label": `${hhmm(h.time)}, score ${h.score}${h.cloud >= 0 ? `, ${h.cloud}% cloud` : ""}` },
       el("span", { class: "tick-flag" }, flag),
       el("span", { class: "tick-track" }, el("span", { class: "tick-groove" }, cloud), el("span", { class: "tick-value" }, h.score), fill),
-      el("span", { class: "tick-moon" }),
+      moonTick(list, i),
       el("span", { class: "tick-hour" }, hourLabel(h.time)),
     );
   }));
+}
+
+/**
+ * How much the moon lights the sky in hour [h], as the line's opacity: phase × height (full
+ * effect from 20° up) × what cloud lets through, with a faint floor while it's up. The same as the
+ * phone page (app.js) and the app (ui/Extras.kt MoonLine).
+ */
+function moonlightAlpha(h) {
+  if (!h || !(h.moonAlt > 0)) return 0;
+  const lit = Math.max(0, Math.min(1, h.moonIllum ?? 0));
+  const high = Math.max(0, Math.min(1, h.moonAlt / 20));
+  const clear = 1 - 0.8 * Math.max(0, Math.min(1, (h.cloud ?? 0) / 100));
+  return 0.3 + 0.7 * lit * high * clear;
+}
+
+/** One hour's piece of the moonlight line, fading from the hour before to the hour after. */
+function moonTick(list, i) {
+  const span = el("span", { class: "tick-moon" });
+  const a = moonlightAlpha(list[i]);
+  if (a > 0) {
+    const prev = i > 0 ? moonlightAlpha(list[i - 1]) : a;
+    const next = i < list.length - 1 ? moonlightAlpha(list[i + 1]) : a;
+    const l = prev > 0 ? (prev + a) / 2 : a, r = next > 0 ? (next + a) / 2 : a;
+    span.style.setProperty("--ml-l", l.toFixed(3));
+    span.style.setProperty("--ml-r", r.toFixed(3));
+  }
+  return span;
 }
 
 function renderPlaces() {

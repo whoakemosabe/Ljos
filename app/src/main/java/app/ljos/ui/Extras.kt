@@ -60,7 +60,17 @@ internal fun MoonLine(hours: List<HourScore>, moon: MoonTimeline, modifier: Modi
     if (hours.isEmpty()) return
     val start = hours.first().time
     val end = hours.last().time + HOUR_MS
-    val glow = (0.25f + 0.75f * moon.illumination.toFloat()).coerceIn(0.25f, 1f)
+    // Brightness follows the moonlight itself, hour by hour: how lit the moon is, how high it
+    // stands (eases in after rise, out before set) and whether cloud covers it. The same formula
+    // as the phone page (app.js) and the lobby (lobby.js) moonlightAlpha.
+    fun alphaAt(t: Long): Float {
+        val h = hours.firstOrNull { t >= it.time && t < it.time + HOUR_MS } ?: if (t < start) hours.first() else hours.last()
+        if (h.moonAlt <= 0.0) return 0.3f
+        val lit = h.moonIllum.coerceIn(0.0, 1.0)
+        val high = (h.moonAlt / 20.0).coerceIn(0.0, 1.0)
+        val clear = 1.0 - 0.8 * (h.cloud.coerceAtLeast(0) / 100.0).coerceIn(0.0, 1.0)
+        return (0.3 + 0.7 * lit * high * clear).toFloat()
+    }
     Column(modifier.fillMaxWidth()) {
         Canvas(Modifier.fillMaxWidth().height(10.dp)) {
             val y = size.height / 2f
@@ -71,19 +81,28 @@ internal fun MoonLine(hours: List<HourScore>, moon: MoonTimeline, modifier: Modi
                 val x0 = x(a)
                 val x1 = x(b)
                 if (x1 - x0 < 1f) return@forEach
-                // Soft halo, then the line itself, fading in and out at the ends
+                // Stops at the segment's ends and at each hour's middle inside it.
+                val span = (b - a).coerceAtLeast(1L).toFloat()
+                val stops = buildList {
+                    add(0f to alphaAt(a))
+                    hours.forEach { h ->
+                        val mid = h.time + HOUR_MS / 2
+                        if (mid > a && mid < b) add(((mid - a) / span) to alphaAt(mid))
+                    }
+                    add(1f to alphaAt(b - 1))
+                }
+                // Soft halo (fading out at both ends), then the line itself.
+                val halo = buildList {
+                    add(0f to Color.Transparent)
+                    stops.forEach { (f, al) -> add((0.04f + f * 0.92f) to MoonGold.copy(alpha = 0.18f * al)) }
+                    add(1f to Color.Transparent)
+                }
                 drawRoundRect(
-                    Brush.horizontalGradient(
-                        listOf(Color.Transparent, MoonGold.copy(alpha = 0.18f * glow), MoonGold.copy(alpha = 0.18f * glow), Color.Transparent),
-                        startX = x0, endX = x1,
-                    ),
+                    Brush.horizontalGradient(*halo.toTypedArray(), startX = x0, endX = x1),
                     Offset(x0, y - 4.dp.toPx()), Size(x1 - x0, 8.dp.toPx()), CornerRadius(4.dp.toPx()),
                 )
                 drawRoundRect(
-                    Brush.horizontalGradient(
-                        listOf(MoonGold.copy(alpha = 0.3f * glow), MoonGold.copy(alpha = glow), MoonGold.copy(alpha = 0.3f * glow)),
-                        startX = x0, endX = x1,
-                    ),
+                    Brush.horizontalGradient(*stops.map { (f, al) -> f to MoonGold.copy(alpha = al) }.toTypedArray(), startX = x0, endX = x1),
                     Offset(x0, y - track / 2), Size(x1 - x0, track), CornerRadius(track),
                 )
             }

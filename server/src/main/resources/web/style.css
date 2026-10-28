@@ -795,10 +795,8 @@ html:not(.tv) .problem, html:not(.tv) .banner { margin: 14px 0 0; }
 .moonline { margin-top: 10px; }
 .ml-track { position: relative; height: 10px; }
 .ml-track::before { content: ""; position: absolute; left: 0; right: 0; top: 4px; height: 2px; border-radius: 2px; background: rgba(255, 255, 255, 0.08); }
-.ml-seg { position: absolute; top: 1px; height: 8px; border-radius: 4px;
-  background: linear-gradient(90deg, transparent, rgba(243, 231, 193, calc(0.18 * var(--glow))) 30%, rgba(243, 231, 193, calc(0.18 * var(--glow))) 70%, transparent); }
-.ml-seg::after { content: ""; position: absolute; left: 0; right: 0; top: 3px; height: 2px; border-radius: 2px;
-  background: linear-gradient(90deg, rgba(243, 231, 193, calc(0.3 * var(--glow))), rgba(243, 231, 193, var(--glow)), rgba(243, 231, 193, calc(0.3 * var(--glow)))); }
+.ml-seg { position: absolute; top: 1px; height: 8px; border-radius: 4px; background: var(--ml-halo); }
+.ml-seg::after { content: ""; position: absolute; left: 0; right: 0; top: 3px; height: 2px; border-radius: 2px; background: var(--ml-line); }
 .ml-text { display: flex; align-items: center; gap: 6px; margin-top: 4px; font-size: 11px; letter-spacing: 0.3px; color: var(--faint); }
 .ml-phase { width: 11px; height: 11px; flex: none; }
 
