@@ -323,10 +323,10 @@ function renderHours() {
     fill.style.setProperty("--tint", scoreRgb(h.score).join(", "));
     // Cloud cover hangs from the top of the column, as on the phone and in the app.
     const cloud = h.cloud > 0 ? el("span", { class: "tick-cloud" }) : null;
-    if (cloud) cloud.style.height = `${Math.min(100, h.cloud)}%`;
+    if (cloud) cloud.style.height = `${Math.min(100, h.cloud) * 0.034}rem`;
     return el("div", { class: cls.join(" "), role: "listitem", "aria-label": `${hhmm(h.time)}, score ${h.score}${h.cloud >= 0 ? `, ${h.cloud}% cloud` : ""}` },
       el("span", { class: "tick-flag" }, flag),
-      el("span", { class: "tick-track" }, cloud, el("span", { class: "tick-value" }, h.score), fill),
+      el("span", { class: "tick-track" }, el("span", { class: "tick-groove" }, cloud), el("span", { class: "tick-value" }, h.score), fill),
       el("span", { class: "tick-moon" }),
       el("span", { class: "tick-hour" }, hourLabel(h.time)),
     );

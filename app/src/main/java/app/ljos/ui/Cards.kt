@@ -1,5 +1,7 @@
 package app.ljos.ui
 
+import androidx.compose.ui.draw.drawWithContent
+
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -336,8 +338,7 @@ internal fun FactorRow(name: String, value: String, f: Double, last: Boolean = f
             Modifier
                 .fillMaxWidth()
                 .height(6.dp)
-                .clip(RoundedCornerShape(3.dp))
-                .background(Color(0x14FFFFFF))
+                .ljosGroove(3.dp)
         ) {
             Box(
                 Modifier
@@ -345,6 +346,7 @@ internal fun FactorRow(name: String, value: String, f: Double, last: Boolean = f
                     .fillMaxHeight()
                     .clip(RoundedCornerShape(3.dp))
                     .background(Brush.horizontalGradient(listOf(Teal, Green)))
+                    .drawWithContent { drawContent(); fillLight(Offset.Zero, size, 3.dp.toPx()) }
             )
         }
     }

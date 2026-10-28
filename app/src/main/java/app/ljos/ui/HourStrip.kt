@@ -79,8 +79,8 @@ fun HourStrip(
             val isSel = h.time == selected
             val dim = if (selected == null || isSel) 1f else 0.5f
 
-            // Track
-            drawRoundRect(Color(0x10FFFFFF), Offset(x, 0f), Size(barW, chartH), r)
+            // Groove
+            grooveFloor(Offset(x, 0f), Size(barW, chartH), r.x)
             // Cloud cap
             if (h.cloud > 0) {
                 drawRoundRect(Color(0x26C9D6E8), Offset(x, 0f), Size(barW, chartH * h.cloud / 100f), r)
@@ -95,6 +95,8 @@ fun HourStrip(
                 cornerRadius = r,
                 alpha = dim,
             )
+            if (dim == 1f) fillLight(Offset(x, chartH - bh), Size(barW, bh), r.x)
+            grooveShade(Offset(x, 0f), Size(barW, chartH), r.x)
             if (isSel) {
                 drawRoundRect(
                     color = Color.White.copy(alpha = 0.85f),

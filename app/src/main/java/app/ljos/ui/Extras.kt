@@ -153,7 +153,7 @@ internal fun KpOutlookCard(days: List<KpDay>, now: Long, collapsed: Boolean, onT
                         val blockStart = d.dayStart + b * 3 * HOUR_MS
                         val kp = d.blocks.firstOrNull { it.time == blockStart }?.kp
                         val x = b * slot + (slot - w) / 2f
-                        drawRoundRect(Color(0x10FFFFFF), Offset(x, 0f), Size(w, size.height), CornerRadius(w / 2f))
+                        grooveFloor(Offset(x, 0f), Size(w, size.height), w / 2f)
                         if (kp != null) {
                             val h = (size.height * (kp / 7.0).toFloat()).coerceIn(w, size.height)
                             val col = when {
@@ -162,7 +162,9 @@ internal fun KpOutlookCard(days: List<KpDay>, now: Long, collapsed: Boolean, onT
                                 else -> Teal.copy(alpha = 0.75f)
                             }
                             drawRoundRect(col, Offset(x, size.height - h), Size(w, h), CornerRadius(w / 2f))
+                            fillLight(Offset(x, size.height - h), Size(w, h), w / 2f)
                         }
+                        grooveShade(Offset(x, 0f), Size(w, size.height), w / 2f)
                         if (now >= blockStart && now < blockStart + 3 * HOUR_MS) {
                             drawCircle(Color.White, 1.5.dp.toPx(), Offset(x + w / 2f, size.height + 3.dp.toPx()))
                         }
