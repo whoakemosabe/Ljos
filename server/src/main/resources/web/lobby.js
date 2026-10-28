@@ -131,6 +131,10 @@ async function load() {
 }
 function problem(text) { $("problem").textContent = text; $("problem").hidden = false; }
 
+/** Glasspane lenses new .gp elements itself; release the old ones before they're replaced. */
+function unglass(parent) { parent.querySelectorAll(".gp").forEach((n) => window.Glasspane?.unlens(n)); }
+let glassOn = false;
+
 function render() {
   if (!data) return;
   renderHeader();
@@ -140,6 +144,7 @@ function render() {
   renderPlaces();
   renderLookUp();
   renderSky();
+  if (!glassOn && window.Glasspane) { glassOn = true; window.Glasspane.init({ selector: ".gp" }); }
 }
 
 /** The background is the live sky here: this hour's weather, moon, stars and aurora. */
@@ -235,7 +240,8 @@ function renderHero() {
     if (wx.wind != null) conds.push(["wind", "Wind", `${Math.round(wx.wind)} m/s`]);
   }
   if (n.darkFrom && n.darkUntil) conds.push(now < n.darkFrom ? ["sun", "Dark from", hhmm(n.darkFrom)] : ["dark", "Dark until", hhmm(n.darkUntil)]);
-  $("conditions").replaceChildren(...conds.map(([ic, k, v]) => el("span", { class: "cond" }, icon(ic), el("span", { class: "cond-k" }, k), el("span", { class: "cond-v" }, v))));
+  unglass($("conditions"));
+  $("conditions").replaceChildren(...conds.map(([ic, k, v]) => el("span", { class: "cond gp gp-smoky" }, icon(ic), el("span", { class: "cond-k" }, k), el("span", { class: "cond-v" }, v))));
 }
 
 function setGauge(score) {
@@ -339,6 +345,7 @@ function renderPlaces() {
   const top = ranked.find((r) => (r[1] ?? 0) > 0);
   $("go-title").textContent = `Where to go at ${hhmm(h.time)}`;
   $("go-sub").textContent = !top ? "No clear, dark place nearby tonight." : top[0] === "home" ? "Best right here. Each place has its own clouds." : "Each place has its own clouds. Best first.";
+  unglass($("places"));
   $("places").replaceChildren(...ranked.slice(0, 5).map(([id, score, cloud]) => {
     const s = meta.get(id);
     const here = id === "home";
@@ -347,7 +354,7 @@ function renderPlaces() {
     if (score != null) applyTint(badge, score);
     const clouds = cloud != null && cloud >= 0 ? el("span", { class: "meta" }, icon("cloud"), `${cloud}%`) : null;
     const detail = [here ? el("span", { class: "meta" }, icon("pin"), "You're here") : el("span", { class: "meta" }, icon("car"), `${drive(s.distanceKm)} min`), clouds];
-    const card = el("li", { class: "place" }, best ? solidPill("Best bet", Math.max(score, 80), "star") : null, badge,
+    const card = el("li", { class: "place gp gp-smoky" }, best ? solidPill("Best bet", Math.max(score, 80), "star") : null, badge,
       el("span", { class: "place-body" },
         el("span", { class: "place-name" }, here ? data.place.name : s.name),
         el("span", { class: "place-detail" }, detail)));

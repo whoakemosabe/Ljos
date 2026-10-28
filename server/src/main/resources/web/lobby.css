@@ -398,20 +398,14 @@ html.taking-over #drift { visibility: hidden; }
 }
 
 /* A pane: rim on top, hairline all round, shadow below. No border of its own. */
-.panel, .tile, .place, .cond, .day, .problem {
-  border: 0;
-  -webkit-backdrop-filter: var(--blur);
-  backdrop-filter: var(--blur);
-  box-shadow:
-    inset 0 1px 0 var(--rim),
-    inset 0 0 0 1px var(--inner),
-    0 0 0 1px var(--edge),
-    0 1px 2px var(--contact),
-    0 12px 32px -14px var(--shade);
-}
-.panel, .tile, .place { background: var(--pane); }
-.cond, .day { background: var(--pane-thin); }
-.panel { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 0 0 1px var(--inner), 0 0 0 1px var(--edge), 0 1px 2px var(--contact), 0 24px 60px -18px var(--shade), 0 6px 16px -6px rgba(0, 0, 0, 0.25); }
+/* Panes are Glasspane glass (glasspane.css, "smoky": clear glass with refracted edges and the
+   solid-glass rim, hairline and shadows); here they only keep their own corner radius. */
+.gp.panel { --gp-radius: 1.4rem; }
+.gp.tile { --gp-radius: 0.85rem; }
+.gp.place { --gp-radius: 1.2rem; }
+.gp.cond { --gp-radius: 999px; }
+.problem { border: 0; box-shadow: inset 0 1px 0 rgba(242, 164, 143, 0.5), inset 0 0 0 1px rgba(242, 164, 143, 0.2); }
+.day { border: 0; }
 .now-meta { border-left-color: rgba(255, 255, 255, 0.1); }
 .days-wrap { border-top-color: rgba(255, 255, 255, 0.08); box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.25); }
 
