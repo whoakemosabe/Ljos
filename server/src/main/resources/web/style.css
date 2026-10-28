@@ -563,3 +563,6 @@ html.tv .spot { padding: 0.45rem 0.5rem; }
 .place-name{font-size:.875rem;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .place-detail{font-size:.6875rem;color:var(--faint)}
 .place-score{font-size:1rem;font-weight:300;margin-left:.75rem;font-variant-numeric:tabular-nums}
+
+/* Cloud cap from the top of each hour's bar, as in the app's HourStrip */
+.bar .track .cloud{position:absolute;left:0;right:0;top:0;border-radius:inherit;background:rgba(201,214,232,.15);pointer-events:none}

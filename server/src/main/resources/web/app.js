@@ -266,12 +266,14 @@ function renderStrip() {
       type: "button",
       class: "bar" + (h.time === peakTime ? " peak" : "") + (isNow ? " now" : "") + (selected === h.time ? " selected" : "") + (h.time + HOUR <= now ? " past" : ""),
       role: "listitem",
-      "aria-label": `${hhmm(h.time)}, score ${h.score}, ${CHANCE[h.chance] || ""}`,
+      "aria-label": `${hhmm(h.time)}, score ${h.score}, ${CHANCE[h.chance] || ""}${h.cloud >= 0 ? `, ${h.cloud}% cloud` : ""}`,
       "aria-pressed": selected === h.time ? "true" : "false",
       onclick: () => { selected = selected === h.time ? null : h.time; render(); },
     },
       el("span", { class: "value" }, h.score),
-      el("span", { class: "track" }, el("span", { class: "fill", style: `height:${pct}%;background:${scoreColor(h.score)}` })),
+      el("span", { class: "track" },
+        h.cloud > 0 ? el("span", { class: "cloud", style: `height:${Math.min(100, h.cloud)}%` }) : null,
+        el("span", { class: "fill", style: `height:${pct}%;background:${scoreColor(h.score)}` })),
       el("span", { class: "label" }, isNow ? "now" : hourLabel(h.time)),
     );
     strip.append(bar);
