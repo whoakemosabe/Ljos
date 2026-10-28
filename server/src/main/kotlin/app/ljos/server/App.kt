@@ -40,7 +40,8 @@ class Response(val status: Int, val type: String, val body: ByteArray, val cache
  *  GET /v1/forecast?lat=&lon=[&tz=&name=]  forecast for any position (cached per ~10 km cell)
  *  GET /v1/places/{id}                      forecast for a saved place
  *  GET /healthz                             feed status, for uptime checks
- *  GET /, /lobby, /lobby/{id}               the web app (phone layout, or TV layout under /lobby)
+ *  GET /                                    the phone web app
+ *  GET /lobby, /lobby/{id}                  the lobby screen for a saved place
  */
 class App(
     private val forecaster: Forecaster,
@@ -62,7 +63,8 @@ class App(
             path == "/v1/forecast" -> forecastByPosition(query)
             path.startsWith("/v1/places/") -> forecastForPlace(path.removePrefix("/v1/places/"))
             path == "/healthz" -> health()
-            path == "/" || path == "/index.html" || path == "/lobby" || path.startsWith("/lobby/") -> page("index.html", "no-cache")
+            path == "/" || path == "/index.html" -> page("index.html", "no-cache")
+            path == "/lobby" || path.startsWith("/lobby/") -> page("lobby.html", "no-cache")
             else -> staticFile(path.removePrefix("/"))
         }
     }

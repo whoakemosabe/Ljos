@@ -48,7 +48,7 @@ app/src/main/java/app/ljos/
 `server/` is a small Kotlin server (JDK built-in HTTP server, no framework) that scores the sky with the same `core/` code and serves a web app with two layouts:
 
 - **Phone** (`/`): works in Safari and Chrome, installable to the home screen, shares location to score where you are.
-- **TV** (`/lobby/{place}`): one full screen for a hotel lobby, refreshed every minute, with a full-screen "Look up now" when it's happening. Places are listed in `server/src/main/resources/places.json`.
+- **TV** (`/lobby/{place}`, its own page: `lobby.html`): one full screen for a hotel lobby, refreshed every minute, with a full-screen "Look up now" when it's happening. Places are listed in `server/src/main/resources/places.json`.
 
 | Route | What |
 | --- | --- |

@@ -154,7 +154,11 @@ class ServerTest {
 
     private fun app(now: Long, fetch: (String) -> String) =
         App(Forecaster(FeedCache(fetch, { now }), { now }), places, clock = { now }, resources = { name ->
-            if (name == "index.html") "<!doctype html>".toByteArray() else null
+            when (name) {
+                "index.html" -> "<!doctype html><title>phone</title>".toByteArray()
+                "lobby.html" -> "<!doctype html><title>lobby</title>".toByteArray()
+                else -> null
+            }
         })
 
     @Test fun forecastByPositionWorks() {
@@ -184,7 +188,10 @@ class ServerTest {
         assertEquals(200, place.status)
         assertEquals("Ljós", JSONObject(String(place.body)).getJSONObject("place").getString("title"))
         assertEquals(200, a.respond("GET", "/", null).status)
-        assertEquals(200, a.respond("GET", "/lobby/njardvik", null).status)
+        assertTrue(String(a.respond("GET", "/", null).body).contains("phone"))
+        val lobby = a.respond("GET", "/lobby/njardvik", null)
+        assertEquals(200, lobby.status)
+        assertTrue(String(lobby.body).contains("lobby"))
         assertEquals("text/html; charset=utf-8", a.respond("GET", "/lobby", null).type)
     }
 
