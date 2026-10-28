@@ -10,6 +10,12 @@
   font-display: swap;
 }
 @font-face {
+  font-family: "Outfit";
+  src: url("/outfit.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
   font-family: "Schibsted Grotesk";
   src: url("/schibsted-grotesk.woff2") format("woff2");
   font-weight: 400 900;
@@ -32,6 +38,7 @@
   --moon: #e8dcb0;
   --band: rgba(120, 140, 200, 0.12);
   --serif: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --numerals: "Outfit", "Schibsted Grotesk", system-ui, sans-serif;
   --sans: "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   color-scheme: dark;
   font-size: 1.05vw;
@@ -132,7 +139,7 @@ h1 { font-size: 2rem; font-weight: 600; line-height: 1.15; white-space: nowrap; 
   background: rgba(8, 12, 24, 0.45);
 }
 .now-tile { padding: 0.45rem 1.1rem 0.45rem 1.2rem; gap: 1.1rem; }
-.clock { font-family: var(--serif); font-size: 3.2rem; font-weight: 300; line-height: 1; }
+.clock { font-family: var(--numerals); font-size: 3.2rem; font-weight: 250; line-height: 1; letter-spacing: -0.01em; }
 .now-meta { display: grid; gap: 0.3rem; padding-left: 1.1rem; border-left: 1px solid var(--rule-strong); }
 .live { display: inline-flex; align-items: center; gap: 0.5rem; color: var(--green); font-size: 1.15rem; font-weight: 600; line-height: 1.2; }
 .live.stale { color: var(--amber); }
@@ -158,10 +165,9 @@ h1 { font-size: 2rem; font-weight: 600; line-height: 1.15; white-space: nowrap; 
 .gauge-fill { stroke: var(--green); stroke-linecap: round; transition: stroke-dasharray 800ms ease-out, stroke 400ms; }
 .gauge-text { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; }
 .gauge-score {
-  font-family: var(--serif);
+  font-family: var(--numerals);
   font-size: 5.3rem;
-  font-weight: 300;
-  font-variation-settings: "opsz" 144, "SOFT" 30;
+  font-weight: 250;
   line-height: 0.9;
   letter-spacing: -0.04em;
 }
@@ -269,7 +275,8 @@ h1 { font-size: 2rem; font-weight: 600; line-height: 1.15; white-space: nowrap; 
   height: 2.8rem;
   border-radius: 0.65rem;
   border: 1px solid var(--rule-strong);
-  font-family: var(--serif);
+  font-family: var(--numerals);
+  font-weight: 300;
   font-size: 1.6rem;
 }
 .place-body { display: flex; flex-direction: column; gap: 0.15rem; min-width: 0; }
