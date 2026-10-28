@@ -195,6 +195,8 @@ function renderHero() {
   let line = "";
   if (selected != null && !isPeak) {
     line = `${cloudText(h.cloud)} · Kp ${h.kp?.toFixed(1)}`;
+  } else if (peak.score <= 0) {
+    line = n.darkFrom && now < n.darkFrom ? `Dark in ${span(n.darkFrom - now)} · no aurora expected tonight` : "No aurora expected tonight";
   } else if (n.darkFrom && now < n.darkFrom) {
     line = `Dark in ${span(n.darkFrom - now)} · peak around ${hhmm(peak.time)}`;
   } else if (now < peak.time) {
@@ -220,7 +222,8 @@ function renderStrip() {
   const list = hours();
   $("hours-card").hidden = list.length === 0;
   if (!list.length) return;
-  const peakTime = data.tonight.peak?.time;
+  // No peak marker when every hour scores 0.
+  const peakTime = data.tonight.peak?.score > 0 ? data.tonight.peak.time : null;
   const now = data.now;
   list.forEach((h) => {
     const isNow = now >= h.time && now < h.time + HOUR;

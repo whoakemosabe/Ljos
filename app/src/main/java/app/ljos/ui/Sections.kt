@@ -214,6 +214,12 @@ internal fun countdownLine(night: Night, now: Long): String? {
     // Local copies: Night lives in core, so its properties can't be smart-cast here.
     val darkFrom = night.darkFrom
     val darkUntil = night.darkUntil
+    // Every hour at 0: there's no peak to count down to.
+    if (peak.score <= 0) return when {
+        darkFrom != null && now < darkFrom ->
+            L.t("Dark in ${span(darkFrom - now)} · no aurora expected", "Myrkur eftir ${span(darkFrom - now)} · engin norðurljós í kortunum")
+        else -> L.t("No aurora expected tonight", "Engin norðurljós í kortunum í nótt")
+    }
     return when {
         darkFrom != null && now < darkFrom ->
             L.t("Dark in ${span(darkFrom - now)} · peak around ${Fmt.hhmm(peak.time)}", "Myrkur eftir ${span(darkFrom - now)} · hámark um ${Fmt.hhmm(peak.time)}")
@@ -269,7 +275,8 @@ internal fun HourCard(
         title = L.t("Hour by hour", "Klukkustund fyrir klukkustund"),
         subtitle = L.t("Tap a bar to see why · tap it again to close", "Ýttu á súlu til að sjá af hverju · ýttu aftur til að loka"),
         summary = peak?.let {
-            (if (tomorrow) L.t("Tomorrow ", "Á morgun ") else "") + L.t("peak ", "hámark ") + "${Fmt.hhmm(it.time)} · ${it.score}"
+            if (it.score <= 0) L.t("No aurora expected", "Engin norðurljós í kortunum")
+            else (if (tomorrow) L.t("Tomorrow ", "Á morgun ") else "") + L.t("peak ", "hámark ") + "${Fmt.hhmm(it.time)} · ${it.score}"
         } ?: "—",
         collapsed = collapsed,
         onToggle = onToggle,

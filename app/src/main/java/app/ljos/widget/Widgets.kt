@@ -74,6 +74,7 @@ class WidgetData(
             val stale = now - inp.updatedAt > 6 * HOUR_MS
             val sub = when {
                 stale -> L.t("Updated ", "Uppfært ") + Fmt.ago(inp.updatedAt, now)
+                peak.score <= 0 -> L.t("No aurora expected tonight", "Engin norðurljós í kortunum í nótt")
                 st.isDark -> L.t("Now ${st.score} · peak ${Fmt.hhmm(peak.time)}", "Núna ${st.score} · hámark ${Fmt.hhmm(peak.time)}")
                 else -> L.t("Peak ", "Hámark ") + "${Fmt.hhmm(peak.time)} · ${Fmt.cloud(peak.cloud)}"
             }

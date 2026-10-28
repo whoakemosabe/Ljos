@@ -198,7 +198,8 @@ function renderHero() {
 
   const w = bestWindow();
   let line;
-  if (peak.score < 20 || !w) line = `Best hour at ${hhmm(peak.time)}`;
+  if (peak.score <= 0) line = "No aurora expected tonight";
+  else if (peak.score < 20 || !w) line = `Best hour at ${hhmm(peak.time)}`;
   else if (now >= w.from) line = `Best now, until ${hhmm(w.to)}`;
   else if (w.to - w.from <= HOUR) line = `Best around ${hhmm(w.from)}`;
   else line = `Best from ${hhmm(w.from)} to ${hhmm(w.to)}`;
@@ -291,7 +292,8 @@ function renderHours() {
   if (!list.length) return;
   const n = data.tonight;
   const now = data.now;
-  const peakTime = n.peak?.time;
+  // No Peak badge on a night where every hour scores 0: there's no best hour to point at.
+  const peakTime = n.peak?.score > 0 ? n.peak.time : null;
   const w = n.peak && n.peak.score >= 20 ? bestWindow() : null;
   $("key-window").hidden = !w;
   $("timeline").replaceChildren(...list.map((h) => {
