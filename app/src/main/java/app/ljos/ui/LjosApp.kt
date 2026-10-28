@@ -480,7 +480,7 @@ fun LjosApp() {
                             onScorePlaced = { pos, size -> heroBase = pos + Offset(0f, scroll.value.toFloat()); heroSize = size },
                         )
                         // Live solar wind, folded into a line under the number; tap for details.
-                        SoftReveal(nowState?.bz != null) {
+                        SoftReveal(nowState != null) {
                             nowState?.let { st ->
                                 SolarWindStrip(
                                     st, inp?.solarWind.orEmpty(), now,

@@ -17,6 +17,7 @@ import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -167,24 +168,29 @@ internal fun SolarWindStrip(
         else -> L.t("Neutral", "Hlutlaust") to Ink
     }
     val turn by animateFloatAsState(if (open) 180f else 0f, spring(dampingRatio = 0.7f, stiffness = 300f), label = "windChevron")
+    val backdrop = LocalGlassBackdrop.current
+    val angle = LocalGlassAngle.current
+    val shape = RoundedCornerShape(20.dp)
+    // A slim glass strip: the same pane and edges as the cards and chips, just thinner.
+    val glass: Modifier = if (backdrop != null) Modifier.glassControl(backdrop, shape, angle, lensHeight = 10.dp, lensAmount = 16.dp)
+    else Modifier.clip(shape).background(Color(0x1AFFFFFF)).border(1.dp, Color(0x14FFFFFF), shape)
     Column(
         Modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(16.dp))
+            .then(glass)
+            .then(if (st.lookUp) Modifier.background(Brush.horizontalGradient(listOf(Color(0x403DFFA0), Color(0x20B79CFF))), shape) else Modifier)
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {
                 Haptics.tap(view); onToggle()
             }
-            .padding(vertical = 4.dp)
+            .padding(horizontal = 14.dp, vertical = 10.dp)
     ) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Text(L.t("SOLAR WIND", "SÓLVINDUR"), color = Muted, fontSize = 11.sp, fontWeight = FontWeight.Medium, letterSpacing = 2.sp)
+            Text(L.t("Right now", "Núna"), color = Ink, fontSize = 15.sp, fontWeight = FontWeight.Medium)
             Spacer(Modifier.width(8.dp))
             Text(word, color = color, fontSize = 13.sp, fontWeight = FontWeight.Medium)
             Spacer(Modifier.weight(1f))
-            st.etaMinutes?.let {
-                Text(L.t("reaches us in ~$it min", "nær okkur eftir ~$it mín"), color = Faint, fontSize = 12.sp)
-                Spacer(Modifier.width(4.dp))
-            }
+            Text(st.score.toString(), color = scoreColor(st.score), fontSize = 20.sp, fontWeight = FontWeight.Light)
+            Spacer(Modifier.width(6.dp))
             Canvas(Modifier.size(18.dp).graphicsLayer { rotationZ = turn }) {
                 val w = size.width
                 val path = Path().apply { moveTo(w * 0.3f, w * 0.42f); lineTo(w * 0.5f, w * 0.6f); lineTo(w * 0.7f, w * 0.42f) }
@@ -192,9 +198,14 @@ internal fun SolarWindStrip(
             }
         }
         val recent = solarWind.filter { now - it.time <= 2 * HOUR_MS }
-        if (recent.size > 20) {
+        if (recent.size > 5) {
             Spacer(Modifier.height(6.dp))
             BzSparkline(recent, now, Modifier.fillMaxWidth().height(34.dp))
+            Row(Modifier.fillMaxWidth().padding(top = 3.dp)) {
+                Text(L.t("Solar wind, last 2 h", "Sólvindur, síðustu 2 klst"), color = Faint, fontSize = 11.sp)
+                Spacer(Modifier.weight(1f))
+                st.etaMinutes?.let { Text(L.t("reaches us in ~$it min", "nær okkur eftir ~$it mín"), color = Faint, fontSize = 11.sp) }
+            }
         }
         AnimatedVisibility(
             visible = open,
@@ -202,7 +213,7 @@ internal fun SolarWindStrip(
             exit = shrinkVertically(spring(dampingRatio = 0.9f, stiffness = 400f)) + fadeOut(tween(160)),
         ) {
             Column(Modifier.padding(top = 8.dp)) {
-                if (recent.size > 20) {
+                if (recent.size > 5) {
                     Text(
                         L.t("Last 2 hours at the satellite, 1.5 million km out. Dips below the line (field pointing south) are what switch aurora on.",
                             "Síðustu 2 klst við gervitunglið, 1,5 milljón km í burtu. Dýfur undir línuna (segulsvið til suðurs) kveikja á norðurljósum."),
@@ -213,7 +224,6 @@ internal fun SolarWindStrip(
                 val rows = buildList {
                     if (bz != null) add(L.t("Bz now", "Bz núna") to "${Fmt.signed(bz)} nT" + if (!st.bzFresh) L.t(" (old)", " (gamalt)") else "")
                     st.bzSustained?.let { add(L.t("Arriving now, 20 min average", "Kemur núna, 20 mín meðaltal") to "${Fmt.signed(it)} nT") }
-                    add(L.t("Score right now", "Einkunn núna") to st.score.toString())
                     add(L.t("Clouds here", "Ský hér") to Fmt.cloud(st.cloud))
                     st.clearerSpot?.let { add(L.t("Clearer at", "Heiðskírara við") to "${it.spot.name} (${Fmt.cloud(it.cloud)})") }
                 }

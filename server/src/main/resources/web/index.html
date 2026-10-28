@@ -45,6 +45,20 @@
         <p class="score"><span id="score">–</span><span class="of">/100</span></p>
         <p class="chance" id="chance">Reading the sky…</p>
         <p class="peak-line" id="peak-line"></p>
+        <div class="now-strip lg" id="now-strip" role="button" tabindex="0" aria-expanded="false" aria-controls="now-more">
+          <div class="ns-head">
+            <span class="ns-title">Right now</span>
+            <span class="ns-word" id="ns-word">–</span>
+            <span class="ns-score" id="ns-score"></span>
+            <svg class="ns-chev" viewBox="0 0 18 18" aria-hidden="true"><path d="M5.4 7.6l3.6 3.4 3.6-3.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </div>
+          <div class="ns-spark" id="spark" hidden></div>
+          <p class="ns-cap" id="ns-cap" hidden><span>Solar wind, last 2 h</span><span id="ns-eta"></span></p>
+          <div class="ns-more" id="now-more"><div class="ns-more-in">
+            <p class="ns-explain" id="ns-explain">Last 2 hours at the satellite, 1.5 million km out. Dips below the line (field pointing south) are what switch aurora on.</p>
+            <dl class="ns-rows" id="ns-rows"></dl>
+          </div></div>
+        </div>
         <div class="chips" id="chips" hidden>
           <button type="button" class="chip lg" data-go="outlook-card" aria-label="Kp index, see the next days">
             <svg viewBox="0 0 13 13" aria-hidden="true"><path d="M0 9.1C3.9 1.3 7.15 12.35 13 3.9" fill="none" stroke="#3dffa0" stroke-width="1.8" stroke-linecap="round"/></svg>
@@ -70,15 +84,6 @@
 
 
 
-      <section class="card lg now" id="now-card" data-fold="now">
-        <div class="card-head">
-          <h2>Right now</h2>
-          <p class="now-score" id="now-score"></p>
-        </div>
-        <p class="now-state" id="now-state">–</p>
-        <ul class="lines" id="now-lines"></ul>
-        <div class="spark" id="spark" hidden></div>
-      </section>
       <section class="card lg hours" id="hours-card" data-fold="hours" hidden>
         <div class="card-head">
           <h2>Hour by hour</h2>

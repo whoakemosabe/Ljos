@@ -392,63 +392,82 @@ function renderWhy() {
   );
 }
 
+// Right now: a slim glass strip under the score, as in the app's SolarWindStrip. Status word,
+// live score and the last two hours of solar wind; tap to fold out the details.
+let nowOpen = false;
+try { nowOpen = localStorage.getItem("ljos-now-open") === "1"; } catch { /* private mode */ }
+
 function renderNow() {
   const c = data.current;
-  const n = data.tonight;
-  let state, tone;
-  if (c.lookUp) { state = "Look up now"; tone = "go"; }
-  else if (!c.isDark) { state = n.darkFrom && data.now < n.darkFrom ? `Dark from ${hhmm(n.darkFrom)}` : "Too light right now"; tone = "quiet"; }
-  else if (c.bz == null || !c.bzFresh) { state = "No live solar wind"; tone = "quiet"; }
-  else { state = "Watching the sky"; tone = "watch"; }
-  $("now-state").textContent = state;
-  $("now-state").dataset.tone = tone;
-  $("now-score").textContent = c.score;
-  $("now-score").style.color = scoreColor(c.score);
+  const strip = $("now-strip");
+  if (TV) { strip.hidden = true; return; }
+  const [word, tone] = c.lookUp ? ["Look up now", "go"]
+    : c.bz == null || !c.bzFresh ? ["No live data", "faint"]
+    : c.bz <= -3 ? ["Helping", "go"]
+    : c.bz >= 3 ? ["Quiet", "muted"]
+    : ["Neutral", "ink"];
+  $("ns-word").textContent = word;
+  $("ns-word").dataset.tone = tone;
+  $("ns-score").textContent = c.score;
+  $("ns-score").style.color = scoreColor(c.score);
+  strip.classList.toggle("look", !!c.lookUp);
+  strip.setAttribute("aria-label", `Right now: ${word}, live score ${c.score}. ${nowOpen ? "Hide" : "Show"} details`);
 
-  const lines = [];
-  if (c.bz == null) lines.push("Solar wind data unavailable");
-  else if (!c.bzFresh) lines.push("Solar wind data is stale");
-  else {
-    const dir = c.bz <= -3 ? "field pointing south, good" : c.bz >= 3 ? "pointing north, quiet" : "neutral";
-    lines.push(`Bz ${signed(c.bz)} nT · ${dir}${c.etaMinutes != null ? ` · here in ~${c.etaMinutes} min` : ""}`);
+  const rows = [];
+  if (c.bz != null) rows.push(["Bz now", `${signed(c.bz)} nT${c.bzFresh ? "" : " (old)"}`]);
+  if (c.bzSustained != null) rows.push(["Arriving now, 20 min average", `${signed(c.bzSustained)} nT`]);
+  rows.push(["Clouds here", cloudText(c.cloud)]);
+  if (c.clearer) rows.push(["Clearer at", `${c.clearer.name} (${cloudText(c.clearer.cloud)})`]);
+  $("ns-rows").replaceChildren(...rows.flatMap(([k, v]) => [el("dt", {}, k), el("dd", {}, v)]));
+  $("ns-eta").textContent = c.etaMinutes != null ? `reaches us in ~${c.etaMinutes} min` : "";
+  const has = renderSpark();
+  $("ns-cap").hidden = !has;
+  $("ns-explain").hidden = !has;
+  strip.classList.toggle("open", nowOpen);
+  strip.setAttribute("aria-expanded", String(nowOpen));
+  if (!strip.dataset.wired) {
+    strip.dataset.wired = "1";
+    const flip = () => {
+      nowOpen = !nowOpen;
+      try { localStorage.setItem("ljos-now-open", nowOpen ? "1" : "0"); } catch { /* ignore */ }
+      renderNow();
+    };
+    strip.addEventListener("click", flip);
+    strip.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(); } });
   }
-  if (c.bzSustained != null) lines.push(`Arriving now: Bz ${signed(c.bzSustained)} nT on average`);
-  lines.push(`Clouds here: ${cloudText(c.cloud)}`);
-  if (c.clearer) lines.push(`Clearer at ${c.clearer.name} (${cloudText(c.clearer.cloud)})`);
-  $("now-lines").replaceChildren(...lines.map((l) => el("li", {}, l)));
-  renderSpark();
 }
 
+/** The last two hours of Bz at L1 as a slim line; minutes pointing south are shaded green. */
 function renderSpark() {
   const box = $("spark");
-  const pts = data.solarWind || [];
-  if (pts.length < 6) { box.hidden = true; return; }
+  const now = data.now;
+  const pts = (data.solarWind || []).filter((p) => now - p[0] <= 2 * HOUR && p[1] != null);
+  if (pts.length < 6) { box.hidden = true; return false; }
   box.hidden = false;
-  const w = 300, hgt = 64;
-  const t0 = pts[0][0], t1 = pts[pts.length - 1][0];
-  const max = Math.max(5, ...pts.map((p) => Math.abs(p[1])));
-  const x = (t) => ((t - t0) / (t1 - t0 || 1)) * w;
-  const y = (v) => hgt / 2 - (v / max) * (hgt / 2 - 4);
+  const w = 320, hgt = 34;
+  const t0 = now - 2 * HOUR;
+  const max = Math.max(8, ...pts.map((p) => Math.abs(p[1])));
+  const mid = hgt / 2;
+  const x = (t) => Math.min(1, Math.max(0, (t - t0) / (2 * HOUR))) * w;
+  const y = (v) => mid - (v / max) * (mid - 2);
   const line = pts.map((p, i) => `${i ? "L" : "M"}${x(p[0]).toFixed(1)} ${y(p[1]).toFixed(1)}`).join("");
-  const area = `${line}L${w} ${hgt / 2}L0 ${hgt / 2}Z`;
-  box.innerHTML = "";
+  const south = `M${x(pts[0][0]).toFixed(1)} ${mid}` + pts.map((p) => `L${x(p[0]).toFixed(1)} ${(p[1] < 0 ? y(p[1]) : mid).toFixed(1)}`).join("") + `L${x(pts[pts.length - 1][0]).toFixed(1)} ${mid}Z`;
   const ns = "http://www.w3.org/2000/svg";
-  const svg = document.createElementNS(ns, "svg");
-  svg.setAttribute("viewBox", `0 0 ${w} ${hgt}`);
-  svg.setAttribute("preserveAspectRatio", "none");
-  svg.setAttribute("role", "img");
-  svg.setAttribute("aria-label", "Bz at the satellite over the last two hours; below the line is south, which is good");
-  const mk = (tag, attrs) => { const n = document.createElementNS(ns, tag); for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, v); return n; };
-  const clipId = "below";
-  const defs = mk("defs", {});
-  const clip = mk("clipPath", { id: clipId });
-  clip.append(mk("rect", { x: 0, y: hgt / 2, width: w, height: hgt / 2 }));
-  defs.append(clip);
-  svg.append(defs);
-  svg.append(mk("path", { d: area, class: "spark-south", "clip-path": `url(#${clipId})` }));
-  svg.append(mk("line", { x1: 0, x2: w, y1: hgt / 2, y2: hgt / 2, class: "spark-zero" }));
-  svg.append(mk("path", { d: line, class: "spark-line" }));
-  box.append(svg, el("p", { class: "quiet small" }, "Bz at the satellite, last 2 h · shaded = south (good)"));
+  const mk = (tag, attrs) => { const n = document.createElementNS(ns, tag); for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, String(v)); return n; };
+  const svg = mk("svg", { viewBox: `0 0 ${w} ${hgt}`, preserveAspectRatio: "none", role: "img", "aria-label": "Solar wind Bz over the last two hours; below the line is south, which is good" });
+  const grad = mk("linearGradient", { id: "sparkSouth", gradientUnits: "userSpaceOnUse", x1: 0, y1: mid, x2: 0, y2: hgt });
+  grad.append(mk("stop", { offset: "0%", "stop-color": "#3dffa0", "stop-opacity": 0 }), mk("stop", { offset: "100%", "stop-color": "#3dffa0", "stop-opacity": 0.45 }));
+  const defs = mk("defs", {}); defs.append(grad);
+  const last = pts[pts.length - 1];
+  svg.append(defs,
+    mk("path", { d: south, fill: "url(#sparkSouth)" }),
+    mk("line", { x1: 0, x2: w, y1: mid, y2: mid, class: "spark-zero" }),
+    mk("path", { d: line, class: "spark-line" }));
+  box.replaceChildren(svg, el("span", { class: "spark-dot" + (last[1] < 0 ? " south" : "") }));
+  // The live dot sits on top as HTML so it stays round while the chart stretches.
+  const dot = box.lastChild;
+  dot.style.cssText = `left:${(x(last[0]) / w) * 100}%;top:${(y(last[1]) / hgt) * 100}%`;
+  return true;
 }
 
 let pickedSpot = null; // the spot picked on the map or list, like the app's WhereCard
@@ -477,7 +496,6 @@ function renderSums() {
   let bi = -1;
   days.forEach((d, i) => { if (d.maxKp != null && (bi < 0 || d.maxKp > days[bi].maxKp)) bi = i; });
   setSum("days", bi < 0 ? "—" : `Highest Kp ${days[bi].maxKp.toFixed(1)} ${bi === 0 ? "today" : bi === 1 ? "tomorrow" : weekday(days[bi].dayStart)}`);
-  setSum("now", $("now-state")?.textContent || "—");
 }
 
 function renderSpots() {
