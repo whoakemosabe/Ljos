@@ -409,7 +409,23 @@ const awake = () => {
 awake();
 
 // Offline shell: if the hotel Wi-Fi drops and the TV reloads, the page still comes up.
-if ("serviceWorker" in navigator) navigator.serviceWorker.register("/sw.js").catch(() => {});
+if ("serviceWorker" in navigator) {
+  // A lobby screen runs for days with nobody to tap "Update", so it takes a new version as soon
+  // as it's ready and reloads once.
+  navigator.serviceWorker.register("/sw.js").then((reg) => {
+    const take = (w) => w && w.postMessage({ type: "SKIP_WAITING" });
+    if (reg.waiting) take(reg.waiting);
+    reg.addEventListener("updatefound", () => {
+      const w = reg.installing;
+      w?.addEventListener("statechange", () => { if (w.state === "installed" && navigator.serviceWorker.controller) take(w); });
+    });
+    setInterval(() => reg.update().catch(() => {}), 30 * 60 * 1000);
+  }).catch(() => {});
+  // Reload only when a new version replaces an old one (not on the very first install).
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloading = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (hadController && !reloading) { reloading = true; location.reload(); } });
+}
 
 // Keep the screen on where the browser allows it.
 const wake = async () => { try { await navigator.wakeLock?.request("screen"); } catch { /* not allowed: fine */ } };

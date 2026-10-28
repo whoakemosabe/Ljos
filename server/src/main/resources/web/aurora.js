@@ -368,7 +368,7 @@ export function moonFace(ctx, size, illum, waxing) {
   ctx.putImageData(img, 0, 0);
 }
 
-export function startSky(canvas, { scale = 0.5, rich = false, maxWidth = Infinity, moonSize = 0.034 } = {}) {
+export function startSky(canvas, { scale = 0.5, rich = false, maxWidth = Infinity, moonSize = 0.034, fps = 60, pauseOnScroll = false } = {}) {
   const gl = canvas.getContext("webgl", { antialias: false, alpha: false, preserveDrawingBuffer: false, powerPreference: "low-power" });
   const target = { ...skyFor(null), ...RICH_ZERO };
   let stars = new Float32Array(14 * 3);
@@ -491,8 +491,14 @@ export function startSky(canvas, { scale = 0.5, rich = false, maxWidth = Infinit
     placeMoon();
   };
 
+  // The aurora moves slowly, so phones draw it at [fps] (30) and hold it still while the page
+  // scrolls: every glass pane blurs what's behind it, so a moving sky means re-blurring them all.
+  const frameMs = 1000 / fps;
+  let lastDraw = 0;
+  let scrollingUntil = 0;
+  if (pauseOnScroll) addEventListener("scroll", () => { scrollingUntil = performance.now() + 180; }, { passive: true });
   const loop = (now) => {
-    draw(now);
+    if (now >= scrollingUntil && now - lastDraw >= frameMs - 4) { lastDraw = now; draw(now); }
     if (running && !reduce.matches) raf = requestAnimationFrame(loop);
   };
   const resume = () => {

@@ -15,7 +15,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Ljós">
   <link rel="stylesheet" href="/style.css">
-  <script src="/glasspane.js" defer></script>
   <script type="module" src="/app.js"></script>
 </head>
 <body>
@@ -45,6 +44,16 @@
     </button>
 
     <p class="problem lg" id="problem" role="status" hidden></p>
+
+    <div class="notice lg" id="update" role="status" hidden>
+      <span class="notice-text">A new version of Ljós is ready</span>
+      <button type="button" class="notice-go" id="update-go">Update</button>
+    </div>
+    <div class="notice lg" id="install" hidden>
+      <span class="notice-text" id="install-text">Install Ljós on your phone</span>
+      <button type="button" class="notice-go" id="install-go">Install</button>
+      <button type="button" class="notice-x" id="install-x" aria-label="Not now">×</button>
+    </div>
 
     <main class="grid">
       <section class="hero" id="hero" aria-live="polite">

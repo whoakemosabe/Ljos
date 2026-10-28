@@ -106,17 +106,34 @@ function endpoint() {
 }
 
 let glassOn = false;
+/** The edge lens (glasspane.js) only works in Chromium (Android Chrome, desktop Chrome/Edge), so
+ * other browsers (iPhone Safari, Firefox) don't download it at all. */
+function loadLens() {
+  if (!navigator.userAgentData) return;
+  const go = () => {
+    const sc = document.createElement("script");
+    sc.src = "/glasspane.js";
+    sc.onload = () => window.Glasspane?.init({ selector: ".lg", light: false });
+    document.head.append(sc);
+  };
+  ("requestIdleCallback" in window) ? requestIdleCallback(go, { timeout: 1500 }) : setTimeout(go, 300);
+}
 async function load() {
   lastLoad = Date.now();
   try {
     const r = await fetch(endpoint(), { headers: { Accept: "application/json" }, cache: "no-cache" });
     if (r.status === 404 && TV) return showProblem("This screen's place isn't set up. Check the address ends in /lobby/<place>.");
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    // Keep a copy for offline from the very first visit (before the offline helper is running).
+    if ("caches" in window && !navigator.serviceWorker?.controller) {
+      const copy = r.clone();
+      caches.open("ljos-data").then((c) => c.put(endpoint(), copy)).catch(() => {});
+    }
     data = await r.json();
     hideProblem();
     render();
     // The edge lens (glasspane.js, Chromium) on every glass surface. No moving light: no shine.
-    if (!glassOn && window.Glasspane) { glassOn = true; window.Glasspane.init({ selector: ".lg", light: false }); }
+    if (!glassOn) { glassOn = true; loadLens(); }
   } catch (e) {
     console.error(e);
     if (data) showProblem("Couldn't reach the forecast. Showing the last one.");
@@ -130,7 +147,7 @@ function hideProblem() { $("problem").hidden = true; }
 // ---------------------------------------------------------------------------------------------
 // Rendering
 // ---------------------------------------------------------------------------------------------
-const sky = startSky($("sky"), { scale: TV ? 0.5 : 0.6, rich: true, maxWidth: 1280, moonSize: 0.032 });
+const sky = startSky($("sky"), { scale: TV ? 0.5 : 0.6, rich: true, maxWidth: 1280, moonSize: 0.032, fps: TV ? 60 : 30, pauseOnScroll: !TV });
 skyLab($("brand"), () => setSky());
 
 let showTomorrow = false; // the Tonight / Tomorrow switch in Hour by hour, as in the app
@@ -406,6 +423,20 @@ function renderStrip() {
   renderMoonLine(list);
 }
 
+/** Picking an hour only changes the cards below the score: redraw just those, once per frame. */
+let focusFrame = 0;
+function renderFocus() {
+  if (focusFrame) return;
+  focusFrame = requestAnimationFrame(() => {
+    focusFrame = 0;
+    renderStrip();
+    renderWhy();
+    renderSpots();
+    renderTips();
+    renderSums();
+  });
+}
+
 // Tap or drag across the strip to pick an hour, as in the app. Tapping the hour already shown
 // goes back to the default (right now, or the peak).
 (() => {
@@ -418,8 +449,8 @@ function renderStrip() {
     const i = Math.max(0, Math.min(bars.length - 1, Math.floor(((x - r.left) / r.width) * bars.length)));
     const t = Number(bars[i].dataset.t);
     const cur = focusHour()?.time ?? null;
-    if (t !== cur) { selected = t; render(); }
-    else if (tap && selected != null) { selected = null; render(); }
+    if (t !== cur) { selected = t; renderFocus(); }
+    else if (tap && selected != null) { selected = null; renderFocus(); }
   };
   strip.addEventListener("pointerdown", (e) => {
     if (TV || e.button > 0) return;
@@ -438,7 +469,7 @@ function renderStrip() {
     if (TV || e.detail !== 0) return;
     const b = e.target.closest(".bar"); if (!b) return;
     const t = Number(b.dataset.t);
-    selected = selected === t ? null : t; render();
+    selected = selected === t ? null : t; renderFocus();
   });
 })();
 
@@ -897,6 +928,64 @@ if (TV) {
 // Keep "updated x min ago" honest between loads.
 setInterval(() => { if (data) renderHeader(); }, 30 * 1000);
 
+// Offline helper and updates: a new version installs quietly; "Update" switches to it.
 if ("serviceWorker" in navigator) {
-  window.addEventListener("load", () => { navigator.serviceWorker.register("/sw.js").catch(() => {}); });
+  const hadController = !!navigator.serviceWorker.controller;
+  let reloading = false;
+  navigator.serviceWorker.addEventListener("controllerchange", () => { if (hadController && !reloading) { reloading = true; location.reload(); } });
+  window.addEventListener("load", () => {
+    navigator.serviceWorker.register("/sw.js").then((reg) => {
+      const offer = (w) => {
+        if (!w || TV) return;
+        $("update").hidden = false;
+        $("update-go").onclick = () => { $("update-go").disabled = true; w.postMessage({ type: "SKIP_WAITING" }); };
+      };
+      if (reg.waiting && navigator.serviceWorker.controller) offer(reg.waiting);
+      reg.addEventListener("updatefound", () => {
+        const w = reg.installing;
+        w?.addEventListener("statechange", () => { if (w.state === "installed" && navigator.serviceWorker.controller) offer(w); });
+      });
+      // Someone who keeps it open all night still hears about new versions.
+      setInterval(() => { if (document.visibilityState === "visible") reg.update().catch(() => {}); }, 30 * 60 * 1000);
+    }).catch(() => {});
+  });
 }
+
+// Install: Android/Chrome offers its own prompt (we show a small "Install" button for it);
+// iPhone Safari has none, so it gets a one-line how-to. Either can be dismissed for good.
+(() => {
+  if (TV) return;
+  const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  let dismissed = false;
+  try { dismissed = localStorage.getItem("ljos-install-dismissed") === "1"; } catch { /* ignore */ }
+  if (standalone || dismissed) return;
+  const box = $("install");
+  const hide = (forGood) => {
+    box.hidden = true;
+    if (forGood) try { localStorage.setItem("ljos-install-dismissed", "1"); } catch { /* ignore */ }
+  };
+  $("install-x").addEventListener("click", () => hide(true));
+  let prompt = null;
+  addEventListener("beforeinstallprompt", (e) => {
+    e.preventDefault();
+    prompt = e;
+    $("install-text").textContent = "Install Ljós on your phone";
+    $("install-go").hidden = false;
+    box.hidden = false;
+  });
+  $("install-go").addEventListener("click", async () => {
+    if (!prompt) return;
+    prompt.prompt();
+    const choice = await prompt.userChoice.catch(() => null);
+    prompt = null;
+    hide(choice?.outcome === "accepted");
+  });
+  addEventListener("appinstalled", () => hide(true));
+  const ua = navigator.userAgent;
+  const iosSafari = /iP(hone|ad|od)/.test(ua) && /Safari/.test(ua) && !/CriOS|FxiOS|EdgiOS/.test(ua);
+  if (iosSafari) {
+    $("install-text").textContent = "Add Ljós to your Home Screen: tap Share, then Add to Home Screen";
+    $("install-go").hidden = true;
+    setTimeout(() => { box.hidden = false; }, 4000);
+  }
+})();
