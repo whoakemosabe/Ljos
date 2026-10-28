@@ -1,7 +1,7 @@
 // Ljós service worker: the app shell works offline, and the last forecast is shown when the
 // network is down (the page says how old it is). Bump VERSION when shell files change.
-const VERSION = "ljos-v2";
-const SHELL = ["/", "/style.css", "/app.js", "/aurora.js", "/fraunces.woff2", "/schibsted-grotesk.woff2", "/manifest.webmanifest", "/icon.svg", "/icon-192.png", "/icon-180.png"];
+const VERSION = "ljos-v3";
+const SHELL = ["/", "/style.css", "/app.js", "/aurora.js", "/lobby.html", "/lobby.css", "/lobby.js", "/fraunces.woff2", "/schibsted-grotesk.woff2", "/manifest.webmanifest", "/icon.svg", "/icon-192.png", "/icon-180.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(caches.open(VERSION).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
@@ -32,9 +32,10 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Pages: every route is the same page.
+  // Pages: the phone app, or the lobby screen under /lobby.
   if (event.request.mode === "navigate") {
-    event.respondWith(fetch(event.request).catch(() => caches.match("/")));
+    const page = url.pathname.startsWith("/lobby") ? "/lobby.html" : "/";
+    event.respondWith(fetch(event.request).catch(() => caches.match(page)));
     return;
   }
 

@@ -1,0 +1,115 @@
+<!doctype html>
+<html lang="en" class="tv">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Ljós lobby screen</title>
+  <meta name="robots" content="noindex">
+  <meta name="theme-color" content="#070b16">
+  <meta name="color-scheme" content="dark">
+  <link rel="icon" href="/icon.svg" type="image/svg+xml">
+  <link rel="preload" href="/fraunces.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="preload" href="/schibsted-grotesk.woff2" as="font" type="font/woff2" crossorigin>
+  <link rel="stylesheet" href="/lobby.css">
+  <script type="module" src="/lobby.js"></script>
+</head>
+<body>
+  <canvas id="sky" aria-hidden="true"></canvas>
+
+  <div id="drift">
+    <header class="top">
+      <div class="where">
+        <p class="wordmark" id="brand">Ljós</p>
+        <h1 id="place">Aurora forecast</h1>
+      </div>
+      <div class="status">
+        <span class="pill live" id="live"><span class="dot" aria-hidden="true"></span><span id="live-text">Live</span></span>
+        <span class="updated" id="updated"></span>
+      </div>
+      <p class="clock" id="clock" aria-hidden="true"></p>
+    </header>
+
+    <p class="problem" id="problem" role="status" hidden></p>
+
+    <main class="layout">
+      <section class="hero" id="hero" aria-live="polite">
+        <p class="hero-label" id="eyebrow">Tonight's best hour</p>
+        <div class="score-row">
+          <p class="score"><span id="score">–</span><span class="of">/100</span></p>
+          <div class="hero-badges">
+            <span class="pill chance-pill" id="chance">Reading the sky</span>
+            <span class="pill" id="peak-pill" hidden></span>
+          </div>
+        </div>
+        <p class="peak-line" id="peak-line"></p>
+        <div class="scale" id="scale" aria-hidden="true">
+          <div class="scale-bar"></div>
+          <span class="scale-mark best" id="scale-best"></span>
+          <span class="scale-mark now" id="scale-now"></span>
+          <div class="scale-labels"><span>Not tonight</span><span>Unlikely</span><span>Possible</span><span>Good</span><span>Excellent</span></div>
+        </div>
+        <div class="conditions" id="conditions"></div>
+      </section>
+
+      <section class="block now-block" id="now-card">
+        <div class="block-head">
+          <h2>Right now</h2>
+          <span class="pill score-badge" id="now-score"></span>
+        </div>
+        <p class="now-state"><span class="pill state" id="now-state">–</span></p>
+        <div class="bz" id="bz" hidden>
+          <span class="bz-arrow" id="bz-arrow" aria-hidden="true"></span>
+          <span class="bz-value" id="bz-value"></span>
+          <span class="bz-note" id="bz-note"></span>
+        </div>
+        <dl class="facts" id="now-lines"></dl>
+        <div class="spark" id="spark" hidden></div>
+      </section>
+
+      <section class="block spots" id="spots-card">
+        <div class="block-head">
+          <h2 id="spots-title">Where to go</h2>
+          <p class="sub" id="spots-sub"></p>
+        </div>
+        <ol class="spot-list" id="spots"></ol>
+      </section>
+
+      <section class="block outlook">
+        <div class="block-head">
+          <h2>Next 3 days</h2>
+          <p class="sub">Solar activity, 3-hour blocks</p>
+        </div>
+        <div class="days" id="outlook"></div>
+      </section>
+
+      <section class="block dress" id="dress-card" hidden>
+        <div class="block-head">
+          <h2>Dress for it</h2>
+          <p class="sub" id="dress-sub"></p>
+        </div>
+        <p class="dress-main"><span class="dress-temp" id="dress-temp"></span><span class="dress-badges" id="dress-badges"></span></p>
+        <p class="dress-advice" id="dress-advice"></p>
+      </section>
+
+      <section class="block hours" id="hours-card" hidden>
+        <div class="block-head">
+          <h2>Hour by hour</h2>
+          <p class="sub" id="hours-sub"></p>
+        </div>
+        <div class="chart" id="strip" role="list"></div>
+      </section>
+    </main>
+
+    <footer class="foot">
+      <p>Space weather from the NOAA Space Weather Prediction Center. Weather by Open-Meteo, CC BY 4.0.</p>
+    </footer>
+  </div>
+
+  <div class="takeover" id="lookup" hidden>
+    <span class="pill live big"><span class="dot" aria-hidden="true"></span>Happening now</span>
+    <p class="takeover-title">Look up now</p>
+    <p class="takeover-sub">The aurora is likely overhead.</p>
+    <p class="takeover-detail" id="lookup-detail"></p>
+  </div>
+</body>
+</html>
