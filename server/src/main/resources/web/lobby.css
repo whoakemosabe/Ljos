@@ -407,3 +407,27 @@ html.taking-over #drift { visibility: hidden; }
 
 /* The QR sits in a small well of its own. */
 .qr { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5), 0 2px 6px rgba(0, 0, 0, 0.4); }
+
+/* Fixed sizes ------------------------------------------------------------------------------
+   Cards never change size with their content: text that changes (the clock, "Updated 12 min
+   ago", a long place name) is fitted inside a fixed box and cut with an ellipsis if it must. */
+.status { flex: none; }
+.tile { flex: none; height: 4.6rem; }
+.now-tile { width: 22.5rem; }
+.phone { width: 15rem; }
+.clock { flex: none; width: 8.4rem; white-space: nowrap; }
+.now-meta { flex: 1; min-width: 0; }
+.live, .updated { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.live { display: flex; }
+#live-text { overflow: hidden; text-overflow: ellipsis; }
+.layout { height: 23.5rem; }
+.panel { height: 100%; overflow: hidden; }
+.panel .pill { max-width: 60%; overflow: hidden; text-overflow: ellipsis; }
+.places { grid-auto-flow: row; grid-template-columns: repeat(5, minmax(0, 1fr)); }
+.place { height: 3.95rem; overflow: visible; }
+.place-body { flex: 1; }
+.place-detail { flex-wrap: nowrap; white-space: nowrap; overflow: hidden; }
+.day { height: 3.55rem; min-width: 0; }
+.day-name, .day-kp { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* Parts with nothing to show keep their room instead of collapsing the card. */
+.panel .is-empty { visibility: hidden; }

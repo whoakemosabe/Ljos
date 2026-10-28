@@ -250,7 +250,7 @@ function renderNow() {
   else setState("eye", "Watching the sky", 50);
 
   const kp = c.hour?.kp;
-  $("activity").hidden = kp == null;
+  $("activity").classList.toggle("is-empty", kp == null);
   if (kp != null) {
     const at = level(kp);
     $("meter").replaceChildren(...LEVELS.map((name, i) => {
@@ -273,7 +273,7 @@ function renderNow() {
   } else facts.push([icon("wind"), "Solar wind", "No live reading"]);
   $("facts").replaceChildren(...facts.flatMap(([ic, k, v]) => [el("dt", {}, ic, k), el("dd", {}, v)]));
 
-  $("days-wrap").hidden = !(data.outlook || []).length;
+  $("days-wrap").classList.toggle("is-empty", !(data.outlook || []).length);
   $("days").replaceChildren(...(data.outlook || []).slice(0, 3).map((d, i) => {
     const name = i === 0 ? "Today" : i === 1 ? "Tomorrow" : fmt(d.dayStart, { weekday: "long" });
     const k = d.maxKp;
