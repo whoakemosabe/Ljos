@@ -1,0 +1,10 @@
+# Railway deploys the web server from the Dockerfile. Changes to the Android app alone don't
+# trigger a redeploy.
+[build]
+builder = "DOCKERFILE"
+dockerfilePath = "Dockerfile"
+watchPatterns = ["core/**", "server/**", "Dockerfile", "settings.gradle.kts", "build.gradle.kts", "gradle/**", "gradle.properties"]
+
+[deploy]
+healthcheckPath = "/healthz"
+restartPolicyType = "ON_FAILURE"

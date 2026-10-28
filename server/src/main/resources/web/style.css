@@ -1,0 +1,461 @@
+/* Ljós web. Phone layout by default (iPhone and Android); TV layout under html.tv.
+   The sky is the picture: content sits on one dark sheet (phone) or ruled columns (TV),
+   never a stack of glass cards. Fraunces carries the numbers, Schibsted Grotesk the rest. */
+
+@font-face {
+  font-family: "Fraunces";
+  src: url("/fraunces.woff2") format("woff2");
+  font-weight: 100 900;
+  font-display: swap;
+}
+@font-face {
+  font-family: "Schibsted Grotesk";
+  src: url("/schibsted-grotesk.woff2") format("woff2");
+  font-weight: 400 900;
+  font-display: swap;
+}
+
+:root {
+  --night: #070b16;
+  --sheet: rgba(8, 12, 24, 0.9);
+  --snow: #eef3fb;
+  --frost: #a2afc4;
+  --dim: #6f7d94;
+  --rule: rgba(238, 243, 251, 0.11);
+  --rule-strong: rgba(238, 243, 251, 0.22);
+  --green: #79e8b0;
+  --violet: #b9a6ff;
+  --warn: #f2a48f;
+  --serif: "Fraunces", "Iowan Old Style", Georgia, serif;
+  --sans: "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --pad: 1.25rem;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+[hidden] { display: none !important; }
+
+html {
+  -webkit-tap-highlight-color: transparent;
+  -webkit-text-size-adjust: 100%;
+  overscroll-behavior: none;
+  background: var(--night);
+  font-size: 16px;
+}
+
+body {
+  margin: 0;
+  min-height: 100dvh;
+  color: var(--snow);
+  background: var(--night);
+  font: 400 1rem/1.45 var(--sans);
+  -webkit-font-smoothing: antialiased;
+}
+
+#sky {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  display: block;
+}
+html.no-webgl body {
+  background:
+    radial-gradient(90% 55% at 30% 16%, rgba(121, 232, 176, 0.2), transparent 70%),
+    linear-gradient(#060a18, #0a1530 45%, var(--night));
+  background-attachment: fixed;
+}
+
+#drift {
+  position: relative;
+  z-index: 1;
+  max-width: 34rem;
+  margin: 0 auto;
+  padding:
+    calc(env(safe-area-inset-top, 0px) + 1rem)
+    env(safe-area-inset-right, 0px)
+    0
+    env(safe-area-inset-left, 0px);
+  transition: transform 4s ease-in-out;
+}
+
+h1, h2, p, ol, ul, dl, dd { margin: 0; }
+ol, ul { padding: 0; list-style: none; }
+a { color: inherit; text-underline-offset: 0.18em; text-decoration-thickness: 1px; }
+
+button {
+  font: inherit;
+  color: inherit;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+}
+:focus-visible { outline: 2px solid var(--green); outline-offset: 3px; }
+
+.tv-only { display: none; }
+html.tv .tv-only { display: block; }
+html.tv .phone-only { display: none !important; }
+
+/* Figures that sit in columns line up; running text keeps proportional spacing, which
+   matters here because Schibsted Grotesk's tabular set also widens punctuation. */
+.bar .value, .bar .label, .clock, .spot-score, .now-score { font-variant-numeric: tabular-nums; }
+
+/* Header -------------------------------------------------------------------------------- */
+
+.top {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0 var(--pad);
+}
+.wordmark {
+  font-family: var(--serif);
+  font-size: 1.0625rem;
+  font-weight: 600;
+  font-variation-settings: "SOFT" 100, "WONK" 1;
+  color: var(--green);
+  line-height: 1.2;
+}
+h1 { font-size: 1.25rem; font-weight: 600; letter-spacing: -0.005em; line-height: 1.25; }
+.updated { font-size: 0.8125rem; color: var(--dim); }
+.updated.warn { color: var(--warn); }
+
+.locate {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: none;
+  margin-top: 0.15rem;
+  padding: 0.5rem 0.75rem;
+  border: 1px solid var(--rule-strong);
+  border-radius: 0.5rem;
+  background: rgba(8, 12, 24, 0.55);
+  font-size: 0.875rem;
+  font-weight: 500;
+  transition: background 120ms, transform 120ms ease-out;
+}
+.locate svg { width: 0.9rem; height: 0.9rem; fill: currentColor; }
+.locate:active { transform: scale(0.97); background: rgba(238, 243, 251, 0.1); }
+.locate:disabled { color: var(--dim); }
+
+.problem, .banner {
+  margin: 0.75rem var(--pad) 0;
+  padding: 0.6rem 0.85rem;
+  border-left: 2px solid var(--warn);
+  background: rgba(8, 12, 24, 0.8);
+  font-size: 0.875rem;
+}
+.banner {
+  display: block;
+  width: calc(100% - 2 * var(--pad));
+  text-align: left;
+  border-left-color: var(--green);
+}
+.banner-title { display: block; font-family: var(--serif); font-size: 1.375rem; font-weight: 500; color: var(--green); }
+.banner-detail { display: block; color: var(--frost); }
+
+/* Hero ---------------------------------------------------------------------------------- */
+
+.hero { padding: 2.25rem var(--pad) 1.75rem; }
+.hero-label { font-size: 0.9375rem; color: var(--frost); }
+.score {
+  display: flex;
+  align-items: baseline;
+  margin: 0.25rem 0 0.4rem;
+  line-height: 0.82;
+}
+#score {
+  font-family: var(--serif);
+  font-size: clamp(7rem, 38vw, 10.5rem);
+  font-weight: 300;
+  font-variation-settings: "opsz" 144, "SOFT" 30, "WONK" 0;
+  letter-spacing: -0.045em;
+  margin-left: -0.06em;
+  transition: color 400ms;
+}
+.of { font-size: 1.0625rem; color: var(--dim); margin-left: 0.35rem; }
+.chance {
+  font-family: var(--serif);
+  font-size: 1.875rem;
+  font-weight: 400;
+  font-variation-settings: "opsz" 48;
+  line-height: 1.15;
+}
+.peak-line { margin-top: 0.35rem; color: var(--frost); max-width: 30rem; }
+
+/* The sheet ----------------------------------------------------------------------------- */
+
+.sheet {
+  background: var(--sheet);
+  border-top: 1px solid var(--rule-strong);
+  border-radius: 1.25rem 1.25rem 0 0;
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 0.25rem var(--pad) calc(env(safe-area-inset-bottom, 0px) + 1.5rem);
+}
+.block { padding: 1.25rem 0 1.4rem; }
+.block + .block { border-top: 1px solid var(--rule); }
+.block-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 0.25rem 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.85rem;
+}
+h2 { font-size: 1.0625rem; font-weight: 600; }
+.sub { font-size: 0.8125rem; color: var(--dim); }
+
+/* Hour chart ---------------------------------------------------------------------------- */
+
+.chart {
+  display: flex;
+  overflow-x: auto;
+  overscroll-behavior-x: contain;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+  margin: 0 calc(-1 * var(--pad));
+  padding: 0 var(--pad);
+}
+.chart::-webkit-scrollbar { display: none; }
+
+.bar {
+  position: relative;
+  flex: 0 0 2.4rem;
+  display: grid;
+  grid-template-rows: 1.1rem 7rem 1.5rem;
+  justify-items: center;
+  scroll-snap-align: start;
+  transition: background 120ms;
+}
+.bar .value { font-size: 0.75rem; color: var(--dim); align-self: end; padding-bottom: 0.2rem; }
+.bar .track {
+  position: relative;
+  width: 100%;
+  border-bottom: 1px solid var(--rule-strong);
+}
+.bar .fill {
+  position: absolute;
+  bottom: 0;
+  left: 22%;
+  right: 22%;
+  border-radius: 2px 2px 0 0;
+  transition: height 500ms ease-out;
+}
+.bar .label { font-size: 0.75rem; color: var(--dim); padding-top: 0.35rem; }
+.bar.past .fill { opacity: 0.35; }
+.bar.past .value, .bar.past .label { color: rgba(111, 125, 148, 0.6); }
+.bar.now .label { color: var(--snow); font-weight: 600; }
+.bar.now .track::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  border-left: 1px dashed var(--rule-strong);
+}
+.bar.peak .value { color: var(--snow); font-weight: 600; }
+.bar.selected { background: rgba(238, 243, 251, 0.06); }
+.bar.selected .label { color: var(--snow); }
+
+.why {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--rule);
+  display: grid;
+  gap: 0.55rem;
+}
+.why-head { font-family: var(--serif); font-size: 1.25rem; }
+.meter { display: grid; grid-template-columns: 6.75rem 1fr 7.5rem; align-items: center; gap: 0.75rem; font-size: 0.875rem; }
+.meter-name { color: var(--frost); }
+.meter-track { height: 2px; background: var(--rule); }
+.meter-fill { display: block; height: 100%; background: var(--snow); }
+.meter-note { color: var(--dim); font-size: 0.8125rem; text-align: right; }
+
+/* Right now ----------------------------------------------------------------------------- */
+
+.now-score { font-family: var(--serif); font-size: 1.75rem; font-weight: 300; line-height: 1; }
+.now-state { font-family: var(--serif); font-size: 1.5rem; margin-bottom: 0.75rem; }
+.now-state[data-tone="go"] { color: var(--green); }
+.now-state[data-tone="quiet"] { color: var(--frost); }
+.facts { display: grid; grid-template-columns: auto 1fr; gap: 0.4rem 1.25rem; font-size: 0.9375rem; }
+.facts dt { color: var(--dim); }
+.facts dd { color: var(--snow); }
+.spark { margin-top: 1rem; }
+.spark svg { display: block; width: 100%; height: 3.5rem; }
+.spark-line { fill: none; stroke: var(--snow); stroke-width: 1.25; vector-effect: non-scaling-stroke; }
+.spark-zero { stroke: var(--rule-strong); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.spark-south { fill: rgba(121, 232, 176, 0.18); }
+.spark p { margin-top: 0.35rem; font-size: 0.8125rem; color: var(--dim); }
+
+/* Where to go --------------------------------------------------------------------------- */
+
+.spot {
+  display: grid;
+  grid-template-columns: 2.6rem 1fr auto;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.6rem 0 0.6rem 0.65rem;
+  border-left: 2px solid transparent;
+}
+.spot + .spot { border-top: 1px solid var(--rule); }
+.spot.best { border-left-color: var(--green); }
+.spot-score { font-family: var(--serif); font-size: 1.625rem; font-weight: 300; line-height: 1; }
+.spot-body { display: grid; min-width: 0; }
+.spot-name { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.spot-detail { font-size: 0.8125rem; color: var(--dim); }
+.go {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--frost);
+  padding: 0.4rem 0;
+  touch-action: manipulation;
+}
+.go:active { color: var(--snow); }
+
+/* Next 3 days --------------------------------------------------------------------------- */
+
+.days { display: grid; gap: 0.75rem; }
+.day { display: grid; grid-template-columns: 5.5rem 1fr 9rem; align-items: end; gap: 1rem; }
+.day-name { font-weight: 600; line-height: 1.2; }
+.blocks {
+  display: grid;
+  grid-template-columns: repeat(8, 1fr);
+  align-items: end;
+  gap: 3px;
+  height: 1.5rem;
+  border-bottom: 1px solid var(--rule-strong);
+}
+.block-bar { border-radius: 1px 1px 0 0; }
+.day-kp { text-align: right; font-size: 0.9375rem; line-height: 1.2; }
+.day-kp .word { color: var(--dim); }
+
+/* Dress and tips ------------------------------------------------------------------------ */
+
+.dress-main { display: flex; align-items: baseline; gap: 0.85rem; flex-wrap: wrap; }
+.dress-temp { font-family: var(--serif); font-size: 2.75rem; font-weight: 300; line-height: 1; }
+.dress-feels { color: var(--frost); }
+.dress-advice { margin-top: 0.5rem; max-width: 34rem; }
+.tip-list li { padding: 0.45rem 0; }
+.tip-list li + li { border-top: 1px solid var(--rule); }
+
+.foot { padding-top: 1.25rem; border-top: 1px solid var(--rule); font-size: 0.75rem; color: var(--dim); }
+
+/* Look up now takeover (TV) ------------------------------------------------------------- */
+
+.takeover {
+  position: fixed;
+  inset: 0;
+  z-index: 5;
+  display: grid;
+  align-content: center;
+  padding: 0 8vw;
+  gap: 1rem;
+  /* The forecast is hidden while this shows, so only the live sky sits behind it. */
+  background: linear-gradient(90deg, rgba(7, 11, 22, 0.75), rgba(7, 11, 22, 0.2));
+}
+.takeover-title {
+  font-family: var(--serif);
+  font-size: 10rem;
+  font-weight: 400;
+  font-variation-settings: "opsz" 144, "SOFT" 50;
+  letter-spacing: -0.035em;
+  line-height: 0.9;
+  color: var(--green);
+  animation: breathe 3.6s ease-in-out infinite;
+}
+.takeover-sub { font-family: var(--serif); font-size: 2.5rem; }
+.takeover-detail { font-size: 1.6rem; color: var(--frost); }
+html.taking-over #drift { visibility: hidden; }
+@keyframes breathe { 50% { opacity: 0.75; } }
+
+/* Desktop browsers: two columns on the sheet -------------------------------------------- */
+
+@media (min-width: 56rem) {
+  html:not(.tv) #drift { max-width: 68rem; padding-left: 1.5rem; padding-right: 1.5rem; }
+  html:not(.tv) .sheet {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    column-gap: 2.5rem;
+    border-radius: 1rem;
+    border: 1px solid var(--rule-strong);
+    margin-bottom: 2rem;
+  }
+  html:not(.tv) .hours, html:not(.tv) .foot { grid-column: 1 / -1; }
+  html:not(.tv) .sheet .block { border-top: 1px solid var(--rule); }
+  html:not(.tv) .sheet .hours { border-top: 0; }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .bar:hover { background: rgba(238, 243, 251, 0.04); }
+  .locate:hover { background: rgba(238, 243, 251, 0.08); }
+  .go:hover { color: var(--snow); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { transition: none !important; animation: none !important; }
+}
+
+/* TV layout ----------------------------------------------------------------------------- */
+/* One screen, no scrolling, read from across a lobby. 1rem is ~20px at 1080p and scales
+   with the screen. Columns are separated by rules over a darkened sky, not boxed. */
+
+html.tv { font-size: 1.05vw; font-size: min(1.05vw, 1.87vh); }
+/* The pointer hides only after a few seconds without movement. */
+html.tv.idle, html.tv.idle * { cursor: none !important; }
+html.tv body { height: 100vh; overflow: hidden; }
+html.tv body::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(7, 11, 22, 0) 0%, rgba(7, 11, 22, 0.55) 38%, rgba(7, 11, 22, 0.9) 70%);
+}
+html.tv #drift {
+  max-width: none;
+  height: 100vh;
+  padding: 1.6rem 2.2rem 1.2rem;
+  display: flex;
+  flex-direction: column;
+}
+html.tv .top { padding: 0; align-items: center; }
+html.tv .wordmark { font-size: 1.1rem; }
+html.tv h1 { font-size: 1.75rem; }
+html.tv .clock { font-family: var(--serif); font-size: 2.6rem; font-weight: 300; }
+html.tv .problem, html.tv .banner { margin: 0.75rem 0 0; }
+html.tv .layout {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  column-gap: 2.2rem;
+  grid-template-columns: 1.1fr 1fr 1fr;
+  grid-template-rows: auto auto 1fr;
+  grid-template-areas:
+    "hero  now     spots"
+    "dress outlook spots"
+    "hours hours   hours";
+}
+html.tv .sheet { display: contents; }
+html.tv .hero { grid-area: hero; padding: 1.5rem 0 1rem; }
+html.tv #score { font-size: 9.5rem; }
+html.tv .chance { font-size: 2rem; }
+html.tv .peak-line { font-size: 1.1rem; }
+html.tv .block { padding: 1.25rem 0 0.9rem; border-top: 1px solid var(--rule-strong); }
+html.tv .block + .block { border-top: 1px solid var(--rule-strong); }
+html.tv .now { grid-area: now; align-self: end; }
+html.tv .spots { grid-area: spots; align-self: end; }
+html.tv .outlook { grid-area: outlook; }
+html.tv .dress { grid-area: dress; }
+html.tv .hours { grid-area: hours; align-self: end; padding-bottom: 0.4rem; }
+html.tv .tips { display: none; }
+html.tv .chart { overflow: hidden; margin: 0; padding: 0; }
+html.tv .bar { flex: 1 1 0; min-width: 0; grid-template-rows: 1.1rem 6.25rem 1.4rem; }
+html.tv .bar .value, html.tv .bar .label { font-size: 0.85rem; }
+html.tv .foot { position: fixed; right: 2.2rem; bottom: 0.6rem; border: 0; padding: 0; font-size: 0.7rem; z-index: 2; }
+html.tv .hours { margin-bottom: 1.2rem; }
