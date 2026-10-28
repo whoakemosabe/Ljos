@@ -454,7 +454,7 @@ html.taking-over #drift { visibility: hidden; }
 
 /* Chart marks are panes standing on edge: coloured glass, lit along the top. */
 .tick-fill {
-  background: linear-gradient(rgba(var(--tint), 1), rgba(var(--tint), 0.82));
+  background: linear-gradient(rgba(var(--tint), 1), rgba(var(--tint), 0.3)); /* fades to 30% at the floor, as on the phone and in the app */
   box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.16), 0 8px 18px -10px rgba(var(--tint), 0.55);
 }
 .tick-track { border-bottom-color: rgba(255, 255, 255, 0.14); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4); }
