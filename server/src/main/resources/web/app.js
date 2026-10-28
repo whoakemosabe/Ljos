@@ -114,8 +114,8 @@ async function load() {
     data = await r.json();
     hideProblem();
     render();
-    // Glasspane: the same glass as the lobby and the app (lens on Chromium, moving light).
-    if (!glassOn && window.Glasspane) { glassOn = true; window.Glasspane.init({ selector: ".gp" }); }
+    // The edge lens (glasspane.js, Chromium) on every glass surface. No moving light: no shine.
+    if (!glassOn && window.Glasspane) { glassOn = true; window.Glasspane.init({ selector: ".lg", light: false }); }
   } catch (e) {
     if (data) showProblem("Couldn't reach the forecast. Showing the last one.");
     else showProblem("Reading the sky… the forecast feeds are busy, trying again shortly.");

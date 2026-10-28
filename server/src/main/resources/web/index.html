@@ -15,7 +15,6 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Ljós">
   <link rel="stylesheet" href="/style.css">
-  <link rel="stylesheet" href="/glasspane.css">
   <script src="/glasspane.js" defer></script>
   <script type="module" src="/app.js"></script>
 </head>
@@ -30,10 +29,10 @@
         <p class="updated" id="updated"></p>
       </div>
       <p class="clock tv-only" id="clock" aria-hidden="true"></p>
-      <button class="pill phone-only gp gp-liquid gp-press" id="locate" type="button">Use my location</button>
+      <button class="pill phone-only lg" id="locate" type="button">Use my location</button>
     </header>
 
-    <button class="banner gp gp-liquid gp-press" id="banner" type="button" hidden>
+    <button class="banner lg" id="banner" type="button" hidden>
       <span class="banner-title">Look up now</span>
       <span class="banner-detail" id="banner-detail"></span>
     </button>
@@ -48,7 +47,7 @@
         <p class="peak-line" id="peak-line"></p>
       </section>
 
-      <section class="card gp gp-smoky hours" id="hours-card" hidden>
+      <section class="card lg hours" id="hours-card" hidden>
         <div class="card-head">
           <h2>Hour by hour</h2>
           <p class="sub phone-only">Tap an hour to see why</p>
@@ -57,7 +56,7 @@
         <div class="why" id="why" hidden></div>
       </section>
 
-      <section class="card gp gp-smoky now" id="now-card">
+      <section class="card lg now" id="now-card">
         <div class="card-head">
           <h2>Right now</h2>
           <p class="now-score" id="now-score"></p>
@@ -67,7 +66,7 @@
         <div class="spark" id="spark" hidden></div>
       </section>
 
-      <section class="card gp gp-smoky spots" id="spots-card">
+      <section class="card lg spots" id="spots-card">
         <div class="card-head">
           <h2 id="spots-title">Where to go</h2>
           <p class="sub" id="spots-sub"></p>
@@ -75,7 +74,7 @@
         <ol class="spot-list" id="spots"></ol>
       </section>
 
-      <section class="card gp gp-smoky outlook">
+      <section class="card lg outlook">
         <div class="card-head">
           <h2>Next 3 days</h2>
           <p class="sub">Solar activity forecast, 3-hour blocks</p>
@@ -83,7 +82,7 @@
         <div class="days" id="outlook"></div>
       </section>
 
-      <section class="card gp gp-smoky dress" id="dress-card" hidden>
+      <section class="card lg dress" id="dress-card" hidden>
         <div class="card-head">
           <h2>Dress for it</h2>
           <p class="sub" id="dress-sub"></p>
@@ -92,7 +91,7 @@
         <p class="dress-advice" id="dress-advice"></p>
       </section>
 
-      <section class="card gp gp-smoky tips">
+      <section class="card lg tips">
         <div class="card-head">
           <h2>Photo tips</h2>
           <p class="sub">Starting points for tonight's brightness</p>

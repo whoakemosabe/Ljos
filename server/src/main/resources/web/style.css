@@ -434,22 +434,53 @@ html.tv .card { padding: 1rem 1.1rem; }
 html.tv .spot { padding: 0.45rem 0.5rem; }
 
 /* Glass ----------------------------------------------------------------------------------
-   Glasspane (glasspane.css / glasspane.js, whoakemosabe/glasspane): the same material as the
-   lobby and the Android app. Cards are "smoky" (clear glass, refracted edges, the solid-glass
-   rim, hairline and shadows); the location pill and the look-up banner are "liquid". Inside a
-   card there's no glass on glass: Go buttons are coloured glass, the best spot is tinted, and
-   the bars sit in grooves. */
+   One material with the lobby and the Android app. The surface is korbenmade's header pill:
+   clear glass, a light frost and a colour boost, with the edge bending what's behind it (the
+   lens is glasspane.js's per-element SVG filter, Chromium only). The edges are the lobby's
+   solid-glass finish: a fine light line inset along the top, a hairline all round, a slight
+   inner bottom shade, a contact shadow and a soft long one. No sheen, no shine. Inside a card:
+   coloured glass, grooves, no glass on glass. */
 
-.gp.card { --gp-radius: var(--radius); }
-.gp.pill { --gp-radius: 999px; }
-.gp.banner { --gp-radius: 1.25rem; --gp-tint: 61 255 160; --gp-smoke: 0.28; }
+:root {
+  --lg-rim: rgba(255, 255, 255, 0.2);
+  --lg-inner: rgba(255, 255, 255, 0.04);
+  --lg-edge: rgba(190, 210, 255, 0.09);
+  --lg-under: rgba(0, 0, 0, 0.25);
+  --lg-contact: rgba(0, 0, 0, 0.12);
+  --lg-shade: rgba(0, 0, 8, 0.62);
+}
+.lg {
+  position: relative;
+  border: 0;
+  background: rgba(10, 15, 30, 0.24);
+  -webkit-backdrop-filter: blur(6px) saturate(180%) brightness(1.06);
+  backdrop-filter: var(--gp-lens,) blur(3px) saturate(175%) brightness(1.05);
+  box-shadow:
+    inset 0 1px 0 var(--lg-rim),
+    inset 0 -1px 0 var(--lg-under),
+    inset 0 0 0 1px var(--lg-inner),
+    0 0 0 1px var(--lg-edge),
+    0 1px 2px var(--lg-contact),
+    0 12px 32px -14px var(--lg-shade);
+}
+.lg.pill:active { background: rgba(255, 255, 255, 0.1); }
+.lg.banner { background: rgba(61, 255, 160, 0.14); box-shadow: inset 0 1.5px 0 rgba(61, 255, 160, 0.7), inset 0 -1px 0 var(--lg-under), inset 0 0 0 1px rgba(61, 255, 160, 0.22), 0 1px 2px var(--lg-contact), 0 12px 32px -14px var(--lg-shade); }
 
-.go.gp-tinted { border: 0; --gp-accent: 61 255 160; }
+.go.gp-tinted {
+  border: 0;
+  color: var(--green);
+  background: rgba(61, 255, 160, 0.13);
+  box-shadow: inset 0 1.5px 0 rgba(61, 255, 160, 0.75), inset 0 -1px 0 rgba(0, 0, 0, 0.28), inset 0 0 0 1px rgba(61, 255, 160, 0.22), 0 1px 2px rgba(0, 0, 0, 0.2);
+}
 .spot.best { background: rgba(61, 255, 160, 0.08); box-shadow: inset 0 1.5px 0 rgba(61, 255, 160, 0.6), inset 0 -1px 0 rgba(0, 0, 0, 0.22), inset 0 0 0 1px rgba(61, 255, 160, 0.2); }
 .problem { border: 0; box-shadow: inset 0 1px 0 rgba(255, 138, 128, 0.55), inset 0 0 0 1px rgba(255, 138, 128, 0.2); }
 
 /* The hour you tapped: a small pane of clear glass. Bars and meters sit in grooves. */
-.bar.selected { background: rgba(255, 255, 255, 0.08); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 0 0 1px rgba(190, 210, 255, 0.08); }
+.bar.selected { background: rgba(255, 255, 255, 0.08); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 0 0 1px var(--lg-edge); }
 .bar .track, .meter-track { background: rgba(0, 0, 0, 0.22); box-shadow: inset 0 1px 1.5px rgba(0, 0, 0, 0.42), inset 0 -1px 0 rgba(255, 255, 255, 0.09); }
 .bar.peak .track { box-shadow: inset 0 1px 1.5px rgba(0, 0, 0, 0.42), inset 0 -1px 0 rgba(255, 255, 255, 0.09), 0 0 0 1px rgba(255, 255, 255, 0.3); }
 .bar .fill, .meter-fill, .block { box-shadow: inset 0 1.5px 0 rgba(255, 255, 255, 0.5), inset 0 0 0 1px rgba(255, 255, 255, 0.12); }
+
+@media (prefers-reduced-transparency: reduce) {
+  .lg { background: rgba(10, 15, 30, 0.92); backdrop-filter: none; -webkit-backdrop-filter: none; }
+}
