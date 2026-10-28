@@ -290,6 +290,18 @@ function renderHero() {
   $("peak-line").textContent = line;
   $("peak-line").hidden = !line;
   renderChips(h, n, now);
+  renderNudge();
+}
+
+/** "Tomorrow looks better" (the app's TomorrowNudge): when tomorrow's peak is clearly higher. */
+function renderNudge() {
+  const b = $("nudge");
+  const t = data.tomorrow?.peak?.score, p = data.tonight?.peak?.score;
+  const show = !TV && t != null && p != null && t >= 40 && t >= p + 15 && !showTomorrow;
+  b.hidden = !show;
+  if (!show) return;
+  $("nudge-score").textContent = `${t} ↗`;
+  $("nudge-score").style.color = scoreColor(t);
 }
 
 document.addEventListener("click", (e) => {
@@ -333,6 +345,15 @@ function renderNightSwitch() {
   seg.dataset.pos = String(on);
   seg.querySelectorAll("button").forEach((b, i) => b.setAttribute("aria-selected", i === on ? "true" : "false"));
 }
+$("nudge").addEventListener("click", () => {
+  showTomorrow = true;
+  selected = null;
+  folded.delete("hours");
+  try { localStorage.setItem(FOLD_KEY, JSON.stringify([...folded])); } catch { /* ignore */ }
+  const card = $("hours-card");
+  if (card) applyFold(card);
+  render();
+});
 $("night-seg").addEventListener("click", (e) => {
   const b = e.target.closest("button[data-i]");
   if (!b) return;
@@ -348,6 +369,120 @@ $("night-seg").addEventListener("click", (e) => {
 });
 
 function renderStrip() {
+  if (TV) return renderStripTV();
+  // As in the app (ui/HourStrip.kt): the whole night fits, 14px channels with the cloud from the
+  // top and the score from the floor, every second hour labelled, a green dot under now. The
+  // hour the cards show is ringed and the others dim; tap or drag across to pick an hour.
+  const strip = $("strip");
+  const list = hours();
+  $("hours-card").hidden = list.length === 0;
+  renderNightSwitch();
+  strip.replaceChildren();
+  strip.classList.add("fit");
+  if (!list.length) { $("moonline").hidden = true; return; }
+  strip.style.gridTemplateColumns = `repeat(${list.length}, minmax(0, 1fr))`;
+  const now = data.now;
+  const focus = focusHour()?.time ?? null;
+  list.forEach((h, i) => {
+    const isNow = now >= h.time && now < h.time + HOUR;
+    const isSel = h.time === focus;
+    const fill = el("span", { class: "fill" });
+    fill.style.setProperty("--c", scoreColor(h.score));
+    fill.style.height = `max(14px, ${h.score}%)`;
+    const bar = el("button", {
+      type: "button",
+      class: "bar" + (isSel ? " sel" : focus != null ? " dim" : "") + (isNow ? " now" : ""),
+      role: "listitem",
+      "data-t": String(h.time),
+      "aria-label": `${hhmm(h.time)}, score ${h.score}, ${CHANCE[h.chance] || ""}${h.cloud >= 0 ? `, ${h.cloud}% cloud` : ""}`,
+      "aria-pressed": selected === h.time ? "true" : "false",
+    },
+      el("span", { class: "track" }, h.cloud > 0 ? el("span", { class: "cloud", style: `height:${Math.min(100, h.cloud)}%` }) : null, fill),
+      el("span", { class: "dot" }),
+      el("span", { class: "label" }, i % 2 === 0 ? (H12 ? hourLabel(h.time) + "m" : hourLabel(h.time)) : ""),
+    );
+    strip.append(bar);
+  });
+  renderMoonLine(list);
+}
+
+// Tap or drag across the strip to pick an hour, as in the app. Tapping the hour already shown
+// goes back to the default (right now, or the peak).
+(() => {
+  const strip = $("strip");
+  let down = false, moved = false, startX = 0;
+  const pickAt = (x, tap) => {
+    const bars = [...strip.querySelectorAll(".bar")];
+    if (!bars.length) return;
+    const r = strip.getBoundingClientRect();
+    const i = Math.max(0, Math.min(bars.length - 1, Math.floor(((x - r.left) / r.width) * bars.length)));
+    const t = Number(bars[i].dataset.t);
+    const cur = focusHour()?.time ?? null;
+    if (t !== cur) { selected = t; render(); }
+    else if (tap && selected != null) { selected = null; render(); }
+  };
+  strip.addEventListener("pointerdown", (e) => {
+    if (TV || e.button > 0) return;
+    down = true; moved = false; startX = e.clientX;
+    strip.setPointerCapture?.(e.pointerId);
+  });
+  strip.addEventListener("pointermove", (e) => {
+    if (!down) return;
+    if (!moved && Math.abs(e.clientX - startX) > 6) moved = true;
+    if (moved) { e.preventDefault(); pickAt(e.clientX, false); }
+  });
+  strip.addEventListener("pointerup", (e) => { if (down && !moved) pickAt(e.clientX, true); down = false; });
+  strip.addEventListener("pointercancel", () => { down = false; });
+  // Keyboard: Enter or Space on a bar (a pointer click is handled above).
+  strip.addEventListener("click", (e) => {
+    if (TV || e.detail !== 0) return;
+    const b = e.target.closest(".bar"); if (!b) return;
+    const t = Number(b.dataset.t);
+    selected = selected === t ? null : t; render();
+  });
+})();
+
+/** The moon line under the strip (the app's MoonLine): when the moon is up, brighter for a brighter moon. */
+function renderMoonLine(list) {
+  const box = $("moonline");
+  const start = list[0].time, end = list[list.length - 1].time + HOUR;
+  const tonight = !showTomorrow || !hasTomorrow();
+  const m = data.moon || {};
+  // Tonight: the exact rise and set; tomorrow: from the hours the moon is above the horizon.
+  let segs = [];
+  if (tonight && Array.isArray(m.up)) segs = m.up.map(([a, b]) => [a, b]);
+  else {
+    let a = null;
+    list.forEach((h) => { if (h.moonAlt > 0) { if (a == null) a = h.time; } else if (a != null) { segs.push([a, h.time]); a = null; } });
+    if (a != null) segs.push([a, end]);
+  }
+  const illum = tonight && m.illumination != null ? m.illumination : (list.find((h) => h.moonIllum != null)?.moonIllum ?? 0);
+  const glow = Math.max(0.25, Math.min(1, 0.25 + 0.75 * illum));
+  const track = $("ml-track");
+  track.replaceChildren();
+  track.style.setProperty("--glow", String(glow));
+  const x = (t) => Math.max(0, Math.min(1, (t - start) / (end - start))) * 100;
+  segs.forEach(([a, b]) => {
+    const x0 = x(a), x1 = x(b);
+    if (x1 - x0 < 0.3) return;
+    const seg = el("span", { class: "ml-seg" });
+    seg.style.cssText = `left:${x0}%;width:${x1 - x0}%`;
+    track.append(seg);
+  });
+  const pct = Math.round(illum * 100);
+  const parts = [`Moon ${pct}%`];
+  if (tonight && m.rise) parts.push(`rises ${hhmm(m.rise)}`);
+  if (tonight && m.set) parts.push(`sets ${hhmm(m.set)}`);
+  if (!segs.length) parts.push("down all night");
+  $("ml-words").textContent = parts.join(" · ");
+  const sh = $("ml-shadow");
+  const shift = 11 * Math.max(0, Math.min(1, illum));
+  sh.setAttribute("cx", String(m.waxing === false ? 5.5 + shift : 5.5 - shift));
+  sh.setAttribute("visibility", shift >= 10.5 ? "hidden" : "visible");
+  box.hidden = false;
+}
+
+function renderStripTV() {
   const strip = $("strip");
   strip.replaceChildren();
   const list = hours();
@@ -607,17 +742,26 @@ function renderSpotList(ranked, meta, top) {
 }
 
 function renderOutlook() {
+  // As in the app (KpOutlookCard): eight 3-hour channels a day, filled to the Kp (of 7), violet
+  // for storm levels, green for active, teal below; a white dot under the block we're in.
   const box = $("outlook");
   box.replaceChildren();
+  const now = data.now;
   (data.outlook || []).forEach((d, i) => {
     const label = i === 0 ? "Today" : i === 1 ? "Tomorrow" : weekday(d.dayStart);
     const kp = d.maxKp;
-    const word = kp == null ? "no forecast" : kp >= 5 ? "storm" : kp >= 4 ? "active" : kp >= 3 ? "unsettled" : "quiet";
+    const blocks = el("span", { class: "blocks", "aria-hidden": "true" });
+    for (let b = 0; b < 8; b++) {
+      const t0 = d.dayStart + b * 3 * HOUR;
+      const k = d.blocks.find((x) => x.time === t0)?.kp;
+      const fill = k == null ? null : el("span", { class: "kfill" + (k >= 5 ? " storm" : k >= 3 ? " active" : "") });
+      if (fill) fill.style.height = `max(var(--kw), ${Math.min(100, (k / 7) * 100)}%)`;
+      blocks.append(el("span", { class: "kslot" + (now >= t0 && now < t0 + 3 * HOUR ? " now" : "") }, el("span", { class: "kchan" }, fill)));
+    }
     box.append(el("div", { class: "day" },
       el("span", { class: "day-name" }, label),
-      el("span", { class: "blocks", "aria-hidden": "true" },
-        ...d.blocks.map((b) => el("span", { class: "block", style: `background:${kpColor(b.kp)};opacity:${0.35 + Math.min(1, b.kp / 6) * 0.65}` }))),
-      el("span", { class: "day-kp" }, kp == null ? "–" : `Kp ${kp.toFixed(1)}`, el("span", { class: "quiet" }, ` ${word}`)),
+      blocks,
+      el("span", { class: "day-kp" + (kp == null ? "" : kp >= 5 ? " storm" : kp >= 3 ? " active" : "") }, kp == null ? "—" : `Kp ${kp.toFixed(1)}`),
     ));
   });
 }

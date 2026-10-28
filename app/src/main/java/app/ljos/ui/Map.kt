@@ -81,10 +81,14 @@ internal fun SpotMap(
         val wDp = maxWidth.value
         val hDp = maxHeight.value
         val radiusKm = spots.maxOf { Geo.km(home.lat, home.lon, it.lat, it.lon) }.coerceAtLeast(8.0)
-        val zoom = remember(home.lat, radiusKm, hDp) { MapTiles.zoomFor(home.lat, radiusKm, hDp / 2f) }
+        // Fractional zoom, as on the phone page: tiles come from the next whole level up and are
+        // drawn scaled down by [scale], so the places spread across the map.
+        val exact = remember(home.lat, radiusKm, hDp) { MapTiles.zoomExact(home.lat, radiusKm, hDp / 2f) }
+        val zoom = kotlin.math.ceil(exact).toInt()
+        val scale = Math.pow(2.0, exact - zoom)
         var tiles by remember { mutableStateOf<List<MapTiles.Tile>>(emptyList()) }
-        LaunchedEffect(home.lat, home.lon, zoom, wDp, hDp) {
-            tiles = MapTiles.load(context, home.lat, home.lon, zoom, wDp, hDp)
+        LaunchedEffect(home.lat, home.lon, zoom, scale, wDp, hDp) {
+            tiles = MapTiles.load(context, home.lat, home.lon, zoom, (wDp / scale).toFloat(), (hDp / scale).toFloat())
         }
         val fade by animateFloatAsState(if (tiles.isEmpty()) 0f else 1f, tween(700), label = "tiles")
         val images = remember(tiles) { tiles.map { it to it.bitmap.asImageBitmap() } }
@@ -93,7 +97,7 @@ internal fun SpotMap(
         fun screen(px: Float, lat: Double, lon: Double): Offset {
             val (cx, cy) = MapTiles.project(home.lat, home.lon, zoom)
             val (wx, wy) = MapTiles.project(lat, lon, zoom)
-            return Offset(((wx - cx) * px).toFloat() + wDp * px / 2f, ((wy - cy) * px).toFloat() + hDp * px / 2f)
+            return Offset(((wx - cx) * scale * px).toFloat() + wDp * px / 2f, ((wy - cy) * scale * px).toFloat() + hDp * px / 2f)
         }
 
         Canvas(
@@ -122,9 +126,9 @@ internal fun SpotMap(
             val (cx, cy) = MapTiles.project(home.lat, home.lon, zoom)
             images.forEach { (t, img) ->
                 val tw = 256.0 / (1 shl (t.zoom - zoom))
-                val ox = ((t.x * tw - (cx - wDp / 2)) * px).toFloat()
-                val oy = ((t.y * tw - (cy - hDp / 2)) * px).toFloat()
-                val side = (tw * px).roundToInt() + 1
+                val ox = (((t.x * tw - cx) * scale + wDp / 2) * px).toFloat()
+                val oy = (((t.y * tw - cy) * scale + hDp / 2) * px).toFloat()
+                val side = (tw * scale * px).roundToInt() + 1
                 drawImage(
                     img,
                     dstOffset = IntOffset(ox.roundToInt(), oy.roundToInt()),

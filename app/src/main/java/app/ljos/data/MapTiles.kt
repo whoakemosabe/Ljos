@@ -52,6 +52,15 @@ object MapTiles {
         return 5
     }
 
+    /**
+     * Zoom (fractional, so the places fill the map rather than bunching near home) that fits
+     * [radiusKm] in half the map height. The same as the phone page's map.js.
+     */
+    fun zoomExact(lat: Double, radiusKm: Double, halfHeightDp: Float): Double {
+        val z = ln(156_543.03 * cos(Math.toRadians(lat)) * halfHeightDp / (radiusKm * 1000 * 1.2)) / ln(2.0)
+        return z.coerceIn(5.0, 12.0)
+    }
+
     /** Tiles covering a [widthDp]×[heightDp] map at view zoom [zoom] (1 map dp = 1 world px). */
     suspend fun load(
         context: Context, lat: Double, lon: Double, zoom: Int, widthDp: Float, heightDp: Float,
