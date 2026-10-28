@@ -118,6 +118,7 @@ async function load() {
     // The edge lens (glasspane.js, Chromium) on every glass surface. No moving light: no shine.
     if (!glassOn && window.Glasspane) { glassOn = true; window.Glasspane.init({ selector: ".lg", light: false }); }
   } catch (e) {
+    console.error(e);
     if (data) showProblem("Couldn't reach the forecast. Showing the last one.");
     else showProblem("Reading the sky… the forecast feeds are busy, trying again shortly.");
   }
@@ -139,9 +140,17 @@ function night() { return showTomorrow && hasTomorrow() ? data.tomorrow : data?.
 function hours() { return night()?.hours || []; }
 function hourAt(time) { return hours().find((h) => h.time === time) || null; }
 function nowHour() { return data?.current?.hour || null; }
+/** Once it's dark: the hour we're in tonight (the app's nowHour). The big number then shows right now. */
+function darkNowHour() {
+  const now = data?.now ?? Date.now();
+  return (data?.tonight?.hours || []).find((h) => now >= h.time && now < h.time + HOUR && (h.dark ?? 0) > 0) || null;
+}
+/** The hour the big number is for: right now once dark, else tonight's peak (the app's heroHour). */
+function heroHour() { return darkNowHour() || data?.tonight?.peak || null; }
+/** The hour the cards show: the tapped one, else right now (tonight, once dark), else the peak (the app's sel). */
 function focusHour() {
-  if (selected != null) return hourAt(selected);
-  return night()?.peak || null;
+  if (selected != null) { const h = hourAt(selected); if (h) return h; }
+  return (!showTomorrow && darkNowHour()) || night()?.peak || null;
 }
 
 // Folding cards, as in the app: tap a card's title row to fold it to one summary line. Which
@@ -240,42 +249,46 @@ function renderHeader() {
   $("updated").textContent = (stale ? "Data may be out of date · " : "") + `Updated ${ago(data.updatedAt)}`;
   $("updated").classList.toggle("warn", !!stale);
   const locate = $("locate");
-  if (locate) locate.textContent = store.get("ljos.pos") ? "Update location" : "Use my location";
+  if (locate) locate.setAttribute("aria-label", store.get("ljos.pos") ? "Update my location" : "Use my location");
+  const ps = $("pill-score"), hh = heroHour();
+  if (ps) { ps.textContent = hh ? String(hh.score) : ""; ps.style.color = hh ? scoreColor(hh.score) : ""; }
 }
 
 function renderHero() {
-  const n = night();
-  const which = showTomorrow && hasTomorrow() ? "Tomorrow" : "Tonight";
-  const peak = n.peak;
-  const h = focusHour();
+  // As in the app: always tonight; right now once it's dark, otherwise tonight's peak.
+  const n = data.tonight;
+  const peak = n?.peak;
+  const nowH = darkNowHour();
+  const h = nowH || peak;
   const now = data.now;
-  if (!peak || !h) {
-    $("eyebrow").textContent = which;
+  const eb = $("eyebrow");
+  eb.textContent = nowH ? "Right now" : "Tonight";
+  eb.classList.toggle("live", !!nowH);
+  if (!h) {
     setScore(null);
     $("chance").textContent = "Too bright for aurora";
     $("peak-line").textContent = "Nights are too light here this time of year.";
+    renderChips(null, n, now);
     return;
   }
-  const isPeak = selected == null || selected === peak.time;
-  $("eyebrow").textContent = isPeak ? `${which}'s best` : `At ${hhmm(h.time)}`;
   setScore(h.score);
   $("chance").textContent = CHANCE[h.chance] || "";
   let line = "";
-  if (selected != null && !isPeak) {
-    line = `${cloudText(h.cloud)} · Kp ${h.kp?.toFixed(1)}`;
+  if (nowH && peak && peak.time !== nowH.time && peak.score > nowH.score) {
+    line = `Best tonight: ${peak.score} around ${hhmm(peak.time)}`;
+  } else if (nowH) {
+    line = "Tonight's best hour" + (n.darkUntil ? ` · dark until ${hhmm(n.darkUntil)}` : "");
   } else if (peak.score <= 0) {
-    const when = which === "Tonight" ? "tonight" : "tomorrow night";
-    line = n.darkFrom && now < n.darkFrom ? `Dark in ${span(n.darkFrom - now)} · no aurora expected ${when}` : `No aurora expected ${when}`;
+    line = n.darkFrom && now < n.darkFrom ? `Dark in ${span(n.darkFrom - now)} · no aurora expected` : "No aurora expected tonight";
   } else if (n.darkFrom && now < n.darkFrom) {
     line = `Dark in ${span(n.darkFrom - now)} · peak around ${hhmm(peak.time)}`;
   } else if (now < peak.time) {
     line = `Peak in ${span(peak.time - now)}, around ${hhmm(peak.time)}`;
   } else if (n.darkUntil && now < n.darkUntil) {
-    line = `Best was around ${hhmm(peak.time)} · dark until ${hhmm(n.darkUntil)}`;
-  } else {
-    line = `Peak around ${hhmm(peak.time)}`;
+    line = `Dark until ${hhmm(n.darkUntil)}`;
   }
   $("peak-line").textContent = line;
+  $("peak-line").hidden = !line;
   renderChips(h, n, now);
 }
 
@@ -309,8 +322,7 @@ function renderChips(h, n, now) {
 function setScore(score) {
   const s = $("score");
   s.textContent = score == null ? "–" : String(score);
-  s.style.color = score == null ? "" : scoreColor(score);
-  $("hero").style.setProperty("--glow", score == null ? "transparent" : scoreColor(score));
+  s.style.color = "";
 }
 
 /** Tonight / Tomorrow: a groove with a green thumb that slides, like the app's segments. */
@@ -670,16 +682,19 @@ function locate() {
   if (!("geolocation" in navigator)) return showProblem("This browser can't share its location.");
   const btn = $("locate");
   btn.disabled = true;
-  btn.textContent = "Finding you…";
+  btn.classList.add("busy");
+  btn.setAttribute("aria-label", "Finding you…");
   navigator.geolocation.getCurrentPosition(
     (p) => {
       store.set("ljos.pos", { lat: p.coords.latitude, lon: p.coords.longitude });
       btn.disabled = false;
+      btn.classList.remove("busy");
       selected = null;
       load();
     },
     () => {
       btn.disabled = false;
+      btn.classList.remove("busy");
       renderHeader();
       showProblem("Location is off for this site, so this shows Njarðvík. You can allow it in your browser settings.");
     },
@@ -690,7 +705,26 @@ function locate() {
 // ---------------------------------------------------------------------------------------------
 // Start
 // ---------------------------------------------------------------------------------------------
-if (!TV) $("locate").addEventListener("click", locate);
+if (!TV) {
+  $("locate").addEventListener("click", locate);
+  $("refresh").addEventListener("click", async () => {
+    const b = $("refresh");
+    if (b.classList.contains("busy")) return;
+    b.classList.add("busy");
+    await load();
+    b.classList.remove("busy");
+  });
+  $("place-pill").addEventListener("click", locate);
+  // As in the app: the header turns to glass once the page scrolls, and once the big number has
+  // scrolled away the score shows in the place pill.
+  const top = document.querySelector(".top");
+  const onScroll = () => top.style.setProperty("--glass-in", String(Math.min(1, scrollY / 24)));
+  addEventListener("scroll", onScroll, { passive: true });
+  onScroll();
+  if ("IntersectionObserver" in window) {
+    new IntersectionObserver(([e]) => top.classList.toggle("score-up", !e.isIntersecting), { rootMargin: "-90px 0px 0px 0px" }).observe($("score"));
+  }
+}
 $("banner").addEventListener("click", () => { $("banner").hidden = true; });
 
 load();

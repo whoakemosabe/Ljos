@@ -649,3 +649,105 @@ html.tv .spot { padding: 0.45rem 0.5rem; }
 .ns-rows dt { color: var(--muted); }
 .ns-rows dd { margin: 0; color: var(--ink); text-align: right; }
 @media (prefers-reduced-motion: reduce) { .ns-more, .ns-chev { transition: none; } }
+
+/* ================================================================================================
+   Matching the app exactly (ui/Glass.kt ljosGlass + solidEdges, LjosApp.kt Header, Cards.kt Hero,
+   Sections.kt ConditionChips). Numbers are the app's, in px for dp.
+   ================================================================================================ */
+
+/* Glass: tint #0A0F1E at 24%, saturation 1.75, brightness +3%, 3px frost, Kyant's lens at the edge
+   (glasspane.js), one shadow (16px, 6px down, #000008 at 55%). Edges are drawn on the surface:
+   a 1px hairline #BED2FF at 14%, a 1.5px light line along the top that follows the corners and
+   fades out just past them (white 32%), and a 1px shade along the bottom (black 30%). */
+.lg {
+  --lg-r: 24px;
+  background: rgba(10, 15, 30, 0.24);
+  box-shadow: 0 6px 16px rgba(0, 0, 8, 0.55);
+}
+.lg::before {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 1;
+  box-shadow: inset 0 0 0 0.5px rgba(190, 210, 255, 0.14);
+}
+.lg::after {
+  content: ""; position: absolute; inset: 0; border-radius: inherit; pointer-events: none; z-index: 1;
+  padding: 0.75px;
+  background: linear-gradient(180deg,
+    rgba(255, 255, 255, 0.32) 0, rgba(255, 255, 255, 0) calc(var(--lg-r) + 6px),
+    rgba(0, 0, 0, 0) calc(100% - var(--lg-r) - 6px), rgba(0, 0, 0, 0.3) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box exclude, linear-gradient(#000 0 0);
+}
+.chip.lg { --lg-r: 14px; }
+.now-strip.lg { --lg-r: 20px; }
+.round.lg, .place-pill.lg { --lg-r: 17px; }
+.lg.banner { box-shadow: 0 6px 16px rgba(0, 0, 8, 0.55); background: rgba(61, 255, 160, 0.14); }
+/* The card itself loses its old border and inner rim lines; the edges above replace them. */
+.card.lg { border: 0; }
+
+/* Header: "Ljós", the place in a glass pill, then round glass buttons hard right. It turns to
+   glass as the page scrolls (the app materialises it over the first 24px). */
+html:not(.tv) .top {
+  position: sticky; top: 0; z-index: 20;
+  display: flex; align-items: center; gap: 0; justify-content: flex-start;
+  height: calc(env(safe-area-inset-top, 0px) + 54px);
+  padding: env(safe-area-inset-top, 0px) 0 0;
+  margin: calc(-1 * (env(safe-area-inset-top, 0px) + 1rem)) -20px 0;
+  padding-left: 20px; padding-right: 16px;
+  --glass-in: 0;
+}
+html:not(.tv) .top::before {
+  content: ""; position: absolute; inset: 0 0 -28px; z-index: -1; pointer-events: none;
+  opacity: var(--glass-in);
+  background: rgba(5, 7, 13, 0.34);
+  -webkit-backdrop-filter: blur(18px) saturate(140%); backdrop-filter: blur(18px) saturate(140%);
+  -webkit-mask: linear-gradient(#000 calc(100% - 28px), transparent); mask: linear-gradient(#000 calc(100% - 28px), transparent);
+}
+html:not(.tv) .brand {
+  font-size: 20px; font-weight: 500; letter-spacing: 1px; text-transform: none; color: var(--ink);
+  text-shadow: 0 0 9px rgba(0, 0, 0, 0.7); margin-right: 10px; cursor: default;
+}
+.place-pill {
+  display: flex; align-items: center; height: 34px; max-width: 200px; min-width: 0;
+  padding: 0 12px 0 11px; border-radius: 999px; cursor: pointer;
+}
+.place-pill .pin { width: 10px; height: 13px; flex: none; margin-right: 6px; }
+.place-pill h1 { font-size: 13px; font-weight: 400; letter-spacing: 0; color: rgba(232, 241, 255, 0.9);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+.pill-score { display: inline-block; max-width: 0; opacity: 0; overflow: hidden; font-size: 15px; font-weight: 300;
+  font-variant-numeric: tabular-nums; transition: max-width 0.35s cubic-bezier(0.2, 0.9, 0.3, 1), opacity 0.25s ease, margin 0.35s ease; }
+.top.score-up .pill-score { max-width: 3em; opacity: 1; margin-left: 8px; }
+.top-gap { flex: 1; min-width: 10px; }
+.round { width: 40px; height: 40px; flex: none; border-radius: 50%; padding: 0; display: grid; place-items: center; cursor: pointer;
+  transition: transform 0.25s cubic-bezier(0.34, 1.6, 0.64, 1); touch-action: manipulation; }
+.round + .round { margin-left: 10px; }
+.round svg { width: 18px; height: 18px; }
+.round:active { transform: scale(1.1); }
+.round.busy svg { animation: spin 0.9s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.round:focus-visible, .place-pill:focus-visible { outline: 2px solid rgba(61, 255, 160, 0.6); outline-offset: 2px; }
+
+/* Hero: left-aligned like the app. Eyebrow 12px tracked 3px; the number 120px extra-light white
+   with a dark glow; the headline 26px light; what's next 14px; updated 12px. */
+html:not(.tv) .hero { text-align: left; padding: 6px 0 12px; margin-top: 38px; }
+html:not(.tv) .eyebrow { font-size: 12px; font-weight: 500; letter-spacing: 3px; color: var(--muted); }
+html:not(.tv) .eyebrow.live { color: var(--green); }
+html:not(.tv) .score { margin: 0; line-height: 1; }
+html:not(.tv) #score {
+  display: block; font-size: 120px; line-height: 124px; font-weight: 200; letter-spacing: 0; color: #fff;
+  text-shadow: 0 0 12px rgba(0, 0, 0, 0.6); margin: -6px 0 -18px;
+}
+html:not(.tv) .chance { font-size: 26px; font-weight: 300; color: var(--ink); text-shadow: 0 0 12px rgba(0, 0, 0, 0.6); }
+html:not(.tv) .peak-line { margin-top: 6px; font-size: 14px; color: var(--muted); }
+html:not(.tv) .hero .updated { margin-top: 4px; font-size: 12px; color: var(--faint); }
+
+/* Under the number: the strip, then the four chips, 14px apart like the app's column. */
+.hero-extras { display: flex; flex-direction: column; gap: 14px; }
+.hero-extras[hidden] { display: none; }
+html:not(.tv) .now-strip { margin: 0; max-width: none; }
+html:not(.tv) .chips { margin: 0; max-width: none; gap: 6px; }
+.chip { padding: 7px 6px; font-size: 13px; gap: 5px; border-radius: 14px; }
+.chip svg { width: 13px; height: 13px; }
+@media (min-width: 56rem) { html:not(.tv) .hero-extras { grid-column: 1 / -1; } }
+html.tv .hero-extras { display: none; }
+html:not(.tv) #drift { padding-left: calc(env(safe-area-inset-left, 0px) + 20px); padding-right: calc(env(safe-area-inset-right, 0px) + 20px); }

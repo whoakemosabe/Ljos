@@ -23,13 +23,20 @@
 
   <div id="drift">
     <header class="top">
-      <div class="where">
-        <p class="brand" id="brand">Ljós</p>
-        <h1 id="place">Aurora tonight</h1>
-        <p class="updated" id="updated"></p>
-      </div>
+      <p class="brand" id="brand">Ljós</p>
       <p class="clock tv-only" id="clock" aria-hidden="true"></p>
-      <button class="pill phone-only lg" id="locate" type="button">Use my location</button>
+      <div class="place-pill lg" id="place-pill">
+        <svg class="pin" viewBox="0 0 10 13" aria-hidden="true"><path d="M5 13L.6 6.25h8.8z" fill="#3dffa0"/><circle cx="5" cy="5" r="5" fill="#3dffa0"/><circle cx="5" cy="5" r="2" fill="#05070d"/></svg>
+        <h1 id="place">Aurora tonight</h1>
+        <span class="pill-score" id="pill-score" aria-hidden="true"></span>
+      </div>
+      <span class="top-gap"></span>
+      <button class="round lg phone-only" id="refresh" type="button" aria-label="Refresh the forecast">
+        <svg viewBox="0 0 18 18" aria-hidden="true"><path d="M13.53 4.47A6.4 6.4 0 1 0 15.4 9" fill="none" stroke="#e8f1ff" stroke-width="1.8" stroke-linecap="round"/><path d="M15.6 3.2v3.6H12" fill="none" stroke="#e8f1ff" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <button class="round lg phone-only" id="locate" type="button" aria-label="Use my location">
+        <svg viewBox="0 0 18 18" aria-hidden="true"><path d="M15.5 2.5L2.5 8l5.6 1.9L10 15.5z" fill="none" stroke="#e8f1ff" stroke-width="1.6" stroke-linejoin="round"/></svg>
+      </button>
     </header>
 
     <button class="banner lg" id="banner" type="button" hidden>
@@ -42,9 +49,12 @@
     <main class="grid">
       <section class="hero" id="hero" aria-live="polite">
         <p class="eyebrow" id="eyebrow">Tonight</p>
-        <p class="score"><span id="score">–</span><span class="of">/100</span></p>
+        <p class="score"><span id="score">–</span></p>
         <p class="chance" id="chance">Reading the sky…</p>
         <p class="peak-line" id="peak-line"></p>
+        <p class="updated" id="updated"></p>
+      </section>
+      <section class="hero-extras" id="hero-extras">
         <div class="now-strip lg" id="now-strip" role="button" tabindex="0" aria-expanded="false" aria-controls="now-more">
           <div class="ns-head">
             <span class="ns-title">Right now</span>
