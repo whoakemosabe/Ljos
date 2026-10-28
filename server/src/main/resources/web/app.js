@@ -1,4 +1,5 @@
-import { startSky, skyFor } from "/aurora.js";
+import { startSky, skyFor, skyDetail } from "/aurora.js";
+import { skyLab, labHour, labExtras } from "/skylab.js";
 
 // ---------------------------------------------------------------------------------------------
 // Mode. /lobby and /lobby/{place} are the TV layout; everything else is the phone layout.
@@ -124,7 +125,8 @@ function hideProblem() { $("problem").hidden = true; }
 // ---------------------------------------------------------------------------------------------
 // Rendering
 // ---------------------------------------------------------------------------------------------
-const sky = startSky($("sky"), { scale: TV ? 0.5 : 0.6 });
+const sky = startSky($("sky"), { scale: TV ? 0.5 : 0.6, rich: true, maxWidth: 1280, moonSize: 0.032 });
+skyLab($("brand"), () => setSky());
 
 function hours() { return data?.tonight?.hours || []; }
 function hourAt(time) { return hours().find((h) => h.time === time) || null; }
@@ -147,8 +149,20 @@ function render() {
   renderDress();
   renderTips();
   renderLookUp();
-  const skyHour = selected != null ? hourAt(selected) : nowHour();
-  sky.set(skyFor(skyHour, hours()));
+  setSky();
+}
+
+/** The live sky, as in the app: the tapped hour, else right now. Moon and stars stay above the score. */
+function setSky() {
+  if (!data) return;
+  const h = labHour(selected != null ? hourAt(selected) : nowHour());
+  const c = data.current;
+  const x = labExtras({ bz: c?.bzFresh ? c.bz : null, waxing: !!data.moon?.waxing, now: h ? h.time + HOUR / 2 : Date.now() });
+  const fit = TV ? { horizon: 0.42, top: 0.03, anchor: 0.5 } : { horizon: 0.15, top: 0.04, anchor: 0.72 };
+  sky.set({
+    ...skyFor(h, hours()),
+    ...skyDetail(h, { bz: x.bz, waxing: x.waxing, ...fit, lat: data.place?.lat, lon: data.place?.lon, starsAt: x.now }),
+  });
 }
 
 function renderHeader() {

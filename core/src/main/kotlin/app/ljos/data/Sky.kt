@@ -1,15 +1,14 @@
-package app.ljos.server
+package app.ljos.data
 
-import app.ljos.data.HOUR_MS
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.Locale
 import kotlin.math.abs
 
 /**
- * Weather that only the lobby sky uses: wind direction (which way the clouds drift), rain,
+ * Weather that only the live sky uses: wind direction (which way the clouds drift), rain,
  * snow and visibility. A separate request from the clouds on purpose: if it fails, the
- * forecast itself is untouched, and the phone app's request stays as it is.
+ * forecast itself is untouched.
  */
 class SkySeries(
     val times: LongArray,

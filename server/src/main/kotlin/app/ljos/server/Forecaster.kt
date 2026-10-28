@@ -1,5 +1,7 @@
 package app.ljos.server
 
+import app.ljos.data.SkyFeed
+import app.ljos.data.SkySeries
 import app.ljos.data.Feeds
 import app.ljos.data.Inputs
 import app.ljos.data.MIN_MS

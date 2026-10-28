@@ -34,8 +34,9 @@ class Repo(context: Context) {
     suspend fun refresh(force: Boolean = false, live: Boolean = false): List<String> = withContext(Dispatchers.IO) {
         val liveAge = if (live) MIN_MS else 10 * MIN_MS
         val errors: MutableList<String> = Collections.synchronizedList(ArrayList())
-        val (_, spots) = place()
+        val (home, spots) = place()
         val cloudsUrl = Feeds.cloudsUrl(spots)
+        val skyUrl = SkyFeed.url(home.lat, home.lon)
         // A new location means the cached clouds are for the wrong places.
         val moved = read(CLOUDS_URL) != cloudsUrl
         coroutineScope {
@@ -51,6 +52,16 @@ class Repo(context: Context) {
                 async { pull(MAG, liveAge, Feeds.MAG_SUMMARY_URL, force, errors) { Feeds.parseMagSummary(it) != null } },
                 async { pull(WIND, liveAge, Feeds.WIND_SUMMARY_URL, force, errors) { Feeds.parseWindSummary(it) != null } },
                 async { pull(KP_NOW, liveAge, Feeds.KP_NOW_URL, force, errors) { Feeds.parseKpNow(it) != null } },
+                // Weather for the live sky (wind, rain, snow, visibility). Best effort: a failure
+                // only makes the sky plainer, so it never shows as an error.
+                async {
+                    val quiet: MutableList<String> = ArrayList()
+                    pull(SKY, 60 * MIN_MS, skyUrl, force || read(SKY_URL) != skyUrl, quiet) {
+                        val ok = SkyFeed.parse(it) != null
+                        if (ok) write(SKY_URL, skyUrl)
+                        ok
+                    }
+                },
             ).awaitAll()
         }
         // Minute-level solar wind (for travel time, coupling and "sustained" checks) is a bigger
@@ -84,7 +95,8 @@ class Repo(context: Context) {
             if (magText == null) emptyList() else try { Feeds.parseSolarWind(magText, read(WIND_RT)) } catch (e: Exception) { emptyList() }
         } else emptyList()
         val updated = listOf(KP, CLOUDS, MAG, WIND).maxOf { f(it).takeIf { file -> file.exists() }?.lastModified() ?: 0L }
-        return Inputs(kp, clouds, mag, wind, updated, home, spots, kpNow, solarWind)
+        val sky = if (read(SKY_URL) == SkyFeed.url(home.lat, home.lon)) parse(SKY) { SkyFeed.parse(it) } else null
+        return Inputs(kp, clouds, mag, wind, updated, home, spots, kpNow, solarWind, sky)
     }
 
     private fun <T> parse(name: String, parser: (String) -> T?): T? {
@@ -158,5 +170,7 @@ class Repo(context: Context) {
         const val CLOUDS_URL = "clouds.url"
         const val KP_NOW = "kp_now.json"
         const val WIND_RT = "wind_rt.json"
+        const val SKY = "sky.json"
+        const val SKY_URL = "sky.url"
     }
 }

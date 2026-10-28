@@ -239,7 +239,7 @@ h1 { font-size: 2rem; font-weight: 600; line-height: 1.15; white-space: nowrap; 
 .tick.window .tick-track { border-top-color: var(--green); }
 .tick-value { font-size: 1.1rem; font-weight: 500; margin-bottom: 0.3rem; }
 .tick-fill { width: 46%; min-height: 0.2rem; border-radius: 0.3rem 0.3rem 0 0; transition: height 500ms ease-out; }
-.tick-moon { width: 100%; height: 0.25rem; margin-top: 0.3rem; }
+.tick-moon { width: 100%; height: 0.15rem; margin-top: 0.35rem; }
 .tick.moon .tick-moon { background: var(--moon); }
 .tick-hour { margin-top: 0.35rem; font-size: 1.1rem; color: var(--frost); }
 .tick.past .tick-fill { opacity: 0.35; }

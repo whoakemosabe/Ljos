@@ -1,0 +1,47 @@
+/* Sky lab: the hidden panel for testing the live sky. Sized in px so it's the same on the
+   phone and the TV. */
+.skylab {
+  position: fixed;
+  left: 16px;
+  bottom: 16px;
+  z-index: 50;
+  width: min(360px, calc(100vw - 32px));
+  max-height: min(calc(100vh - 32px), 640px);
+  overflow: auto;
+  overscroll-behavior: contain;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(238, 243, 251, 0.16);
+  background: rgba(8, 12, 24, 0.9);
+  -webkit-backdrop-filter: blur(16px);
+  backdrop-filter: blur(16px);
+  color: #eef3fb;
+  font: 400 13px/1.35 "Schibsted Grotesk", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+}
+.skylab[hidden] { display: none; }
+html .skylab, html .skylab * { cursor: auto !important; }
+html .skylab button { cursor: pointer !important; }
+.skylab-head { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; }
+.skylab-title { margin: 0; font-size: 15px; font-weight: 700; }
+.skylab-mode { margin-right: auto; padding: 2px 8px; border-radius: 999px; background: rgba(121, 232, 176, 0.14); color: #79e8b0; font-size: 12px; font-weight: 600; }
+.skylab button {
+  font: inherit;
+  color: inherit;
+  border: 1px solid rgba(238, 243, 251, 0.18);
+  background: rgba(238, 243, 251, 0.06);
+  border-radius: 999px;
+  padding: 5px 11px;
+}
+@media (hover: hover) { .skylab button:hover { background: rgba(238, 243, 251, 0.12); } }
+.skylab button:focus-visible, .skylab input:focus-visible { outline: 2px solid #79e8b0; outline-offset: 2px; }
+.skylab-presets { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
+.skylab-chip.on { border-color: rgba(121, 232, 176, 0.6); background: rgba(121, 232, 176, 0.16); color: #79e8b0; }
+.skylab-list { display: grid; gap: 8px; }
+.skylab-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 8px; align-items: center; }
+.skylab-row input[type="range"] { grid-column: 1 / -1; width: 100%; accent-color: #79e8b0; margin: 0; }
+.skylab-name { color: #b4c0d3; }
+.skylab-val { font-variant-numeric: tabular-nums; font-weight: 600; }
+.skylab-check { grid-template-columns: auto 1fr; }
+.skylab-check input { accent-color: #79e8b0; margin: 0; }
+.skylab.is-live .skylab-list { opacity: 0.55; }
+@media (max-width: 600px) { .skylab { max-height: 46vh; left: 10px; bottom: 10px; width: calc(100vw - 20px); } }

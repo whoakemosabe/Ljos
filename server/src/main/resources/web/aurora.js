@@ -2,11 +2,13 @@
 // The sky *is* the forecast: curtain brightness and height follow activity, storms tint
 // violet, cloud rolls in as fog, and the real moon sits in the sky at its phase.
 //
-// The lobby turns on a richer sky (startSky with { rich: true }): the moon and twilight sit at
-// their real compass directions, a bright moon washes out faint aurora, cloud comes in three
-// layers drifting with the wind, rain, snow and haze follow the weather, the aurora reddens
-// and brightens with the data, and real stars sit where they are. With rich off (the phone),
-// every one of those terms is zero and the picture is exactly the app's.
+// The live sky (startSky with { rich: true }, on the phone page and the lobby, matching the
+// Android app): the moon and twilight sit at their real compass directions, a bright moon
+// washes out faint aurora, cloud comes in three layers drifting with the wind, rain, snow and
+// haze follow the weather, the aurora reddens and brightens with the data, and real stars sit
+// where they are. The moon itself is drawn at full screen resolution on its own small canvas
+// (moonFace below), since the sky renders at reduced resolution. The same mapping lives in
+// core SkyView.kt for the app; keep the two in step.
 
 const VERT = `
 attribute vec2 p;
@@ -116,11 +118,9 @@ void main() {
   col += vec3(0.85, 0.82, 0.70) * exp(-md * 9.0) * 0.35 * moonIllum * moonUp;
   float r = 0.032;
   float disc = smoothstep(r, r - 0.003, md);
-  // Rich: the lit side follows the phase (waxing lit on the right), and the dark side shows faint earthshine.
-  float side = rich > 0.5 && waxing > 0.5 ? -1.0 : 1.0;
-  float shadow = smoothstep(r, r - 0.003, length(mp - vec2(side * moonIllum * 2.0 * r, 0.0)));
-  col = mix(col, vec3(0.95, 0.92, 0.80), disc * (1.0 - shadow) * moonUp);
-  col = mix(col, vec3(0.13, 0.14, 0.17), rich * disc * shadow * moonUp * 0.6);
+  // Rich: the disc is drawn sharp on its own canvas instead (moonFace); only the halo is here.
+  float shadow = smoothstep(r, r - 0.003, length(mp - vec2(moonIllum * 2.0 * r, 0.0)));
+  col = mix(col, vec3(0.95, 0.92, 0.80), disc * (1.0 - shadow) * moonUp * (1.0 - rich));
 
   // Stars dim under a bright moon and vanish behind cloud. Sized in CSS pixels.
   float s = hash(floor(fragCoord / (3.0 * pixel)));
@@ -217,14 +217,20 @@ const STARS = [
   [5.278, 46.0, 1.0], // Capella
 ];
 const RAD = Math.PI / 180;
-const HORIZON = 0.42;
-/** Facing north: north in the middle, east to the right, south at both edges. */
-const azToX = (az) => 0.5 + ((((az + 180) % 360) + 360) % 360 - 180) / 360;
-const altToY = (alt) => HORIZON - (Math.max(-10, Math.min(90, alt)) / 90) * HORIZON;
+/**
+ * Compass direction to screen x. The view faces [viewAz] (the moon when it's up, else north),
+ * which sits at [anchor] across the screen; east is to the right of north, as when you face it.
+ */
+const wrap180 = (a) => ((((a + 180) % 360) + 360) % 360) - 180;
+const azToX = (az, viewAz = 0, anchor = 0.5) => anchor + wrap180(az - viewAz) / 360;
+/** Which way the view faces: toward the moon when it's up, else north (where the aurora is). */
+const viewFor = (hour) => ((hour?.moonAlt ?? -1) > 0 && hour?.moonAz != null ? hour.moonAz : 0);
+/** [horizon] is the screen height of the horizon, [top] of straight overhead (0 = top). */
+const altToY = (alt, horizon, top) => horizon - (Math.max(-10, Math.min(70, alt)) / 70) * (horizon - top);
 const clamp01 = (v) => Math.min(1, Math.max(0, v));
 
 /** Where each bright star is right now, as screen positions with brightness (0 = hidden). */
-export function starPositions(ms, lat, lon) {
+export function starPositions(ms, lat, lon, { horizon = 0.42, top = 0.03, anchor = 0.5, viewAz = 0 } = {}) {
   const jd = ms / 86400000 + 2440587.5;
   const lst = (280.46061837 + 360.98564736629 * (jd - 2451545) + lon) * RAD;
   const phi = lat * RAD;
@@ -233,7 +239,8 @@ export function starPositions(ms, lat, lon) {
     const d = dec * RAD;
     const alt = Math.asin(Math.sin(phi) * Math.sin(d) + Math.cos(phi) * Math.cos(d) * Math.cos(h)) / RAD;
     const az = (Math.atan2(Math.sin(h), Math.cos(h) * Math.sin(phi) - Math.tan(d) * Math.cos(phi)) / RAD + 180) % 360;
-    return alt > 3 ? [azToX(az), altToY(alt), mag] : [0, 0, 0];
+    const x = azToX(az, viewAz, anchor);
+    return alt > 3 && x > -0.05 && x < 1.05 ? [x, altToY(alt, horizon, top), mag] : [0, 0, 0];
   });
 }
 
@@ -242,15 +249,17 @@ export function starPositions(ms, lat, lon) {
  * snow, haze, and aurora colour from the live data. Merge over skyFor() and pass to a sky
  * started with { rich: true }.
  */
-export function skyDetail(hour, { bz = null, waxing = false } = {}) {
+export function skyDetail(hour, { bz = null, waxing = false, horizon = 0.42, top = 0.03, anchor = 0.5, lat = null, lon = null, starsAt = null } = {}) {
   if (!hour) return { ...RICH_ZERO };
   const out = { ...RICH_ZERO, waxing: waxing ? 1 : 0 };
+  const viewAz = viewFor(hour);
   if (hour.moonAz != null && hour.moonAlt != null) {
-    out.moonX = Math.min(0.96, Math.max(0.04, azToX(hour.moonAz)));
-    out.moonY = Math.max(0.05, altToY(hour.moonAlt));
+    out.moonX = azToX(hour.moonAz, viewAz, anchor);
+    out.moonY = Math.max(top, altToY(hour.moonAlt, horizon, top));
   }
+  if (lat != null && lon != null) out.stars = starPositions(starsAt ?? Date.now(), lat, lon, { horizon, top, anchor, viewAz });
   out.moonWash = (hour.moonAlt ?? -1) > 0 ? (hour.moonIllum ?? 0) * clamp01(hour.moonAlt / 30) : 0;
-  if (hour.sunAz != null) { out.sunX = azToX(hour.sunAz); out.sunY = HORIZON; }
+  if (hour.sunAz != null) { out.sunX = azToX(hour.sunAz, viewAz, anchor); out.sunY = horizon; }
   const pct = (v) => (v == null || v < 0 ? null : v / 100);
   const low = pct(hour.cloudLow), mid = pct(hour.cloudMid), high = pct(hour.cloudHigh);
   if (low == null && mid == null && high == null) out.cloudMid = Math.max(0, hour.cloud ?? 0) / 100;
@@ -303,7 +312,63 @@ export function skyFor(hour, hours, portrait = window.innerHeight > window.inner
  * pauses when the page is hidden, and draws one still frame under prefers-reduced-motion.
  * Falls back to a CSS gradient if WebGL isn't available.
  */
-export function startSky(canvas, { scale = 0.5, rich = false, maxWidth = Infinity } = {}) {
+// ---------------------------------------------------------------------------------------------
+// The moon's face, drawn per pixel at full resolution: a lit sphere with the real phase, the
+// maria and a few bright craters (positions on the near side, north up), and faint earthshine.
+// Same model as the app's shader (Aurora.kt moonAlbedo).
+
+const MARIA = [
+  [-0.55, -0.05, 0.42, 0.15], [-0.28, -0.45, 0.28, 0.19], [0.18, -0.38, 0.19, 0.19], [0.32, -0.10, 0.22, 0.19],
+  [0.68, -0.30, 0.12, 0.21], [0.60, 0.12, 0.15, 0.14], [0.40, 0.26, 0.11, 0.14], [-0.18, 0.36, 0.2, 0.14],
+  [-0.48, 0.30, 0.11, 0.14],
+];
+const fract = (v) => v - Math.floor(v);
+const hash2 = (x, y) => fract(Math.sin(x * 127.1 + y * 311.7) * 43758.5453);
+function noise2(x, y) {
+  const ix = Math.floor(x), iy = Math.floor(y), fx = x - ix, fy = y - iy;
+  const ux = fx * fx * (3 - 2 * fx), uy = fy * fy * (3 - 2 * fy);
+  const a = hash2(ix, iy), b = hash2(ix + 1, iy), c = hash2(ix, iy + 1), d = hash2(ix + 1, iy + 1);
+  return a + (b - a) * ux + (c - a) * uy + (a - b - c + d) * ux * uy;
+}
+const blob = (x, y, cx, cy, r) => Math.exp(-((x - cx) ** 2 + (y - cy) ** 2) / (r * r));
+function moonAlbedo(x, y) {
+  let m = 0;
+  for (const [cx, cy, r, k] of MARIA) m += k * blob(x, y, cx, cy, r);
+  m += 0.10 * blob(x * 0.5, y, -0.02, -0.70, 0.14);
+  const bright = 0.14 * blob(x, y, -0.12, 0.72, 0.04) + 0.08 * blob(x, y, -0.30, -0.12, 0.035);
+  const tex = (noise2(x * 6, y * 6) - 0.5) * 0.07 + (noise2(x * 22, y * 22) - 0.5) * 0.025;
+  return Math.min(1.1, Math.max(0, 1.0 - m + bright + tex));
+}
+
+/** Paints the moon into [ctx] as a [size]-pixel square. [illum] 0..1, [waxing] lit on the right. */
+export function moonFace(ctx, size, illum, waxing) {
+  const img = ctx.createImageData(size, size);
+  const px = img.data;
+  const inc = Math.acos(Math.min(1, Math.max(-1, 2 * illum - 1)));
+  const lx = (waxing ? 1 : -1) * Math.sin(inc), lz = Math.cos(inc);
+  const r = size / 2, aa = 1.5 / r;
+  const smooth = (e0, e1, v) => { const t = Math.min(1, Math.max(0, (v - e0) / (e1 - e0))); return t * t * (3 - 2 * t); };
+  for (let j = 0; j < size; j++) {
+    for (let i = 0; i < size; i++) {
+      const x = (i + 0.5 - r) / r, y = (j + 0.5 - r) / r;
+      const d = Math.hypot(x, y);
+      if (d > 1) continue;
+      const z = Math.sqrt(Math.max(0, 1 - d * d));
+      const ndl = x * lx + z * lz;
+      const lit = smooth(-0.04, 0.10, ndl);
+      const alb = moonAlbedo(x, y);
+      const shade = lit * (0.78 + 0.22 * smooth(0, 0.45, ndl));
+      const k = (i + j * size) * 4;
+      px[k] = Math.min(255, 255 * (1.0 * alb * shade + 0.10 * alb * (1 - lit)));
+      px[k + 1] = Math.min(255, 255 * (0.98 * alb * shade + 0.11 * alb * (1 - lit)));
+      px[k + 2] = Math.min(255, 255 * (0.92 * alb * shade + 0.14 * alb * (1 - lit)));
+      px[k + 3] = 255 * smooth(1, 1 - aa, d);
+    }
+  }
+  ctx.putImageData(img, 0, 0);
+}
+
+export function startSky(canvas, { scale = 0.5, rich = false, maxWidth = Infinity, moonSize = 0.034 } = {}) {
   const gl = canvas.getContext("webgl", { antialias: false, alpha: false, preserveDrawingBuffer: false, powerPreference: "low-power" });
   const target = { ...skyFor(null), ...RICH_ZERO };
   let stars = new Float32Array(14 * 3);
@@ -346,6 +411,35 @@ export function startSky(canvas, { scale = 0.5, rich = false, maxWidth = Infinit
     rich: u("rich"), waxing: u("waxing"), moonWash: u("moonWash"), cloudLow: u("cloudLow"), cloudMid: u("cloudMid"),
     cloudHigh: u("cloudHigh"), drift: u("drift"), rain: u("rain"), rainSlant: u("rainSlant"), snow: u("snow"), haze: u("haze"),
     sunPos: u("sunPos"), bzBoost: u("bzBoost"), redFringe: u("redFringe"), pinkEdge: u("pinkEdge"), stars: u("stars"),
+  };
+
+  // Rich: the sharp moon on its own canvas just above the sky.
+  let moon = null, moonCtx = null, moonKey = "";
+  if (rich) {
+    moon = document.createElement("canvas");
+    moon.setAttribute("aria-hidden", "true");
+    moon.style.cssText = "position:fixed;left:0;top:0;z-index:0;pointer-events:none;opacity:0;will-change:transform,opacity";
+    canvas.after(moon);
+    moonCtx = moon.getContext("2d");
+  }
+  const placeMoon = () => {
+    if (!moon) return;
+    const dpr = window.devicePixelRatio || 1;
+    const css = Math.max(8, Math.round(canvas.clientHeight * moonSize * 2));
+    const size = Math.round(css * dpr);
+    const key = `${size}|${current.moonIllum.toFixed(3)}|${current.waxing > 0.5}`;
+    if (key !== moonKey) {
+      moonKey = key;
+      moon.width = size; moon.height = size;
+      moon.style.width = `${css}px`; moon.style.height = `${css}px`;
+      moonFace(moonCtx, size, current.moonIllum, current.waxing > 0.5);
+    }
+    const x = current.moonX * canvas.clientWidth - css / 2;
+    const y = current.moonY * canvas.clientHeight - css / 2;
+    moon.style.transform = `translate(${x.toFixed(1)}px, ${y.toFixed(1)}px)`;
+    // Behind cloud and haze the moon fades; by day it's pale.
+    const hidden = Math.min(0.92, current.cloudMid * 0.75 + current.cloudLow * 0.5 + current.cloudHigh * 0.2 + current.haze * 0.5);
+    moon.style.opacity = String(current.moonUp * (1 - hidden) * (1 - 0.6 * current.daylight));
   };
 
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -394,6 +488,7 @@ export function startSky(canvas, { scale = 0.5, rich = false, maxWidth = Infinit
       gl.uniform3fv(uni.stars, stars);
     }
     gl.drawArrays(gl.TRIANGLES, 0, 3);
+    placeMoon();
   };
 
   const loop = (now) => {

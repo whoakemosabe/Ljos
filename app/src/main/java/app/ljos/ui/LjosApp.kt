@@ -420,7 +420,7 @@ fun LjosApp() {
             else {
                 val h = shownNight?.hours?.firstOrNull { it.time == selected }
                     ?: Model.hourScore(now - now % HOUR_MS, inp.home, inp, now)
-                skyFor(h, night, inp.home.lat, inp.home.lon)
+                skyFor(h, night, inp, now)
             }
         }
         val sheetVisible by remember { derivedStateOf { sheet.value < 0.999f } }
@@ -974,7 +974,9 @@ private fun PinIcon(modifier: Modifier) {
 
 
 /** Live-sky conditions for one hour. Moon height follows its altitude; it drifts across the night. */
-private fun skyFor(h: HourScore, night: Night?, lat: Double, lon: Double): SkyState {
+private fun skyFor(h: HourScore, night: Night?, inp: app.ljos.data.Inputs, now: Long): SkyState {
+    val lat = inp.home.lat
+    val lon = inp.home.lon
     val hours = night?.hours.orEmpty()
     val frac = if (hours.size > 1) {
         ((h.time - hours.first().time).toFloat() / (hours.last().time - hours.first().time)).coerceIn(0f, 1f)
@@ -993,7 +995,14 @@ private fun skyFor(h: HourScore, night: Night?, lat: Double, lon: Double): SkySt
         storm = ((h.kp - 4.5) / 2.0).coerceIn(0.0, 1.0).toFloat(),
         daylight = daylight,
         dusk = dusk,
-    )
+        // The real sky: moon and sun directions, cloud layers, wind, rain, snow, stars. The moon
+        // and stars stay between the top of the screen and its upper third, clear of the score.
+        detail = app.ljos.model.SkyView.detail(
+            h, inp,
+            bz = inp.mag?.takeIf { now - it.time <= 60 * app.ljos.data.MIN_MS }?.bz,
+            horizon = 0.32f, top = 0.06f, anchor = 0.72f,
+        ),
+    ).let { st -> st.detail?.let { d -> st.copy(moonX = d.moonX, moonY = d.moonY) } ?: st }
 }
 
 /**

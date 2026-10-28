@@ -66,6 +66,8 @@ class Inputs(
     val kpNow: KpPoint? = null,
     /** Minute-level solar wind at the L1 satellite, oldest first. Empty when not fetched. */
     val solarWind: List<SwPoint> = emptyList(),
+    /** Wind direction, rain, snow and visibility for the live sky. Null when not fetched. */
+    val sky: SkySeries? = null,
 ) {
     val isEmpty: Boolean get() = kp.isEmpty() && clouds.isEmpty()
 }

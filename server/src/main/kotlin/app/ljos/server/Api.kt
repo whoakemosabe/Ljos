@@ -1,5 +1,6 @@
 package app.ljos.server
 
+import app.ljos.data.SkySeries
 import app.ljos.data.HOUR_MS
 import app.ljos.data.Inputs
 import app.ljos.data.MIN_MS

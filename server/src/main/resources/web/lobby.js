@@ -1,4 +1,5 @@
-import { startSky, skyFor, skyDetail, starPositions } from "/aurora.js";
+import { startSky, skyFor, skyDetail } from "/aurora.js";
+import { skyLab, labHour, labExtras } from "/skylab.js";
 
 // The lobby screen: /lobby/{place}. One screen, refreshed every minute, nothing to tap.
 
@@ -108,7 +109,8 @@ function applyTint(node, score) {
 
 // ---------------------------------------------------------------------------------------------
 
-const sky = startSky($("sky"), { scale: 0.5, rich: true, maxWidth: 1280 });
+const sky = startSky($("sky"), { scale: 0.5, rich: true, maxWidth: 1280, moonSize: 0.042 });
+skyLab($("brand"), () => renderSky());
 $("activity-label").prepend(icon("pulse"));
 $("days-label").prepend(icon("days"));
 const hours = () => data?.tonight?.hours || [];
@@ -144,12 +146,13 @@ function render() {
 /** The background is the live sky here: this hour's weather, moon, stars and aurora. */
 function renderSky() {
   if (!data) return;
-  const h = data.current?.hour;
+  const h = labHour(data.current?.hour);
   const c = data.current;
+  const x = labExtras({ bz: c?.bzFresh ? c.bz : null, waxing: !!data.moon?.waxing, now: Date.now() });
   sky.set({
     ...skyFor(h, hours(), false),
-    ...skyDetail(h, { bz: c?.bzFresh ? c.bz : null, waxing: !!data.moon?.waxing }),
-    stars: starPositions(Date.now(), data.place.lat, data.place.lon),
+    // The open sky on this screen is the band above the forecast, between the title and the clock.
+    ...skyDetail(h, { bz: x.bz, waxing: x.waxing, horizon: 0.2, top: 0.035, anchor: 0.45, lat: data.place.lat, lon: data.place.lon, starsAt: x.now }),
   });
 }
 

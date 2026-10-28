@@ -5,6 +5,7 @@ import app.ljos.data.HOUR_MS
 import app.ljos.data.Inputs
 import app.ljos.data.KpPoint
 import app.ljos.data.MIN_MS
+import app.ljos.data.SkyFeed
 import app.ljos.data.Spots
 import app.ljos.model.Model
 import org.json.JSONObject
