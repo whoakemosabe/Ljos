@@ -1,5 +1,7 @@
 package app.ljos.ui
 
+import app.glasspane.tintedGlass
+import app.glasspane.GlassAccents
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -798,8 +800,7 @@ private fun RoundButton(onClick: () -> Unit, enabled: Boolean = true, content: @
             .requiredSize(36.dp)
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .clip(CircleShape)
-            .background(Color(0x1FFFFFFF))
-            .border(1.dp, Color(0x14FFFFFF), CircleShape)
+            .tintedGlass(Color.White, CircleShape)
             .clickable(interactionSource = interaction, indication = null, enabled = enabled) { Haptics.tap(view); onClick() },
         contentAlignment = Alignment.Center,
     ) { content() }
@@ -1162,8 +1163,7 @@ private fun UpdateCard(version: String, onDismiss: () -> Unit) {
         Modifier
             .fillMaxWidth()
             .clip(shape)
-            .background(Brush.linearGradient(listOf(Color(0x2E3DFFA0), Color(0x1FB79CFF))))
-            .border(1.dp, Color(0x403DFFA0), shape)
+            .tintedGlass(GlassAccents.Aurora, shape)
             .padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 14.dp)
             .animateContentSize(spring(dampingRatio = 0.85f, stiffness = 500f)),
     ) {

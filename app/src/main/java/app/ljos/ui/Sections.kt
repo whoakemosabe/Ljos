@@ -1,5 +1,7 @@
 package app.ljos.ui
 
+import app.glasspane.tintedGlass
+import app.glasspane.GlassAccents
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.FastOutSlowInEasing
@@ -238,8 +240,7 @@ internal fun TomorrowNudge(tomorrowScore: Int, onTap: () -> Unit) {
     Row(
         Modifier
             .clip(RoundedCornerShape(16.dp))
-            .background(Brush.horizontalGradient(listOf(Color(0x263DFFA0), Color(0x1AB79CFF))))
-            .border(1.dp, Color(0x333DFFA0), RoundedCornerShape(16.dp))
+            .tintedGlass(GlassAccents.Aurora, RoundedCornerShape(16.dp))
             .clickable { Haptics.tap(view); onTap() }
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically,

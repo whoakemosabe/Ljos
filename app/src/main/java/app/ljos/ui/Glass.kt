@@ -22,17 +22,14 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import app.glasspane.GlassPresets
+import app.glasspane.glass
 import com.kyant.backdrop.BackdropEffectScope
 import com.kyant.backdrop.backdrops.LayerBackdrop
-import com.kyant.backdrop.drawBackdrop
 import com.kyant.backdrop.drawPlainBackdrop
-import com.kyant.backdrop.highlight.Highlight
-import com.kyant.backdrop.highlight.HighlightStyle
-import com.kyant.backdrop.shadow.Shadow
 import com.kyant.backdrop.effects.blur
 import com.kyant.backdrop.effects.colorControls
 import com.kyant.backdrop.effects.runtimeShaderEffect
-import com.kyant.backdrop.effects.lens
 
 /*
  * Liquid glass, built on Kyant's Backdrop library (io.github.kyant0:backdrop), the most faithful
@@ -71,12 +68,6 @@ private fun BackdropEffectScope.dissolve(fadeTop: Float, fadeBottom: Float) {
     }
 }
 
-/** The glass recipe shared by the header and the sheet. */
-private fun BackdropEffectScope.liquidGlass(frost: Float, lensHeight: Float, lensAmount: Float) {
-    colorControls(saturation = 1.15f)
-    blur(frost)
-    lens(lensHeight, lensAmount, depthEffect = true, chromaticAberration = true)
-}
 
 /**
  * A pane of liquid glass across the top of a screen or sheet. [backdrop] is what's behind it
@@ -165,89 +156,38 @@ val LocalGlassBackdrop = androidx.compose.runtime.staticCompositionLocalOf<Layer
 val LocalGlassAngle = androidx.compose.runtime.staticCompositionLocalOf<State<Float>?> { null }
 
 /**
- * Liquid glass for a card: more frost than a control (it carries text), a gentle lens around its
- * rounded edge with colour fringing, a rim highlight from the top left, a soft shadow and a
- * dark wash so text stays crisp over bright aurora.
+ * A card: Glasspane's "smoky" glass (whoakemosabe/glasspane), the same material as the phone
+ * page and the lobby: clear glass with a refracted edge, plus the solid-glass rim, hairline,
+ * inner bottom shade and contact + long shadow.
  */
 fun Modifier.glassCard(
     backdrop: LayerBackdrop,
     shape: androidx.compose.foundation.shape.CornerBasedShape,
     lightAngle: State<Float>? = null,
-): Modifier = drawBackdrop(
-    backdrop = backdrop,
-    shape = { shape },
-    effects = {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            colorControls(saturation = 1.2f)
-            blur(10.dp.toPx())
-            lens(16.dp.toPx(), 24.dp.toPx(), chromaticAberration = true)
-        }
-    },
-    highlight = { Highlight(style = HighlightStyle.Default(angle = lightAngle?.value ?: 45f)) },
-    shadow = { Shadow(radius = 20.dp, color = Color.Black.copy(alpha = 0.25f)) },
-    onDrawSurface = {
-        drawRect(Color(0x4D070B16))
-        drawRect(Brush.verticalGradient(listOf(Color(0x14FFFFFF), Color(0x05FFFFFF))))
-    },
-)
+): Modifier = glass(backdrop, GlassPresets.Smoky, shape, lightAngle?.let { a -> { a.value } })
 
 /** Light catches the glass rims from the top left, as on iOS. (Fixed; no tilt sensor.) */
 @Composable
 fun rememberGlassLightAngle(): State<Float> = remember { mutableStateOf(45f) }
 
 /**
- * True liquid glass for a floating control (button, pill, chip), as on iOS 26: barely frosted,
- * the lens bending its whole rounded edge with colour fringing, a rim highlight that moves with
- * the top left, and a soft shadow. [shape] must be a rounded shape (RoundedCornerShape,
- * CircleShape). Phones before Android 13 get a plain translucent fill.
+ * A floating control (button, pill, chip): Glasspane's "liquid" glass, as on korbenmade's header
+ * pill and the phone page. [lensHeight] and [lensAmount] are kept for callers; the preset sets
+ * the lens now so every surface matches.
  */
+@Suppress("UNUSED_PARAMETER")
 fun Modifier.glassControl(
     backdrop: LayerBackdrop,
     shape: androidx.compose.foundation.shape.CornerBasedShape,
     lightAngle: State<Float>? = null,
     lensHeight: Dp = 10.dp,
     lensAmount: Dp = 18.dp,
-): Modifier = drawBackdrop(
-    backdrop = backdrop,
-    shape = { shape },
-    effects = {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            colorControls(saturation = 1.25f)
-            blur(2.dp.toPx())
-            lens(lensHeight.toPx(), lensAmount.toPx(), chromaticAberration = true)
-        }
-    },
-    highlight = {
-        Highlight(style = HighlightStyle.Default(angle = lightAngle?.value ?: 45f))
-    },
-    shadow = { Shadow(radius = 14.dp, color = Color.Black.copy(alpha = 0.22f)) },
-    onDrawSurface = {
-        // A faint dark wash so white text and icons read over bright things behind.
-        drawRect(if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) Color(0x2605080F) else Color(0x33FFFFFF))
-    },
-)
+): Modifier = glass(backdrop, GlassPresets.Liquid, shape, lightAngle?.let { a -> { a.value } })
 
 /**
- * The settings sheet's body: one big piece of liquid glass showing the screen behind it,
- * frosted more than the header (there's text on it), with the lens bending its rounded top.
+ * The settings sheet's body: Glasspane's "smoky" glass, a see-through sheet with a refracted
+ * rounded top and the solid-glass edges. [tint] is kept for callers; the preset sets the smoke.
  */
+@Suppress("UNUSED_PARAMETER")
 fun Modifier.glassSheet(backdrop: LayerBackdrop, cornerRadius: Dp, tint: Color): Modifier =
-    drawBackdrop(
-        backdrop = backdrop,
-        shape = { RoundedCornerShape(topStart = cornerRadius, topEnd = cornerRadius) },
-        effects = {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-                // A thick, clearly bent rim along the rounded top, like an iOS 26 sheet.
-                liquidGlass(14.dp.toPx(), lensHeight = 28.dp.toPx(), lensAmount = 40.dp.toPx())
-            } else {
-                blur(14.dp.toPx())
-            }
-        },
-        // The rim catches the light, as on every other glass piece.
-        highlight = { Highlight(style = HighlightStyle.Default(angle = 45f)) },
-        shadow = null,
-        onDrawSurface = {
-            drawRect(tint)
-            drawRect(Brush.verticalGradient(listOf(Color(0x1AFFFFFF), Color(0x05FFFFFF))))
-        },
-    )
+    glass(backdrop, GlassPresets.Smoky, RoundedCornerShape(topStart = cornerRadius, topEnd = cornerRadius))

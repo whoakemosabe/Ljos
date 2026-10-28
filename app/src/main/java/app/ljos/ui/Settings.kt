@@ -1,5 +1,6 @@
 package app.ljos.ui
 
+import app.glasspane.glassGroove
 import android.annotation.SuppressLint
 import android.content.Intent
 import android.net.Uri
@@ -601,8 +602,7 @@ internal fun SlidingSegments(options: List<String>, selected: Int, modifier: Mod
         modifier
             .height(36.dp)
             .clip(RoundedCornerShape(13.dp))
-            .background(Color(0x14FFFFFF))
-            .border(1.dp, Color(0x14FFFFFF), RoundedCornerShape(13.dp))
+            .glassGroove(RoundedCornerShape(13.dp))
             .padding(3.dp)
     ) {
         val segW = maxWidth / options.size

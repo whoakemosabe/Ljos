@@ -1,5 +1,6 @@
 package app.ljos.ui
 
+import app.glasspane.tintedGlass
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.Intent
@@ -342,8 +343,7 @@ private fun PermissionRow(title: String, sub: String, granted: Boolean, onAllow:
             .fillMaxWidth()
             .padding(vertical = if (LocalCompact.current) 4.dp else 6.dp)
             .clip(RoundedCornerShape(18.dp))
-            .background(Color(0x14FFFFFF))
-            .border(1.dp, Color(0x14FFFFFF), RoundedCornerShape(18.dp))
+            .tintedGlass(Color.White, RoundedCornerShape(18.dp))
             .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null, enabled = !granted) {
                 Haptics.tap(view); onAllow()
             }
