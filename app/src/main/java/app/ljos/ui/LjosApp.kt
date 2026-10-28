@@ -897,7 +897,8 @@ private fun SettingsSheet(
             val sheetBodyPx = with(LocalDensity.current) { SheetHeader.toPx() }
             val sheetGlassIn = with(LocalDensity.current) { 24.dp.toPx() }
             GlassHeader(
-                layer, bodyPx = { sheetBodyPx }, fade = SheetFade, tint = Color(0x8C0A1022),
+                // The same header glass as the main screen: frosted, dissolving at its bottom edge.
+                layer, bodyPx = { sheetBodyPx }, fade = SheetFade, tint = NightBg.copy(alpha = 0.34f),
                 visible = { inner.value / sheetGlassIn },
             )
 

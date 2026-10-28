@@ -173,6 +173,31 @@ fun Modifier.glassCard(
 ): Modifier = ljosGlass(backdrop, shape)
 
 /**
+ * The lobby's solid-glass edges (deeplethe/solid-glass): a fine light line along the top that
+ * follows the rounded corners and fades down the sides, a hairline all round, and a slight
+ * shade along the bottom. Drawn on the surface, so no specular highlight is needed.
+ */
+private fun DrawScope.solidEdges(shape: androidx.compose.foundation.shape.CornerBasedShape, rim: Float = 0.32f) {
+    val outline = shape.createOutline(size, layoutDirection, this)
+    val corner = shape.topStart.toPx(size, this).coerceAtMost(size.height / 2f)
+    val fade = ((corner + 6.dp.toPx()) / size.height).coerceIn(0.02f, 1f)
+    // hairline all round (the lobby's --edge plus its faint inner line)
+    drawOutline(outline, Color(0xFFBED2FF).copy(alpha = 0.14f), style = Stroke(1.dp.toPx()))
+    // the light line along the top, round the corners
+    drawOutline(
+        outline,
+        Brush.verticalGradient(0f to Color.White.copy(alpha = rim), fade to Color.White.copy(alpha = 0f)),
+        style = Stroke(1.5.dp.toPx()),
+    )
+    // a slight shade along the bottom edge
+    drawOutline(
+        outline,
+        Brush.verticalGradient(1f - fade to Color.Black.copy(alpha = 0f), 1f to Color.Black.copy(alpha = 0.3f)),
+        style = Stroke(1.dp.toPx()),
+    )
+}
+
+/**
  * The one Ljós glass, the same as the phone page and the lobby. Surface: korbenmade's header
  * pill, clear glass with a light frost, a colour boost and the edge bent by Kyant's lens.
  * Edges: the lobby's solid-glass finish, a fine light line inset along the top, a hairline all
@@ -192,17 +217,11 @@ fun Modifier.ljosGlass(
     },
     highlight = null,
     shadow = { Shadow(radius = 16.dp, offset = DpOffset(0.dp, 6.dp), color = Color(0xFF000008).copy(alpha = 0.55f)) },
-    innerShadow = { InnerShadow(radius = 1.dp, offset = DpOffset(0.dp, (-1).dp), color = Color.Black.copy(alpha = 0.25f)) },
+    innerShadow = null,
     onDrawSurface = {
         val full = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
         drawRect(Color(0xFF0A0F1E).copy(alpha = if (full) 0.24f else 0.9f))
-        val outline = shape.createOutline(size, layoutDirection, this)
-        // hairline all round (the lobby's --edge plus its faint inner line)
-        drawOutline(outline, Color(0xFFBED2FF).copy(alpha = 0.14f), style = Stroke(1.dp.toPx()))
-        // the fine light line inset along the top
-        val r = minOf(size.height / 2f, shape.topStart.toPx(size, this))
-        val y = 0.5.dp.toPx()
-        drawLine(Color.White.copy(alpha = 0.2f), Offset(r, y), Offset(size.width - r, y), 1.dp.toPx())
+        solidEdges(shape)
     },
 )
 
@@ -225,9 +244,25 @@ fun Modifier.glassControl(
 ): Modifier = ljosGlass(backdrop, shape)
 
 /**
- * The settings sheet's body: Glasspane's "smoky" glass, a see-through sheet with a refracted
- * rounded top and the solid-glass edges. [tint] is kept for callers; the preset sets the smoke.
+ * The settings sheet's body: one piece of glass over the screen behind, opaque enough to read
+ * (it's all text), frosted, with the lens bending its rounded top, and the lobby's edges.
+ * [tint] is the theme's sheet colour; it's kept at least 80% opaque.
  */
-@Suppress("UNUSED_PARAMETER")
-fun Modifier.glassSheet(backdrop: LayerBackdrop, cornerRadius: Dp, tint: Color): Modifier =
-    ljosGlass(backdrop, RoundedCornerShape(topStart = cornerRadius, topEnd = cornerRadius))
+fun Modifier.glassSheet(backdrop: LayerBackdrop, cornerRadius: Dp, tint: Color): Modifier {
+    val shape = RoundedCornerShape(topStart = cornerRadius, topEnd = cornerRadius)
+    return drawBackdrop(
+        backdrop = backdrop,
+        shape = { shape },
+        effects = {
+            colorControls(saturation = 1.2f)
+            blur(18.dp.toPx())
+            lens(24.dp.toPx(), 32.dp.toPx(), chromaticAberration = true)
+        },
+        highlight = null,
+        shadow = null,
+        onDrawSurface = {
+            drawRect(tint.copy(alpha = maxOf(tint.alpha, 0.8f)))
+            solidEdges(shape, rim = 0.36f)
+        },
+    )
+}
