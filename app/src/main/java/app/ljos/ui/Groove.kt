@@ -28,16 +28,22 @@ import androidx.compose.ui.unit.dp
 
 private val GrooveFloor = Color.Black.copy(alpha = 0.32f)
 
-/** The groove's floor. Draw before the fill. */
-internal fun DrawScope.grooveFloor(topLeft: Offset, size: Size, radius: Float) {
-    drawRoundRect(GrooveFloor, topLeft, size, CornerRadius(radius))
+/** A rounded rect with its own top and bottom corner radii (hour bars stand square on the floor). */
+private fun rrect(x: Float, y: Float, w: Float, h: Float, top: Float, bottom: Float): Path = Path().apply {
+    val t = CornerRadius(top.coerceAtLeast(0f))
+    val b = CornerRadius(bottom.coerceAtLeast(0f))
+    addRoundRect(RoundRect(x, y, x + w, y + h, topLeftCornerRadius = t, topRightCornerRadius = t, bottomRightCornerRadius = b, bottomLeftCornerRadius = b))
+}
+
+/** The groove's floor. Draw before the fill. [bottom] is the bottom corner radius (defaults to [radius]). */
+internal fun DrawScope.grooveFloor(topLeft: Offset, size: Size, radius: Float, bottom: Float = radius) {
+    drawPath(rrect(topLeft.x, topLeft.y, size.width, size.height, radius, bottom), GrooveFloor)
 }
 
 /** The groove's shading. Draw after the fill. */
-internal fun DrawScope.grooveShade(topLeft: Offset, size: Size, radius: Float) {
+internal fun DrawScope.grooveShade(topLeft: Offset, size: Size, radius: Float, bottom: Float = radius) {
     val px = 1.dp.toPx()
-    val rr = RoundRect(topLeft.x, topLeft.y, topLeft.x + size.width, topLeft.y + size.height, CornerRadius(radius))
-    val path = Path().apply { addRoundRect(rr) }
+    val path = rrect(topLeft.x, topLeft.y, size.width, size.height, radius, bottom)
     clipPath(path) {
         // The web's inset shadow (0 2px 3px black 65%): soft, falling off over ~7dp under the top lip.
         val shadeH = minOf(size.height, 7.dp.toPx())
@@ -53,27 +59,26 @@ internal fun DrawScope.grooveShade(topLeft: Offset, size: Size, radius: Float) {
         drawRect(Color.White.copy(alpha = 0.16f), Offset(topLeft.x, topLeft.y + size.height - px), Size(size.width, px))
     }
     // Dark inner rim (black 30%), so the channel's walls read.
-    drawRoundRect(
-        Color.Black.copy(alpha = 0.3f), Offset(topLeft.x + px / 2, topLeft.y + px / 2), Size(size.width - px, size.height - px),
-        CornerRadius((radius - px / 2).coerceAtLeast(0f)), style = Stroke(px),
+    drawPath(
+        rrect(topLeft.x + px / 2, topLeft.y + px / 2, size.width - px, size.height - px, radius - px / 2, bottom - px / 2),
+        Color.Black.copy(alpha = 0.3f), style = Stroke(px),
     )
     // The pane's light catching the lip just below the cut (the web's 0 1px 0 white 7%): drawn
     // outside the channel only.
     clipPath(path, clipOp = ClipOp.Difference) {
-        drawRoundRect(Color.White.copy(alpha = 0.09f), Offset(topLeft.x, topLeft.y + px), size, CornerRadius(radius))
+        drawPath(rrect(topLeft.x, topLeft.y + px, size.width, size.height, radius, bottom), Color.White.copy(alpha = 0.09f))
     }
 }
 
 /** A fill sitting in a groove: lit along its top, with a faint hairline. Draw over the fill. */
-internal fun DrawScope.fillLight(topLeft: Offset, size: Size, radius: Float) {
+internal fun DrawScope.fillLight(topLeft: Offset, size: Size, radius: Float, bottom: Float = radius) {
     val px = 1.dp.toPx()
-    val path = Path().apply { addRoundRect(RoundRect(topLeft.x, topLeft.y, topLeft.x + size.width, topLeft.y + size.height, CornerRadius(radius))) }
-    clipPath(path) {
+    clipPath(rrect(topLeft.x, topLeft.y, size.width, size.height, radius, bottom)) {
         drawRect(Color.White.copy(alpha = 0.5f), topLeft, Size(size.width, 1.5.dp.toPx()))
     }
-    drawRoundRect(
-        Color.White.copy(alpha = 0.12f), Offset(topLeft.x + px / 2, topLeft.y + px / 2), Size(size.width - px, size.height - px),
-        CornerRadius((radius - px / 2).coerceAtLeast(0f)), style = Stroke(px),
+    drawPath(
+        rrect(topLeft.x + px / 2, topLeft.y + px / 2, size.width - px, size.height - px, radius - px / 2, bottom - px / 2),
+        Color.White.copy(alpha = 0.12f), style = Stroke(px),
     )
 }
 

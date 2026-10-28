@@ -839,3 +839,9 @@ html:not(.tv) .dress-main { align-items: flex-end; gap: 12px; }
 html:not(.tv) .dress-temp { font-size: 40px; font-weight: 300; color: #fff; line-height: 1.15; }
 html:not(.tv) .dress-feels { font-size: 14px; color: var(--muted); padding-bottom: 8px; }
 html:not(.tv) .dress-advice { margin-top: 4px; font-size: 14px; color: var(--ink); }
+
+/* Hour channels stand square on the floor, like the lobby: rounded on top only; the score fills
+   up from the floor with a slight rounding on top, the cloud hangs from the top. */
+.strip.fit .bar .track { border-radius: 7px 7px 0 0; }
+.strip.fit .bar .fill { border-radius: 3px 3px 0 0; }
+.strip.fit .bar .track .cloud { border-radius: 7px 7px 3px 3px; }

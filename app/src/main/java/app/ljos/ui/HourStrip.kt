@@ -12,6 +12,7 @@ import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
@@ -80,30 +81,45 @@ fun HourStrip(
             val isSel = h.time == selected
             val dim = if (selected == null || isSel) 1f else 0.5f
 
-            // Groove
-            grooveFloor(Offset(x, 0f), Size(barW, chartH), r.x)
-            // Cloud cap
+            // Groove: rounded at the top, square on the floor (as on the phone page and the lobby)
+            grooveFloor(Offset(x, 0f), Size(barW, chartH), r.x, bottom = 0f)
+            // Cloud cap, hanging from the top
             if (h.cloud > 0) {
-                drawRoundRect(Color(0x26C9D6E8), Offset(x, 0f), Size(barW, chartH * h.cloud / 100f), r)
+                val ch = chartH * h.cloud / 100f
+                drawPath(
+                    Path().apply {
+                        addRoundRect(androidx.compose.ui.geometry.RoundRect(x, 0f, x + barW, ch,
+                            topLeftCornerRadius = r, topRightCornerRadius = r,
+                            bottomRightCornerRadius = CornerRadius(3.dp.toPx()), bottomLeftCornerRadius = CornerRadius(3.dp.toPx())))
+                    },
+                    Color(0x26C9D6E8),
+                )
             }
-            // Score bar
-            val bh = max(chartH * h.score / 100f, barW)
+            // Score bar: stands square on the floor and fills upwards, slightly rounded on top
+            val fillTop = 3.dp.toPx()
+            val bh = max(chartH * h.score / 100f, 3.dp.toPx())
             val col = scoreColor(h.score)
-            drawRoundRect(
+            drawPath(
+                Path().apply {
+                    addRoundRect(androidx.compose.ui.geometry.RoundRect(x, chartH - bh, x + barW, chartH,
+                        topLeftCornerRadius = CornerRadius(fillTop), topRightCornerRadius = CornerRadius(fillTop),
+                        bottomRightCornerRadius = CornerRadius.Zero, bottomLeftCornerRadius = CornerRadius.Zero))
+                },
                 brush = Brush.verticalGradient(listOf(col, col.copy(alpha = 0.3f)), startY = chartH - bh, endY = chartH),
-                topLeft = Offset(x, chartH - bh),
-                size = Size(barW, bh),
-                cornerRadius = r,
                 alpha = dim,
             )
-            if (dim == 1f) fillLight(Offset(x, chartH - bh), Size(barW, bh), r.x)
-            grooveShade(Offset(x, 0f), Size(barW, chartH), r.x)
+            if (dim == 1f) fillLight(Offset(x, chartH - bh), Size(barW, bh), fillTop, bottom = 0f)
+            grooveShade(Offset(x, 0f), Size(barW, chartH), r.x, bottom = 0f)
             if (isSel) {
-                drawRoundRect(
+                val g = 2.dp.toPx()
+                val rt = CornerRadius(r.x + g)
+                val rb = CornerRadius(g)
+                drawPath(
+                    Path().apply {
+                        addRoundRect(androidx.compose.ui.geometry.RoundRect(x - g, -g, x + barW + g, chartH + g,
+                            topLeftCornerRadius = rt, topRightCornerRadius = rt, bottomRightCornerRadius = rb, bottomLeftCornerRadius = rb))
+                    },
                     color = Color.White.copy(alpha = 0.85f),
-                    topLeft = Offset(x - 2.dp.toPx(), -2.dp.toPx()),
-                    size = Size(barW + 4.dp.toPx(), chartH + 4.dp.toPx()),
-                    cornerRadius = CornerRadius(barW / 2f + 2.dp.toPx()),
                     style = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.5.dp.toPx()),
                 )
             }

@@ -388,7 +388,7 @@ function renderStrip() {
     const isSel = h.time === focus;
     const fill = el("span", { class: "fill" });
     fill.style.setProperty("--c", scoreColor(h.score));
-    fill.style.height = `max(14px, ${h.score}%)`;
+    fill.style.height = `max(3px, ${h.score}%)`;
     const bar = el("button", {
       type: "button",
       class: "bar" + (isSel ? " sel" : focus != null ? " dim" : "") + (isNow ? " now" : ""),
