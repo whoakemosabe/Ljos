@@ -23,10 +23,14 @@
         <h1 id="place">Aurora forecast</h1>
       </div>
       <div class="status">
-        <span class="pill live" id="live"><span class="dot" aria-hidden="true"></span><span id="live-text">Live</span></span>
-        <span class="updated" id="updated"></span>
-        <span class="clock" id="clock" aria-hidden="true"></span>
-        <div class="phone">
+        <div class="tile now-tile">
+          <span class="clock" id="clock" aria-hidden="true"></span>
+          <span class="now-meta">
+            <span class="live" id="live"><span class="dot" aria-hidden="true"></span><span id="live-text">Live</span></span>
+            <span class="updated" id="updated"></span>
+          </span>
+        </div>
+        <div class="tile phone">
           <img class="qr" src="/qr.svg" alt="QR code for ljos.up.railway.app" width="33" height="33">
           <p class="phone-text"><span class="phone-title">On your phone</span><span class="phone-sub">Forecast and look-up alerts</span></p>
         </div>
@@ -60,12 +64,12 @@
           <span class="pill" id="now-state">–</span>
         </div>
         <div class="activity" id="activity">
-          <p class="label">Activity in the sky</p>
+          <p class="label" id="activity-label">Activity in the sky</p>
           <div class="meter" id="meter"></div>
         </div>
         <dl class="facts" id="facts"></dl>
         <div class="days-wrap" id="days-wrap">
-          <p class="label">Next 3 days</p>
+          <p class="label" id="days-label">Next 3 days</p>
           <div class="days" id="days"></div>
         </div>
       </section>
