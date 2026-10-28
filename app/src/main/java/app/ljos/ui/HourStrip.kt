@@ -71,8 +71,9 @@ fun HourStrip(
         val labelH = 28.dp.toPx()
         val chartH = size.height - labelH
         val slot = size.width / n
-        val barW = slot * 0.58f
-        val r = CornerRadius(barW / 2f)
+        // As on the phone page: 14dp channels with 7dp ends (they narrow only if the night is long).
+        val barW = minOf(14.dp.toPx(), slot * 0.8f)
+        val r = CornerRadius(minOf(barW / 2f, 7.dp.toPx()))
 
         hours.forEachIndexed { i, h ->
             val x = i * slot + (slot - barW) / 2f
