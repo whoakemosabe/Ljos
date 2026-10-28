@@ -217,6 +217,33 @@ function renderHero() {
     line = `Peak around ${hhmm(peak.time)}`;
   }
   $("peak-line").textContent = line;
+  renderChips(h, n, now);
+}
+
+document.addEventListener("click", (e) => {
+  const chip = e.target.closest?.(".chip[data-go]");
+  if (!chip) return;
+  const card = document.getElementById(chip.dataset.go);
+  if (!card || card.hidden) return;
+  const top = card.getBoundingClientRect().top + scrollY - 12;
+  scrollTo({ top, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
+});
+
+/** Kp, cloud, moon, dark: the app's four condition chips under the score. Tap to jump to the card. */
+function renderChips(h, n, now) {
+  const box = $("chips");
+  if (!h || TV) { box.hidden = true; return; }
+  box.hidden = false;
+  $("chip-kp").textContent = h.kp != null ? `Kp ${h.kp.toFixed(1)}` : "–";
+  $("chip-cloud").textContent = h.cloud == null || h.cloud < 0 ? "–" : `${h.cloud}%`;
+  const illum = Math.max(0, Math.min(1, h.moonIllum ?? 0));
+  $("chip-moon").textContent = `${Math.round(illum * 100)}%`;
+  const sh = $("chip-moon-shadow");
+  sh.setAttribute("cx", String(6.5 - 11 * illum));
+  sh.setAttribute("visibility", illum > 0.98 ? "hidden" : "visible");
+  const t = (ms) => (H12 ? hourLabel(ms).toUpperCase() + "M" : hhmm(ms)); // "8PM" fits; dark starts on the hour
+  const dark = !n.darkFrom ? "–" : now < n.darkFrom ? t(n.darkFrom) : n.darkUntil && now < n.darkUntil ? t(n.darkUntil) : t(n.darkFrom);
+  $("chip-dark").textContent = dark;
 }
 
 function setScore(score) {

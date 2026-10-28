@@ -577,3 +577,13 @@ html.tv .spot { padding: 0.45rem 0.5rem; }
 .bar .track { background: rgba(0, 0, 0, 0.3); box-shadow: 0 1px 0 rgba(255, 255, 255, 0.07); }
 .meter-track { background: rgba(0, 0, 0, 0.26); box-shadow: none; }
 .bar.peak .track { box-shadow: 0 1px 0 rgba(255, 255, 255, 0.07), 0 0 0 1px rgba(255, 255, 255, 0.3); }
+
+/* Condition chips under the score, as in the app: four equal glass chips that always fit */
+.chips { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 6px; margin-top: 1rem; width: 100%; max-width: 26rem; margin-inline: auto; }
+.chips[hidden] { display: none; }
+.chip { display: flex; align-items: center; justify-content: center; gap: 5px; padding: 7px 6px; border-radius: 14px; border: 0;
+  color: var(--ink); font: inherit; font-size: 0.8125rem; white-space: nowrap; cursor: pointer; touch-action: manipulation; -webkit-tap-highlight-color: transparent; }
+.chip span { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+.chip svg { width: 13px; height: 13px; flex: none; }
+.chip:active { transform: scale(0.97); }
+.chip:focus-visible { outline: 2px solid rgba(61, 255, 160, 0.6); outline-offset: 2px; }
