@@ -51,7 +51,7 @@ jobs:
         run: |
           chmod +x gradlew
           set -o pipefail
-          ./gradlew --no-daemon test assembleRelease 2>&1 | tee build.log
+          ./gradlew --no-daemon test assembleRelease :server:installDist 2>&1 | tee build.log
 
       - name: Report compile errors
         if: failure()

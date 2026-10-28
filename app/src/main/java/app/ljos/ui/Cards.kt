@@ -61,6 +61,7 @@ import app.ljos.model.HourScore
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.widthIn
 import app.ljos.model.Model
+import app.ljos.model.label
 import app.ljos.model.Night
 import app.ljos.model.NowState
 import app.ljos.model.SpotScore
@@ -250,12 +251,13 @@ internal fun NowCard(st: NowState, solarWind: List<SwPoint> = emptyList(), now: 
                 )
                 Spacer(Modifier.height(4.dp))
                 val eta = st.etaMinutes?.let { L.t(" · here in ~$it min", " · hér eftir ~$it mín") } ?: ""
+                val bz = st.bz // local copy: NowState lives in core, so its properties can't be smart-cast
                 val bzText = when {
-                    st.bz == null -> L.t("Solar wind data unavailable", "Sólvindsgögn vantar")
+                    bz == null -> L.t("Solar wind data unavailable", "Sólvindsgögn vantar")
                     !st.bzFresh -> L.t("Solar wind data is stale", "Sólvindsgögn eru gömul")
-                    st.bz <= -3 -> "Bz ${Fmt.signed(st.bz)} nT · " + L.t("field pointing south, good", "segulsvið til suðurs, gott")
-                    st.bz >= 3 -> "Bz ${Fmt.signed(st.bz)} nT · " + L.t("pointing north, quiet", "til norðurs, rólegt")
-                    else -> "Bz ${Fmt.signed(st.bz)} nT · " + L.t("neutral", "hlutlaust")
+                    bz <= -3 -> "Bz ${Fmt.signed(bz)} nT · " + L.t("field pointing south, good", "segulsvið til suðurs, gott")
+                    bz >= 3 -> "Bz ${Fmt.signed(bz)} nT · " + L.t("pointing north, quiet", "til norðurs, rólegt")
+                    else -> "Bz ${Fmt.signed(bz)} nT · " + L.t("neutral", "hlutlaust")
                 }
                 Text(bzText + eta, color = Muted, fontSize = 13.sp)
                 st.bzSustained?.let {

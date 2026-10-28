@@ -125,11 +125,14 @@ internal fun ConditionChips(peak: HourScore, night: Night, now: Long, onChip: (S
     fun time(t: Long) = if (L.clock24) Fmt.hhmm(t) else Fmt.hour(t)
     // The chip shows when it gets dark, or once dark, when it ends ("Dark until 07:00" is spelled
     // out in the line above).
+    // Local copies: Night lives in core, so its properties can't be smart-cast here.
+    val darkFrom = night.darkFrom
+    val darkUntil = night.darkUntil
     val darkText = when {
-        night.darkFrom == null -> "—"
-        now < night.darkFrom -> time(night.darkFrom)
-        night.darkUntil != null && now < night.darkUntil -> time(night.darkUntil)
-        else -> time(night.darkFrom)
+        darkFrom == null -> "—"
+        now < darkFrom -> time(darkFrom)
+        darkUntil != null && now < darkUntil -> time(darkUntil)
+        else -> time(darkFrom)
     }
     val angle = LocalGlassAngle.current
     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -208,13 +211,16 @@ internal fun countdownLine(night: Night, now: Long): String? {
         val m = (ms / MIN_MS).coerceAtLeast(0)
         return if (m >= 60) "${m / 60}h ${m % 60}m" else "${m}m"
     }
+    // Local copies: Night lives in core, so its properties can't be smart-cast here.
+    val darkFrom = night.darkFrom
+    val darkUntil = night.darkUntil
     return when {
-        night.darkFrom != null && now < night.darkFrom ->
-            L.t("Dark in ${span(night.darkFrom - now)} · peak around ${Fmt.hhmm(peak.time)}", "Myrkur eftir ${span(night.darkFrom - now)} · hámark um ${Fmt.hhmm(peak.time)}")
+        darkFrom != null && now < darkFrom ->
+            L.t("Dark in ${span(darkFrom - now)} · peak around ${Fmt.hhmm(peak.time)}", "Myrkur eftir ${span(darkFrom - now)} · hámark um ${Fmt.hhmm(peak.time)}")
         now < peak.time ->
             L.t("Peak in ${span(peak.time - now)}, around ${Fmt.hhmm(peak.time)}", "Hámark eftir ${span(peak.time - now)}, um ${Fmt.hhmm(peak.time)}")
-        night.darkUntil != null && now < night.darkUntil ->
-            L.t("Dark until ${Fmt.hhmm(night.darkUntil)}", "Myrkur til ${Fmt.hhmm(night.darkUntil)}")
+        darkUntil != null && now < darkUntil ->
+            L.t("Dark until ${Fmt.hhmm(darkUntil)}", "Myrkur til ${Fmt.hhmm(darkUntil)}")
         else -> null
     }
 }
