@@ -96,15 +96,14 @@ const kpScore = (kp) => Math.min(100, (kp / 6) * 100);
 function solidPill(text, score, ic) {
   const p = pill(text, { cls: "best-bet", tint: score, ic });
   const c = scoreRgb(score), base = [10, 16, 30];
-  p.style.background = rgb(base.map((v, i) => Math.round(v + (c[i] - v) * 0.2)));
+  p.style.setProperty("--solid", rgb(base.map((v, i) => Math.round(v + (c[i] - v) * 0.22))));
   return p;
 }
 /** A badge in a score's colour: tinted fill, stronger border, coloured text. */
 function applyTint(node, score) {
   const c = scoreRgb(score);
-  node.style.color = rgb(c);
-  node.style.background = rgb(c, 0.14);
-  node.style.borderColor = rgb(c, 0.45);
+  node.style.setProperty("--tint", c.join(", "));
+  node.classList.add("tinted");
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -255,7 +254,7 @@ function renderNow() {
     const at = level(kp);
     $("meter").replaceChildren(...LEVELS.map((name, i) => {
       const bar = el("span", { class: "level-bar" });
-      if (i <= at) bar.style.background = scoreColor(15 + i * 21);
+      if (i <= at) { bar.style.setProperty("--tint", scoreRgb(15 + i * 21).join(", ")); bar.classList.add("lit"); }
       return el("span", { class: "level" + (i === at ? " current" : "") }, bar, el("span", { class: "level-name" }, name));
     }));
     $("meter").setAttribute("aria-label", `Activity: ${LEVELS[at]}, Kp ${kp.toFixed(1)}`);
@@ -281,7 +280,6 @@ function renderNow() {
       el("span", { class: "day-kp" }, k == null ? "No forecast" : `${LEVELS[level(k)]}, Kp ${k.toFixed(1)}`));
     if (k != null) {
       applyTint(day, kpScore(k));
-      day.style.background = rgb(scoreRgb(kpScore(k)), 0.1);
     }
     return day;
   }));
@@ -310,7 +308,7 @@ function renderHours() {
       : isPeak ? pill("Peak", { tint: h.score }) : null;
     const fill = el("span", { class: "tick-fill" });
     fill.style.height = `${Math.max(0.2, h.score * 0.034)}rem`;
-    fill.style.background = scoreColor(h.score);
+    fill.style.setProperty("--tint", scoreRgb(h.score).join(", "));
     return el("div", { class: cls.join(" "), role: "listitem", "aria-label": `${hhmm(h.time)}, score ${h.score}` },
       el("span", { class: "tick-flag" }, flag),
       el("span", { class: "tick-track" }, el("span", { class: "tick-value" }, h.score), fill),
@@ -341,7 +339,7 @@ function renderPlaces() {
       el("span", { class: "place-body" },
         el("span", { class: "place-name" }, here ? data.place.name : s.name),
         el("span", { class: "place-detail" }, detail)));
-    if (best) card.style.borderColor = rgb(scoreRgb(score), 0.5);
+    if (best) card.style.setProperty("--tint", scoreRgb(score).join(", ")), card.classList.add("best");
     return card;
   }));
 }

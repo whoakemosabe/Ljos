@@ -314,3 +314,89 @@ html.taking-over #drift { visibility: hidden; }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+
+/* Glass finish ---------------------------------------------------------------------------
+   Ljós x Solid Glass: our night and score colours, with Solid Glass's finish. Every pane is
+   smoky navy glass whose finish is at its edge (a line of light along the top, a hairline all
+   round, a contact shadow and a soft long one under it); depth is thickness; small coloured
+   things are coloured glass, lit on top and shaded underneath; tracks are grooves cut into
+   the pane. Adapted from deeplethe/solid-glass (MIT). */
+
+:root {
+  --pane: rgba(12, 18, 34, 0.5);        /* card: the Right now panel, tiles, place cards */
+  --pane-thin: rgba(14, 20, 38, 0.32);  /* panel: condition chips, day tiles */
+  --rim: rgba(255, 255, 255, 0.2);
+  --inner: rgba(255, 255, 255, 0.04);
+  --edge: rgba(190, 210, 255, 0.09);
+  --contact: rgba(0, 0, 0, 0.12);
+  --shade: rgba(0, 0, 8, 0.62);
+  --well-shade: rgba(0, 0, 0, 0.42);
+  --well-rim: rgba(255, 255, 255, 0.09);
+  --blur: blur(26px);
+}
+
+/* A pane: rim on top, hairline all round, shadow below. No border of its own. */
+.panel, .tile, .place, .cond, .day, .problem {
+  border: 0;
+  -webkit-backdrop-filter: var(--blur);
+  backdrop-filter: var(--blur);
+  box-shadow:
+    inset 0 1px 0 var(--rim),
+    inset 0 0 0 1px var(--inner),
+    0 0 0 1px var(--edge),
+    0 1px 2px var(--contact),
+    0 12px 32px -14px var(--shade);
+}
+.panel, .tile, .place { background: var(--pane); }
+.cond, .day { background: var(--pane-thin); }
+.panel { box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2), inset 0 0 0 1px var(--inner), 0 0 0 1px var(--edge), 0 1px 2px var(--contact), 0 24px 60px -18px var(--shade), 0 6px 16px -6px rgba(0, 0, 0, 0.25); }
+.now-meta { border-left-color: rgba(255, 255, 255, 0.1); }
+.days-wrap { border-top-color: rgba(255, 255, 255, 0.08); box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.25); }
+
+/* Coloured glass: badges, day tiles and score tiles take the score colour in their fill,
+   their rim and their hairline, so they read as tinted panes rather than outlined chips. */
+.pill { border: 0; box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), inset 0 0 0 1px rgba(255, 255, 255, 0.08); }
+.tinted {
+  color: rgb(var(--tint));
+  background: rgba(var(--tint), 0.13);
+  box-shadow:
+    inset 0 1.5px 0 rgba(var(--tint), 0.75),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.28),
+    inset 0 0 0 1px rgba(var(--tint), 0.22),
+    0 1px 2px rgba(0, 0, 0, 0.2);
+}
+.pill.live { background: rgba(121, 232, 176, 0.12); box-shadow: inset 0 1px 0 rgba(121, 232, 176, 0.5), inset 0 0 0 1px rgba(121, 232, 176, 0.2); }
+.day.tinted { background: rgba(var(--tint), 0.07); }
+.day.tinted .day-name { color: var(--snow); }
+.place-score.tinted { border: 0; }
+.place.best { box-shadow: inset 0 1px 0 rgba(var(--tint), 0.5), inset 0 0 0 1px rgba(var(--tint), 0.16), 0 0 0 1px rgba(var(--tint), 0.22), 0 1px 2px var(--contact), 0 12px 32px -14px var(--shade); }
+/* Best bet: a solid pane of the tint, sitting on the card's edge. */
+.place .best-bet { background: var(--solid) !important; }
+
+/* The one solid pane: the white Now flag, lit on top and shaded underneath. */
+.pill.now-flag {
+  background: rgba(238, 243, 251, 0.92);
+  box-shadow: inset 0 1px 0 #fff, inset 0 -1px 0 rgba(0, 0, 0, 0.22), 0 1px 2px rgba(0, 0, 0, 0.3), 0 6px 14px -8px rgba(0, 0, 0, 0.6);
+}
+
+/* Grooves: the activity meter and the gauge's track are cut into the pane. */
+.level-bar { background: rgba(0, 0, 0, 0.22); box-shadow: inset 0 1px 1.5px var(--well-shade), inset 0 -1px 0 var(--well-rim); }
+.level-bar.lit {
+  background: rgba(var(--tint), 0.9);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.55), inset 0 -1px 0 rgba(0, 0, 0, 0.25);
+}
+.gauge-track { stroke: rgba(0, 0, 0, 0.3); }
+.gauge circle.gauge-groove-lip, .gauge circle.gauge-groove-rim { stroke-width: 1; }
+.gauge-groove-lip { stroke: rgba(0, 0, 0, 0.35); }
+.gauge-groove-rim { stroke: rgba(255, 255, 255, 0.1); }
+
+/* Chart marks are panes standing on edge: coloured glass, lit along the top. */
+.tick-fill {
+  background: linear-gradient(rgba(var(--tint), 1), rgba(var(--tint), 0.82));
+  box-shadow: inset 0 2px 0 rgba(255, 255, 255, 0.55), inset 0 0 0 1px rgba(255, 255, 255, 0.16), 0 8px 18px -10px rgba(var(--tint), 0.55);
+}
+.tick-track { border-bottom-color: rgba(255, 255, 255, 0.14); box-shadow: 0 1px 0 rgba(0, 0, 0, 0.4); }
+.tick.dark .tick-track { background: rgba(120, 140, 200, 0.09); }
+
+/* The QR sits in a small well of its own. */
+.qr { box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.5), 0 2px 6px rgba(0, 0, 0, 0.4); }
