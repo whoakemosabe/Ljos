@@ -65,10 +65,24 @@
         </div>
       </section>
 
-      <section class="card lg hours" id="hours-card" hidden>
+
+
+
+
+
+      <section class="card lg now" id="now-card" data-fold="now">
+        <div class="card-head">
+          <h2>Right now</h2>
+          <p class="now-score" id="now-score"></p>
+        </div>
+        <p class="now-state" id="now-state">–</p>
+        <ul class="lines" id="now-lines"></ul>
+        <div class="spark" id="spark" hidden></div>
+      </section>
+      <section class="card lg hours" id="hours-card" data-fold="hours" hidden>
         <div class="card-head">
           <h2>Hour by hour</h2>
-          <p class="sub phone-only">Tap an hour to see why</p>
+          <p class="sub">Tap a bar to see why · tap it again to close</p>
         </div>
         <div class="seg" id="night-seg" role="tablist" aria-label="Which night" data-pos="0" hidden>
           <span class="seg-thumb" aria-hidden="true"></span>
@@ -78,18 +92,7 @@
         <div class="strip" id="strip" role="list"></div>
         <div class="why" id="why" hidden></div>
       </section>
-
-      <section class="card lg now" id="now-card">
-        <div class="card-head">
-          <h2>Right now</h2>
-          <p class="now-score" id="now-score"></p>
-        </div>
-        <p class="now-state" id="now-state">–</p>
-        <ul class="lines" id="now-lines"></ul>
-        <div class="spark" id="spark" hidden></div>
-      </section>
-
-      <section class="card lg spots" id="spots-card">
+      <section class="card lg spots" id="spots-card" data-fold="where">
         <div class="card-head">
           <h2 id="spots-title">Where to go</h2>
           <p class="sub" id="spots-sub"></p>
@@ -98,16 +101,7 @@
         <div class="spot-pick" id="spot-pick" aria-live="polite" hidden></div>
         <ol class="spot-list" id="spots"></ol>
       </section>
-
-      <section class="card lg outlook" id="outlook-card">
-        <div class="card-head">
-          <h2>Next 3 days</h2>
-          <p class="sub">Solar activity forecast, 3-hour blocks</p>
-        </div>
-        <div class="days" id="outlook"></div>
-      </section>
-
-      <section class="card lg dress" id="dress-card" hidden>
+      <section class="card lg dress" id="dress-card" data-fold="dress" hidden>
         <div class="card-head">
           <h2>Dress for it</h2>
           <p class="sub" id="dress-sub"></p>
@@ -115,13 +109,19 @@
         <p class="dress-main"><span class="dress-temp" id="dress-temp"></span><span class="dress-feels" id="dress-feels"></span></p>
         <p class="dress-advice" id="dress-advice"></p>
       </section>
-
-      <section class="card lg tips">
+      <section class="card lg tips" id="tips-card" data-fold="tips">
         <div class="card-head">
           <h2>Photo tips</h2>
           <p class="sub">Starting points for tonight's brightness</p>
         </div>
         <ul class="lines" id="tips"></ul>
+      </section>
+      <section class="card lg outlook" id="outlook-card" data-fold="days">
+        <div class="card-head">
+          <h2>Next 3 days</h2>
+          <p class="sub">Solar activity forecast, 3-hour blocks</p>
+        </div>
+        <div class="days" id="outlook"></div>
       </section>
     </main>
 

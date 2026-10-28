@@ -1,6 +1,6 @@
 // Ljós service worker: the app shell works offline, and the last forecast is shown when the
 // network is down (the page says how old it is). Bump VERSION when shell files change.
-const VERSION = "ljos-v25";
+const VERSION = "ljos-v26";
 const SHELL = ["/", "/style.css", "/app.js", "/aurora.js", "/lobby.html", "/lobby.css", "/lobby.js", "/qr.svg", "/skylab.js", "/map.js", "/glasspane.js", "/skylab.css", "/fraunces.woff2", "/outfit.woff2", "/schibsted-grotesk.woff2", "/manifest.webmanifest", "/icon.svg", "/icon-192.png", "/icon-180.png"];
 
 self.addEventListener("install", (event) => {
@@ -39,14 +39,13 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
-  // Shell files: cached copy straight away, refreshed in the background.
+  // Shell files: network first, so a new version shows on the next load; cached copy offline.
   event.respondWith(
-    caches.match(event.request).then((hit) => {
-      const net = fetch(event.request).then((res) => {
+    fetch(event.request)
+      .then((res) => {
         if (res.ok) { const copy = res.clone(); caches.open(VERSION).then((c) => c.put(event.request, copy)); }
         return res;
-      }).catch(() => hit);
-      return hit || net;
-    }),
+      })
+      .catch(() => caches.match(event.request).then((hit) => hit || Response.error())),
   );
 });

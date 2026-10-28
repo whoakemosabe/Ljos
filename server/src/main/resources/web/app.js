@@ -144,7 +144,65 @@ function focusHour() {
   return night()?.peak || null;
 }
 
+// Folding cards, as in the app: tap a card's title row to fold it to one summary line. Which
+// cards are folded is remembered on this device.
+const FOLD_KEY = "ljos-folded";
+let folded = new Set();
+try { folded = new Set(JSON.parse(localStorage.getItem(FOLD_KEY) || "[]")); } catch { /* private mode */ }
+const CHEVRON = '<svg viewBox="0 0 22 22" aria-hidden="true"><path d="M7 9.2l4 4 4-4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>';
+
+function setupFolds() {
+  document.querySelectorAll(".card[data-fold]").forEach((card) => {
+    if (card.querySelector(".fold-head")) return;
+    const id = card.dataset.fold;
+    const head = card.querySelector(".card-head");
+    const body = el("div", { class: "card-body" });
+    const inner = el("div", { class: "card-inner" });
+    for (const n of [...card.children]) if (n !== head) inner.append(n);
+    body.append(inner);
+    // Title, then the subtitle (or, folded, the summary) underneath; chevron at the end.
+    const text = el("div", { class: "fold-text" });
+    const h2 = head.querySelector("h2"), sub = head.querySelector(".sub");
+    text.append(h2);
+    if (sub) text.append(sub);
+    text.append(el("p", { class: "card-sum", id: `sum-${id}` }));
+    const btn = el("button", { type: "button", class: "fold-btn", "aria-expanded": "true", "aria-label": `Fold ${h2.textContent}` });
+    btn.innerHTML = CHEVRON;
+    head.classList.add("fold-head");
+    head.prepend(text);
+    head.append(btn);
+    head.addEventListener("click", (e) => {
+      if (e.target.closest("a")) return;
+      folded.has(id) ? folded.delete(id) : folded.add(id);
+      try { localStorage.setItem(FOLD_KEY, JSON.stringify([...folded])); } catch { /* ignore */ }
+      applyFold(card);
+      if (id === "where" && !folded.has(id) && data) renderSpots(); // the map needs its width
+    });
+    card.append(body);
+    applyFold(card, true);
+  });
+}
+
+function applyFold(card, instant = false) {
+  const f = folded.has(card.dataset.fold);
+  if (instant) card.classList.add("no-anim");
+  else {
+    // Clip only while moving, so edges and glows inside an open card aren't cut off.
+    card.classList.add("folding");
+    const body = card.querySelector(".card-body");
+    const done = (e) => { if (e.target !== body || e.propertyName !== "grid-template-rows") return; card.classList.remove("folding"); body.removeEventListener("transitionend", done); };
+    body?.addEventListener("transitionend", done);
+    setTimeout(() => card.classList.remove("folding"), 600);
+  }
+  card.classList.toggle("folded", f);
+  card.querySelector(".fold-btn")?.setAttribute("aria-expanded", String(!f));
+  if (instant) requestAnimationFrame(() => card.classList.remove("no-anim"));
+}
+
+const setSum = (id, text) => { const n = document.getElementById(`sum-${id}`); if (n) n.textContent = text || "—"; };
+
 function render() {
+  if (!TV) setupFolds();
   if (!data) return;
   if (selected != null && !hourAt(selected)) selected = null;
   renderHeader();
@@ -157,6 +215,7 @@ function render() {
   renderDress();
   renderTips();
   renderLookUp();
+  renderSums();
   setSky();
 }
 
@@ -225,6 +284,7 @@ document.addEventListener("click", (e) => {
   if (!chip) return;
   const card = document.getElementById(chip.dataset.go);
   if (!card || card.hidden) return;
+  if (card.classList.contains("folded")) card.querySelector(".fold-head")?.click();
   const top = card.getBoundingClientRect().top + scrollY - 12;
   scrollTo({ top, behavior: matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth" });
 });
@@ -395,6 +455,30 @@ let pickedSpot = null; // the spot picked on the map or list, like the app's Whe
 let pickedFor = undefined; // the hour that pick belongs to; a new hour picks the best spot again
 let mapResize = 0;
 addEventListener("resize", () => { clearTimeout(mapResize); mapResize = setTimeout(() => data && renderSpots(), 150); });
+
+/** The one-line summaries a folded card shows, worded as in the app. */
+function renderSums() {
+  if (TV) return;
+  const n = night(), pk = n?.peak, tom = showTomorrow && hasTomorrow();
+  setSum("hours", !pk ? "—" : pk.score <= 0 ? "No aurora expected" : `${tom ? "Tomorrow peak" : "Peak"} ${hhmm(pk.time)} · ${pk.score}`);
+  const h = focusHour();
+  const ranked = h?.spots || [];
+  const top = ranked.find((r) => (r[1] ?? 0) > 0);
+  const meta = new Map((data.spots || []).map((s) => [s.id, s]));
+  const ts = top && meta.get(top[0]);
+  setSum("where", !top ? "Nothing clear nearby" : top[0] === "home" ? `Best right here · ${top[1]}` : ts ? `${ts.name} · ${top[1]} · ≈ ${drive(ts.distanceKm)} min` : "—");
+  const w = data.weather;
+  const deg = (c) => { const r = Math.round(c); return `${r < 0 ? "−" : ""}${Math.abs(r)}°`; };
+  setSum("dress", w ? `${deg(w.temp)}, feels like ${deg(w.feels)}` : "—");
+  const score = h ? h.score : 0;
+  const [shutter, iso] = score >= 80 ? ["0.5–2 s", "800"] : score >= 60 ? ["2–4 s", "800–1600"] : ["4–8 s", "1600–3200"];
+  setSum("tips", `${shutter} · ISO ${iso} · focus ∞`);
+  const days = data.outlook || [];
+  let bi = -1;
+  days.forEach((d, i) => { if (d.maxKp != null && (bi < 0 || d.maxKp > days[bi].maxKp)) bi = i; });
+  setSum("days", bi < 0 ? "—" : `Highest Kp ${days[bi].maxKp.toFixed(1)} ${bi === 0 ? "today" : bi === 1 ? "tomorrow" : weekday(days[bi].dayStart)}`);
+  setSum("now", $("now-state")?.textContent || "—");
+}
 
 function renderSpots() {
   const meta = new Map((data.spots || []).map((s) => [s.id, s]));

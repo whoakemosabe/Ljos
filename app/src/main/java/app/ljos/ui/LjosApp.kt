@@ -462,7 +462,7 @@ fun LjosApp() {
                 ) {
                     androidx.compose.runtime.CompositionLocalProvider(LocalGlassBackdrop provides skyBackdrop, LocalGlassAngle provides glassAngle) {
                     // Order follows the questions people ask: will I see it → when → where →
-                    // what to wear → this week.
+                    // what to wear → how to photograph it → this week.
                     val tonightSummary: @Composable ColumnScope.() -> Unit = {
                         SoftReveal(updateWaiting != null && updateWaiting != dismissedUpdate) {
                             UpdateCard(updateWaiting ?: "", onDismiss = {
@@ -554,12 +554,24 @@ fun LjosApp() {
                             }
                         }
                     }
+                    val photoTips: @Composable ColumnScope.() -> Unit = {
+                        SoftReveal(sel != null) {
+                            sel?.let { h ->
+                                PhotoTipsCard(
+                                    score = h.score,
+                                    moonBright = h.moonAlt > 0 && h.moonIllum > 0.5,
+                                    collapsed = "tips" in collapsed, onToggle = { toggle("tips") },
+                                    modifier = Modifier.cardAnchor("tips"),
+                                )
+                            }
+                        }
+                    }
                     val nextDays: @Composable ColumnScope.() -> Unit = {
                         SoftReveal(kpDays != null) {
                             kpDays?.let { KpOutlookCard(it, now, "days" in collapsed, { toggle("days") }, Modifier.cardAnchor("days")) }
                         }
                     }
-                    tonightSummary(); hourByHour(); whereToGo(); dressForIt(); nextDays()
+                    tonightSummary(); hourByHour(); whereToGo(); dressForIt(); photoTips(); nextDays()
                     }
                     MadeWithLove(errors)
                     Spacer(Modifier.height(16.dp))
