@@ -25,83 +25,74 @@
       <div class="status">
         <span class="pill live" id="live"><span class="dot" aria-hidden="true"></span><span id="live-text">Live</span></span>
         <span class="updated" id="updated"></span>
+        <span class="clock" id="clock" aria-hidden="true"></span>
+        <div class="phone">
+          <img class="qr" src="/qr.svg" alt="QR code for ljos.up.railway.app" width="33" height="33">
+          <p class="phone-text"><span class="phone-title">On your phone</span><span class="phone-sub">Forecast and look-up alerts</span></p>
+        </div>
       </div>
-      <p class="clock" id="clock" aria-hidden="true"></p>
     </header>
 
     <p class="problem" id="problem" role="status" hidden></p>
 
     <main class="layout">
-      <section class="hero" id="hero" aria-live="polite">
-        <p class="hero-label" id="eyebrow">Tonight's best hour</p>
-        <div class="score-row">
-          <p class="score"><span id="score">–</span><span class="of">/100</span></p>
-          <div class="hero-badges">
-            <span class="pill chance-pill" id="chance">Reading the sky</span>
-            <span class="pill" id="peak-pill" hidden></span>
+      <section class="hero" aria-live="polite">
+        <div class="hero-main">
+          <div class="gauge">
+            <svg viewBox="0 0 250 250" aria-hidden="true">
+              <circle class="gauge-track" cx="125" cy="125" r="110"></circle>
+              <circle class="gauge-fill" id="gauge-fill" cx="125" cy="125" r="110" transform="rotate(-90 125 125)"></circle>
+            </svg>
+            <p class="gauge-text"><span class="gauge-score" id="score">–</span><span class="gauge-of">out of 100</span></p>
           </div>
-        </div>
-        <p class="peak-line" id="peak-line"></p>
-        <div class="scale" id="scale" aria-hidden="true">
-          <div class="scale-bar"></div>
-          <span class="scale-mark best" id="scale-best"></span>
-          <span class="scale-mark now" id="scale-now"></span>
-          <div class="scale-labels"><span>Not tonight</span><span>Unlikely</span><span>Possible</span><span>Good</span><span>Excellent</span></div>
+          <div class="hero-words">
+            <span class="pill chance" id="chance">Reading the sky</span>
+            <p class="best-time" id="best-time"></p>
+            <p class="hero-line" id="hero-line"></p>
+          </div>
         </div>
         <div class="conditions" id="conditions"></div>
       </section>
 
-      <section class="block now-block" id="now-card">
-        <div class="block-head">
+      <section class="panel" id="now-card">
+        <div class="panel-head">
           <h2>Right now</h2>
-          <span class="pill score-badge" id="now-score"></span>
+          <span class="pill" id="now-state">–</span>
         </div>
-        <p class="now-state"><span class="pill state" id="now-state">–</span></p>
-        <div class="bz" id="bz" hidden>
-          <span class="bz-arrow" id="bz-arrow" aria-hidden="true"></span>
-          <span class="bz-value" id="bz-value"></span>
-          <span class="bz-note" id="bz-note"></span>
+        <div class="activity" id="activity">
+          <p class="label">Activity in the sky</p>
+          <div class="meter" id="meter"></div>
         </div>
-        <dl class="facts" id="now-lines"></dl>
-        <div class="spark" id="spark" hidden></div>
-      </section>
-
-      <section class="block spots" id="spots-card">
-        <div class="block-head">
-          <h2 id="spots-title">Where to go</h2>
-          <p class="sub" id="spots-sub"></p>
+        <dl class="facts" id="facts"></dl>
+        <div class="days-wrap" id="days-wrap">
+          <p class="label">Next 3 days</p>
+          <div class="days" id="days"></div>
         </div>
-        <ol class="spot-list" id="spots"></ol>
-      </section>
-
-      <section class="block outlook">
-        <div class="block-head">
-          <h2>Next 3 days</h2>
-          <p class="sub">Solar activity, 3-hour blocks</p>
-        </div>
-        <div class="days" id="outlook"></div>
-      </section>
-
-      <section class="block dress" id="dress-card" hidden>
-        <div class="block-head">
-          <h2>Dress for it</h2>
-          <p class="sub" id="dress-sub"></p>
-        </div>
-        <p class="dress-main"><span class="dress-temp" id="dress-temp"></span><span class="dress-badges" id="dress-badges"></span></p>
-        <p class="dress-advice" id="dress-advice"></p>
-      </section>
-
-      <section class="block hours" id="hours-card" hidden>
-        <div class="block-head">
-          <h2>Hour by hour</h2>
-          <p class="sub" id="hours-sub"></p>
-        </div>
-        <div class="chart" id="strip" role="list"></div>
       </section>
     </main>
 
+    <section class="hours" id="hours-card" hidden>
+      <div class="section-head">
+        <h2>Tonight, hour by hour</h2>
+        <div class="legend" aria-hidden="true">
+          <span><i class="key key-dark"></i>Dark</span>
+          <span><i class="key key-moon"></i>Moon up</span>
+          <span id="key-window"><i class="key key-window"></i>Best window</span>
+        </div>
+      </div>
+      <div class="timeline" id="timeline" role="list"></div>
+    </section>
+
+    <section class="go" id="go-card" hidden>
+      <div class="section-head">
+        <h2 id="go-title">Where to go</h2>
+        <p class="sub" id="go-sub"></p>
+      </div>
+      <ol class="places" id="places"></ol>
+    </section>
+
     <footer class="foot">
-      <p>Space weather from the NOAA Space Weather Prediction Center. Weather by Open-Meteo, CC BY 4.0.</p>
+      <p>Space weather: NOAA SWPC. Weather: Open-Meteo, CC BY 4.0.</p>
     </footer>
   </div>
 
