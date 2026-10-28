@@ -488,3 +488,9 @@ html.taking-over #drift { visibility: hidden; }
 .day-name, .day-kp { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 /* Parts with nothing to show keep their room instead of collapsing the card. */
 .panel .is-empty { visibility: hidden; }
+
+/* Cloud cap: cloud cover hanging from the top of each hour's column */
+.tick-cloud { position: absolute; top: 0; left: 27%; right: 27%; border-radius: 0 0 0.3rem 0.3rem; background: rgba(201, 214, 232, 0.15); pointer-events: none; }
+.tick-value, .tick-fill { position: relative; }
+.tick.past .tick-cloud { opacity: 0.5; }
+.key-cloud { height: 0.8rem; border-radius: 0.2rem; background: rgba(201, 214, 232, 0.3); }
