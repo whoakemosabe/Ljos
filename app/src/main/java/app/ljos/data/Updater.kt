@@ -21,7 +21,42 @@ import java.net.URL
 object Updater {
     private const val REPO = "whoakemosabe/Ljos"
 
-    data class Release(val version: String, val assetUrl: String, val sizeBytes: Long)
+    data class Release(val version: String, val assetUrl: String, val sizeBytes: Long, val notes: List<String> = emptyList())
+
+    /** The "- " lines under "## What's new" in a release body (CI writes them from the commits). */
+    fun whatsNew(body: String): List<String> {
+        val out = mutableListOf<String>()
+        var inSection = false
+        for (raw in body.lines()) {
+            val line = raw.trimEnd()
+            if (line.startsWith("#")) {
+                inSection = line.trimStart('#').trim().equals("What's new", ignoreCase = true)
+                continue
+            }
+            if (!inSection) continue
+            when {
+                line.startsWith("- ") -> out += line.removePrefix("- ").trim()
+                line.isNotBlank() && out.isNotEmpty() && raw.startsWith("  ") -> out[out.lastIndex] = out.last() + " " + line.trim()
+                line.isNotBlank() -> inSection = false
+            }
+        }
+        return out
+    }
+
+    /** What changed in every release newer than [installed], newest first. Empty if GitHub can't say. */
+    private fun changesSince(installed: String, token: String): List<String> = try {
+        val c = open("https://api.github.com/repos/$REPO/releases?per_page=20", token, "application/vnd.github+json")
+        if (c.responseCode !in 200..299) emptyList() else {
+            val arr = org.json.JSONArray(c.inputStream.bufferedReader().use { it.readText() })
+            c.disconnect()
+            (0 until arr.length()).map { arr.getJSONObject(it) }
+                .filter { !it.optBoolean("draft") && isNewer(it.optString("tag_name"), installed) }
+                .flatMap { whatsNew(it.optString("body")) }
+                .distinct()
+        }
+    } catch (e: Exception) {
+        emptyList()
+    }
 
     sealed class Check {
         data object UpToDate : Check()
@@ -67,8 +102,10 @@ object Updater {
                 if (a.optString("name").endsWith(".apk")) asset = a
             }
             val apk = asset ?: return@withContext Check.Failed(L.t("Latest release has no APK yet.", "Nýjasta útgáfan er ekki með APK enn."))
-            if (!isNewer(tag, installedVersion(context))) return@withContext Check.UpToDate
-            Check.Available(Release(tag.removePrefix("v"), apk.getString("url"), apk.optLong("size")))
+            val installed = installedVersion(context)
+            if (!isNewer(tag, installed)) return@withContext Check.UpToDate
+            val notes = changesSince(installed, token).ifEmpty { whatsNew(json.optString("body")) }
+            Check.Available(Release(tag.removePrefix("v"), apk.getString("url"), apk.optLong("size"), notes))
         } catch (e: Exception) {
             Check.Failed(L.t("Couldn't reach GitHub.", "Náði ekki sambandi við GitHub."))
         }

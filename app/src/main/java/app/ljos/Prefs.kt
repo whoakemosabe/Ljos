@@ -113,6 +113,14 @@ class Prefs(context: Context) {
     var availableVersion: String
         get() = p.getString("available_version", "") ?: ""
         set(v) = p.edit().putString("available_version", v).apply()
+    /** "What's new" lines for [availableVersion], one per line. */
+    var availableNotes: List<String>
+        get() = (p.getString("available_notes", "") ?: "").lines().filter { it.isNotBlank() }
+        set(v) = p.edit().putString("available_notes", v.joinToString("\n")).apply()
+    /** The version whose home-screen update card was closed with ×. */
+    var dismissedUpdate: String
+        get() = p.getString("dismissed_update", "") ?: ""
+        set(v) = p.edit().putString("dismissed_update", v).apply()
     var notifiedVersion: String
         get() = p.getString("notified_version", "") ?: ""
         set(v) = p.edit().putString("notified_version", v).apply()
