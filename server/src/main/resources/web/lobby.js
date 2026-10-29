@@ -188,27 +188,40 @@ function bestWindow() {
   return { from: list[a].time, to: list[b].time + HOUR };
 }
 
+/** Once it's dark: the hour we're in tonight. The gauge then shows right now, as in the app. */
+function darkNowHour() {
+  const now = data.now;
+  return (data.tonight?.hours || []).find((h) => now >= h.time && now < h.time + HOUR && (h.dark ?? 0) > 0) || null;
+}
+
 function renderHero() {
   const n = data.tonight;
   const peak = n.peak;
   const now = data.now;
   const cur = data.current;
-  setGauge(peak ? peak.score : null);
+  // As in the app and phone web app: right now once it's dark, otherwise tonight's peak.
+  const nowH = darkNowHour();
+  const h = nowH || peak;
+  const eb = $("hero-eyebrow");
+  eb.textContent = nowH ? "Right now" : "Tonight";
+  eb.classList.toggle("live", !!nowH);
+  setGauge(h ? h.score : null);
   const chance = $("chance");
   chance.style.cssText = "";
-  if (!peak) {
+  if (!h) {
     chance.textContent = "Too bright for aurora";
     $("best-time").textContent = "The nights are too light here this time of year.";
     $("hero-line").textContent = "";
     $("conditions").replaceChildren();
     return;
   }
-  chance.textContent = CHANCE[peak.chance] || "";
-  applyTint(chance, peak.score);
+  chance.textContent = CHANCE[h.chance] || "";
+  applyTint(chance, h.score);
 
   const w = bestWindow();
   let line;
-  if (peak.score <= 0) line = "No aurora expected tonight";
+  if (nowH && peak && peak.time > nowH.time && peak.score > nowH.score) line = `Best tonight: ${peak.score} around ${hhmm(peak.time)}`;
+  else if (peak.score <= 0) line = "No aurora expected tonight";
   else if (peak.score < 20 || !w) line = `Best hour at ${hhmm(peak.time)}`;
   else if (now >= w.from) line = `Best now, until ${hhmm(w.to)}`;
   else if (w.to - w.from <= HOUR) line = `Best around ${hhmm(w.from)}`;

@@ -71,15 +71,20 @@ class WidgetData(
             val peak = night.peak
                 ?: return WidgetData(null, L.t("Too bright", "Of bjart"), L.t("No dark hours tonight", "Engin myrkur í nótt"), emptyList(), now, false)
             val st = Model.nowState(now, inp)
+            // As in the app: once it's dark the big number is right now, otherwise tonight's peak.
+            val nowHour = night.hours.firstOrNull { now >= it.time && now < it.time + HOUR_MS && it.factors.dark > 0 }
+            val hero = nowHour ?: peak
             val stale = now - inp.updatedAt > 6 * HOUR_MS
             val sub = when {
                 stale -> L.t("Updated ", "Uppfært ") + Fmt.ago(inp.updatedAt, now)
                 peak.score <= 0 -> L.t("No aurora expected tonight", "Engin norðurljós í kortunum í nótt")
-                st.isDark -> L.t("Now ${st.score} · peak ${Fmt.hhmm(peak.time)}", "Núna ${st.score} · hámark ${Fmt.hhmm(peak.time)}")
+                nowHour != null && peak.time > nowHour.time && peak.score > nowHour.score ->
+                    L.t("Peak ${peak.score} · ${Fmt.hhmm(peak.time)}", "Hámark ${peak.score} · ${Fmt.hhmm(peak.time)}")
+                nowHour != null -> L.t("Right now · ", "Núna · ") + Fmt.cloud(nowHour.cloud)
                 else -> L.t("Peak ", "Hámark ") + "${Fmt.hhmm(peak.time)} · ${Fmt.cloud(peak.cloud)}"
             }
-            val label = if (st.lookUp) L.t("Look up now!", "Líttu upp!") else Model.label(peak.score)
-            return WidgetData(peak.score, label, sub, night.hours, now, st.lookUp)
+            val label = if (st.lookUp) L.t("Look up now!", "Líttu upp!") else Model.label(hero.score)
+            return WidgetData(hero.score, label, sub, night.hours, now, st.lookUp)
         }
     }
 }
