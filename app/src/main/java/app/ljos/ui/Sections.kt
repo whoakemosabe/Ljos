@@ -239,7 +239,7 @@ internal fun TomorrowNudge(tomorrowScore: Int, onTap: () -> Unit) {
     val view = LocalView.current
     Row(
         Modifier
-            .clip(RoundedCornerShape(16.dp))
+            .then(LocalGlassBackdrop.current?.let { Modifier.glassControl(it, RoundedCornerShape(16.dp)) } ?: Modifier.clip(RoundedCornerShape(16.dp)))
             .tintedGlass(GlassAccents.Aurora, RoundedCornerShape(16.dp))
             .clickable { Haptics.tap(view); onTap() }
             .padding(horizontal = 14.dp, vertical = 10.dp),

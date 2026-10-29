@@ -1175,7 +1175,8 @@ private fun UpdateCard(version: String, onDismiss: () -> Unit) {
     Column(
         Modifier
             .fillMaxWidth()
-            .clip(shape)
+            // The same glass as the cards (frost, lens, shadow, edges), tinted aurora green.
+            .then(LocalGlassBackdrop.current?.let { Modifier.glassControl(it, shape) } ?: Modifier.clip(shape))
             .tintedGlass(GlassAccents.Aurora, shape)
             .padding(start = 16.dp, end = 8.dp, top = 12.dp, bottom = 14.dp)
             .animateContentSize(spring(dampingRatio = 0.85f, stiffness = 500f)),
