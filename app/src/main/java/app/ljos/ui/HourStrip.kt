@@ -74,7 +74,8 @@ fun HourStrip(
         val slot = size.width / n
         // As on the phone page: 14dp channels with 7dp ends (they narrow only if the night is long).
         val barW = minOf(14.dp.toPx(), slot * 0.8f)
-        val r = CornerRadius(minOf(barW / 2f, 7.dp.toPx()))
+        // Rounded-square tops, as in the lobby (a 4dp corner on the 14dp channel).
+        val r = CornerRadius(minOf(barW / 2f, 4.dp.toPx()))
 
         hours.forEachIndexed { i, h ->
             val x = i * slot + (slot - barW) / 2f
