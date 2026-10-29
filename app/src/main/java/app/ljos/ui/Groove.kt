@@ -40,8 +40,11 @@ internal fun DrawScope.grooveFloor(topLeft: Offset, size: Size, radius: Float, b
     drawPath(rrect(topLeft.x, topLeft.y, size.width, size.height, radius, bottom), GrooveFloor)
 }
 
-/** The groove's shading. Draw after the fill. */
-internal fun DrawScope.grooveShade(topLeft: Offset, size: Size, radius: Float, bottom: Float = radius) {
+/**
+ * The groove's shading. Draw after the fill. [lip] adds the light catching the bottom edge, inside
+ * and just below; channels that stand square on a floor (the hour bars) leave it off.
+ */
+internal fun DrawScope.grooveShade(topLeft: Offset, size: Size, radius: Float, bottom: Float = radius, lip: Boolean = true) {
     val px = 1.dp.toPx()
     val path = rrect(topLeft.x, topLeft.y, size.width, size.height, radius, bottom)
     clipPath(path) {
@@ -56,7 +59,7 @@ internal fun DrawScope.grooveShade(topLeft: Offset, size: Size, radius: Float, b
             topLeft, Size(size.width, shadeH),
         )
         // Light catching the bottom inner edge (white 16%).
-        drawRect(Color.White.copy(alpha = 0.16f), Offset(topLeft.x, topLeft.y + size.height - px), Size(size.width, px))
+        if (lip) drawRect(Color.White.copy(alpha = 0.16f), Offset(topLeft.x, topLeft.y + size.height - px), Size(size.width, px))
     }
     // Dark inner rim (black 30%), so the channel's walls read.
     drawPath(
@@ -65,7 +68,7 @@ internal fun DrawScope.grooveShade(topLeft: Offset, size: Size, radius: Float, b
     )
     // The pane's light catching the lip just below the cut (the web's 0 1px 0 white 7%): drawn
     // outside the channel only.
-    clipPath(path, clipOp = ClipOp.Difference) {
+    if (lip) clipPath(path, clipOp = ClipOp.Difference) {
         drawPath(rrect(topLeft.x, topLeft.y + px, size.width, size.height, radius, bottom), Color.White.copy(alpha = 0.09f))
     }
 }

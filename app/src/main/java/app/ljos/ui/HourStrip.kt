@@ -109,7 +109,7 @@ fun HourStrip(
                 alpha = dim,
             )
             if (dim == 1f) fillLight(Offset(x, chartH - bh), Size(barW, bh), fillTop, bottom = 0f)
-            grooveShade(Offset(x, 0f), Size(barW, chartH), r.x, bottom = 0f)
+            grooveShade(Offset(x, 0f), Size(barW, chartH), r.x, bottom = 0f, lip = false)
             if (isSel) {
                 val g = 2.dp.toPx()
                 val rt = CornerRadius(r.x + g)
