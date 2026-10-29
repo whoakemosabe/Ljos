@@ -319,7 +319,7 @@ function renderHours() {
   const peakTime = n.peak?.score > 0 ? n.peak.time : null;
   const w = n.peak && n.peak.score >= 20 ? bestWindow() : null;
   $("key-window").hidden = !w;
-  $("timeline").replaceChildren(...list.map((h, i) => {
+  const ticks = list.map((h, i) => {
     const isNow = now >= h.time && now < h.time + HOUR;
     const isPeak = h.time === peakTime;
     const cls = ["tick"];
@@ -343,7 +343,17 @@ function renderHours() {
       moonTick(list, i),
       el("span", { class: "tick-hour" }, hourLabel(h.time)),
     );
-  }));
+  });
+  // The best window: one rounded box around its columns, like the legend key.
+  const inWin = list.map((h) => !!w && h.time >= w.from && h.time < w.to);
+  const a = inWin.indexOf(true), b = inWin.lastIndexOf(true);
+  if (a >= 0) {
+    const box = el("span", { class: "window-box", "aria-hidden": "true" });
+    box.style.left = `${(a / list.length) * 100}%`;
+    box.style.width = `${((b - a + 1) / list.length) * 100}%`;
+    ticks.push(box);
+  }
+  $("timeline").replaceChildren(...ticks);
 }
 
 /**
