@@ -103,8 +103,10 @@ object SkyView {
                 slant = (-sin(toward) * w / 40).coerceIn(-0.35, 0.35).toFloat()
             }
             val r = sky.rain[si]; val s = sky.snow[si]; val v = sky.visibility[si]
-            if (!r.isNaN() && r > 0.05f) rain = 0.08f + 0.4f * c01(r / 4.0)
-            if (!s.isNaN() && s > 0.02f) snow = 0.1f + 0.4f * c01(s / 1.5)
+            // Rain and snow only fall from real low or mid cloud, so the sky never contradicts the cloud bars.
+            val wet = maxOf(low, midC) >= 0.3f
+            if (wet && !r.isNaN() && r > 0.05f) rain = 0.08f + 0.4f * c01(r / 4.0)
+            if (wet && !s.isNaN() && s > 0.02f) snow = 0.1f + 0.4f * c01(s / 1.5)
             if (!v.isNaN()) haze = c01((8000.0 - v) / 7000.0)
         }
 

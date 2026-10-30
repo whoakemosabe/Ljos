@@ -37,7 +37,9 @@ object SkyFeed {
     fun url(lat: Double, lon: Double): String =
         String.format(Locale.US, "https://api.open-meteo.com/v1/forecast?latitude=%.4f&longitude=%.4f", lat, lon) +
             "&hourly=wind_direction_10m,rain,showers,snowfall,visibility" +
-            "&timeformat=unixtime&timezone=GMT&past_days=1&forecast_days=2"
+            "&timeformat=unixtime&timezone=GMT&past_days=1&forecast_days=2" +
+            // Same DMI HARMONIE model as the cloud feed, so rain and cloud come from one forecast.
+            "&models=dmi_seamless"
 
     fun parse(json: String): SkySeries? {
         val hourly = JSONObject(json.trim()).optJSONObject("hourly") ?: return null

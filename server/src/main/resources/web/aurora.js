@@ -272,8 +272,10 @@ export function skyDetail(hour, { bz = null, waxing = false, horizon = 0.42, top
     out.driftY = -Math.cos(toward) * speed * 0.15;
     out.rainSlant = Math.max(-0.35, Math.min(0.35, -Math.sin(toward) * Math.min(20, hour.wind ?? 5) / 40));
   } else out.driftX = 0.4;
-  if (hour.rain > 0.05) out.rain = 0.08 + 0.4 * clamp01(hour.rain / 4);
-  if (hour.snow > 0.02) out.snow = 0.1 + 0.4 * clamp01(hour.snow / 1.5);
+  // Rain and snow only fall from real low or mid cloud, so the sky never contradicts the cloud bars.
+  const wet = Math.max(out.cloudLow || 0, out.cloudMid || 0) >= 0.3;
+  if (wet && hour.rain > 0.05) out.rain = 0.08 + 0.4 * clamp01(hour.rain / 4);
+  if (wet && hour.snow > 0.02) out.snow = 0.1 + 0.4 * clamp01(hour.snow / 1.5);
   if (hour.visibility != null) out.haze = clamp01((8000 - hour.visibility) / 7000);
   const act = hour.activity ?? 0;
   out.pinkEdge = clamp01((act - 0.6) / 0.3);
