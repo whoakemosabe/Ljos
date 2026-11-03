@@ -414,7 +414,8 @@ function renderStrip() {
       "aria-label": `${hhmm(h.time)}, score ${h.score}, ${CHANCE[h.chance] || ""}${h.cloud >= 0 ? `, ${h.cloud}% cloud` : ""}`,
       "aria-pressed": selected === h.time ? "true" : "false",
     },
-      el("span", { class: "track" }, h.cloud > 0 ? el("span", { class: "cloud", style: `height:${Math.min(100, h.cloud)}%` }) : null, fill),
+      el("span", { class: "track" }, h.cloud > 0 ? el("span", { class: "cloud", style: `height:${Math.min(100, h.cloud)}%` }) : null, fill,
+        el("span", { class: "num", style: `--s:${h.score}`, "aria-hidden": "true" }, String(h.score))),
       el("span", { class: "dot" }),
       el("span", { class: "label" }, i % 2 === 0 ? (H12 ? hourLabel(h.time) + "m" : hourLabel(h.time)) : ""),
     );

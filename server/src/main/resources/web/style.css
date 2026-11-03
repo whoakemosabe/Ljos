@@ -873,3 +873,11 @@ html:not(.tv) #dress-card, html:not(.tv) #tips-card, html:not(.tv) #outlook-card
 /* Rounded-square channel tops, as in the lobby and the app: 4px corners on the 14px channel. */
 .strip.fit .bar .track { border-radius: 4px 4px 0 0; }
 .strip.fit .bar .track .cloud { border-radius: 4px 4px 3px 3px; }
+
+/* Reading on each bar, as in the app's HourStrip: a small number riding just above the fill,
+   held inside the channel once the fill nears the top. */
+.strip.fit .bar .track .num { position: absolute; left: 0; right: 0; z-index: 1; white-space: nowrap; text-align: center; pointer-events: none;
+  bottom: min(calc(var(--s) * 1% + 2px), calc(100% - 13px)); font-size: 8.5px; line-height: 11px; font-weight: 600;
+  letter-spacing: -0.3px; color: rgba(255, 255, 255, 0.92); text-shadow: 0 0 2px rgba(0, 0, 0, 0.9), 0 1px 1px rgba(0, 0, 0, 0.6);
+  font-variant-numeric: tabular-nums; transition: bottom 500ms ease-out, opacity 200ms; }
+.strip.fit .bar.dim .num { opacity: 0.55; }

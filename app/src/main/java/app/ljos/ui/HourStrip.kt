@@ -19,6 +19,8 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.graphics.Shadow
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.unit.dp
@@ -41,6 +43,14 @@ fun HourStrip(
 ) {
     val measurer = rememberTextMeasurer()
     val labelStyle = remember { TextStyle(color = Muted, fontSize = 11.sp) }
+    // The reading on each bar: small, bold, with a dark halo so it reads over the cloud cap and the fill
+    val numStyle = remember {
+        TextStyle(
+            color = Color.White.copy(alpha = 0.92f), fontSize = 8.5.sp, fontWeight = FontWeight.SemiBold,
+            letterSpacing = (-0.3).sp, fontFeatureSettings = "tnum",
+            shadow = Shadow(Color.Black.copy(alpha = 0.9f), Offset.Zero, blurRadius = 4f),
+        )
+    }
     val n = hours.size
     val view = LocalView.current
     val current by rememberUpdatedState(selected)
@@ -111,6 +121,12 @@ fun HourStrip(
             )
             if (dim == 1f) fillLight(Offset(x, chartH - bh), Size(barW, bh), fillTop, bottom = 0f)
             grooveShade(Offset(x, 0f), Size(barW, chartH), r.x, bottom = 0f, lip = false)
+            // Reading: rides just above the fill, held inside the channel once the fill nears the top
+            run {
+                val tl = measurer.measure(h.score.toString(), numStyle)
+                val y = (chartH - bh - 2.dp.toPx() - tl.size.height).coerceAtLeast(2.dp.toPx())
+                drawText(tl, topLeft = Offset(x + barW / 2f - tl.size.width / 2f, y), alpha = if (dim == 1f) 1f else 0.55f)
+            }
             if (isSel) {
                 val g = 2.dp.toPx()
                 val rt = CornerRadius(r.x + g)
