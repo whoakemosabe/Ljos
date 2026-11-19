@@ -159,21 +159,24 @@ object Feeds {
             val prev = mag[minute]
             if (prev == null || (active && !prev.active)) mag[minute] = M(bz, by, bt, active)
         }
-        val speed = HashMap<Long, Pair<Double, Boolean>>()
+        data class P(val v: Double, val n: Double, val active: Boolean)
+        val plasma = HashMap<Long, P>()
         if (windJson != null) {
             val wa = JSONArray(windJson.trim())
             for (i in 0 until wa.length()) {
                 val o = wa.optJSONObject(i) ?: continue
                 val v = num(o, "proton_speed") ?: continue
+                val n = num(o, "proton_density") ?: Double.NaN
                 val t = try { parseTime(str(o, "time_tag") ?: continue) } catch (e: Exception) { continue }
                 val minute = t - t % 60_000L
                 val active = o.optBoolean("active", false)
-                val prev = speed[minute]
-                if (prev == null || (active && !prev.second)) speed[minute] = v to active
+                val prev = plasma[minute]
+                if (prev == null || (active && !prev.active)) plasma[minute] = P(v, n, active)
             }
         }
         return mag.entries.sortedBy { it.key }.map { (t, m) ->
-            SwPoint(t, m.bz, m.by, m.bt, speed[t]?.first ?: Double.NaN)
+            val pl = plasma[t]
+            SwPoint(t, m.bz, m.by, m.bt, pl?.v ?: Double.NaN, pl?.n?.takeIf { it >= 0 } ?: Double.NaN)
         }
     }
 

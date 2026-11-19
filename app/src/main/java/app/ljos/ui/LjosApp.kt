@@ -191,7 +191,12 @@ fun LjosApp() {
     LaunchedEffect(Unit) {
         updateWaiting = try { app.ljos.work.UpdateWatch.check(context, background = false) } catch (e: Exception) { updateWaiting }
     }
-    fun openSheet() { scope.launch { sheet.animateTo(0f, spring(dampingRatio = 0.86f, stiffness = 420f)) } }
+    // One sheet, two contents: Settings, or the Solar wind details from the strip under the score.
+    var sheetKind by remember { mutableStateOf("settings") }
+    fun openSheet(kind: String = "settings") {
+        sheetKind = kind
+        scope.launch { sheet.animateTo(0f, spring(dampingRatio = 0.86f, stiffness = 420f)) }
+    }
     fun closeSheet() { scope.launch { sheet.animateTo(1f, tween(240)) } }
     BackHandler(enabled = sheet.targetValue < 1f) { closeSheet() }
 
@@ -482,10 +487,7 @@ fun LjosApp() {
                         // Live solar wind, folded into a line under the number; tap for details.
                         SoftReveal(nowState != null) {
                             nowState?.let { st ->
-                                SolarWindStrip(
-                                    st, inp?.solarWind.orEmpty(), now,
-                                    open = "wind-open" in collapsed, onToggle = { toggle("wind-open") },
-                                )
+                                SolarWindStrip(st, inp?.solarWind.orEmpty(), now, onOpen = { openSheet("wind") })
                             }
                         }
                         val peak = night?.peak
@@ -647,9 +649,11 @@ fun LjosApp() {
                     .background(Color.Black.copy(alpha = 0.3f))
                     .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) { closeSheet() }
             )
+            val windSheet = sheetKind == "wind" && nowState != null
             SettingsSheet(
                 backdrop = pageBackdrop,
-                jumpToEnd = jumpToUpdates,
+                title = if (windSheet) L.t("Solar wind", "Sólvindur") else L.t("Settings", "Stillingar"),
+                jumpToEnd = if (windSheet) 0 else jumpToUpdates,
                 sheet = sheet,
                 maxHeight = screenH * 0.9f,
                 onClose = { closeSheet() },
@@ -662,7 +666,8 @@ fun LjosApp() {
                 },
                 onDrag = { fraction -> scope.launch { sheet.snapTo((sheet.value + fraction).coerceIn(0f, 1f)) } },
             ) {
-                SettingsContent(
+                if (windSheet) SolarWindContent(nowState!!, inp?.solarWind.orEmpty(), now)
+                else SettingsContent(
                     home = home,
                     spots = inp?.spots ?: Spots.forHome(home),
                     detectedAt = prefs.homeDetectedAt,
@@ -831,6 +836,7 @@ private val SheetFade = 28.dp
 @Composable
 private fun SettingsSheet(
     backdrop: LayerBackdrop,
+    title: String,
     /** Changes when the sheet should scroll to the bottom (Updates). */
     jumpToEnd: Int = 0,
     sheet: Animatable<Float, *>,
@@ -935,7 +941,7 @@ private fun SettingsSheet(
                 )
                 Spacer(Modifier.height(14.dp))
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(L.t("Settings", "Stillingar"), color = Ink, fontSize = 22.sp, fontWeight = FontWeight.Light)
+                    Text(title, color = Ink, fontSize = 22.sp, fontWeight = FontWeight.Light)
                     Spacer(Modifier.weight(1f))
                     // Liquid glass pill, refracting the settings scrolling under the header.
                     val doneAngle = rememberGlassLightAngle()

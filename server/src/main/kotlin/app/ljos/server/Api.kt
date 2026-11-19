@@ -58,6 +58,15 @@ object Api {
                 .num("bz", st.bz, 1)
                 .put("bzFresh", st.bzFresh)
                 .putOrNull("bzSustained", st.bzSustained?.let { round(it, 1) })
+                .num("bt", st.bt, 1)
+                .putOrNull("btSustained", st.btSustained?.let { round(it, 1) })
+                // One word for how hard what is arriving drives aurora: STRONG, HELPING, NEUTRAL, BLOCKING.
+                .putOrNull("drive", st.drive?.name)
+                .putOrNull("coupling", st.coupling?.let { Math.round(it) })
+                .putOrNull("speed", st.speed?.let { Math.round(it) })
+                .num("density", st.density, 1)
+                .num("pressure", st.pressure, 1)
+                .put("shock", st.shock)
                 .put("lookUp", st.lookUp)
                 .putOrNull("etaMinutes", st.etaMinutes)
                 .putOrNull("clearer", st.clearerSpot?.let {
@@ -96,10 +105,10 @@ object Api {
                     .num("feels", it.feels.toDouble(), 1).num("wind", it.wind.toDouble(), 1)
             } ?: JSONObject.NULL)
             .put("solarWind", JSONArray().also { arr ->
-                // Last two hours at L1, every second minute: enough for a Bz sparkline.
+                // Last two hours at L1, every second minute: [time, Bz, Bt]. Enough for a sparkline.
                 inp.solarWind.filter { now - it.time <= 2 * HOUR_MS }
                     .filterIndexed { i, _ -> i % 2 == 0 }
-                    .forEach { p -> if (p.bz.isFinite()) arr.put(JSONArray().put(p.time).put(round(p.bz, 1))) }
+                    .forEach { p -> if (p.bz.isFinite()) arr.put(JSONArray().put(p.time).put(round(p.bz, 1)).put(if (p.bt.isFinite()) round(p.bt, 1) else JSONObject.NULL)) }
             })
             .put("problems", JSONArray(problems))
     }

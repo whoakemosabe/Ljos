@@ -80,4 +80,6 @@ data class SwPoint(
     val bt: Double,
     /** km/s; NaN if the plasma instrument had no reading that minute. */
     val speed: Double,
+    /** Protons per cm³; NaN if the plasma instrument had no reading that minute. */
+    val density: Double = Double.NaN,
 )

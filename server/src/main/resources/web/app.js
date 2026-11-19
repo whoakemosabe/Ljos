@@ -600,74 +600,208 @@ function renderWhy() {
 }
 
 // Right now: a slim glass strip under the score, as in the app's SolarWindStrip. Status word,
-// live score and the last two hours of solar wind; tap to fold out the details.
-let nowOpen = false;
-try { nowOpen = localStorage.getItem("ljos-now-open") === "1"; } catch { /* private mode */ }
+// live score, the two readings (Bz, Bt) in one line and the last two hours of Bz, where up is
+// good. Tap to open the Solar wind sheet. Words and limits match the app's SolarWind.kt.
+const bzLevel = (bz) => (bz <= -3 ? "south" : bz >= 3 ? "north" : "neutral");
+const btLevel = (bt) => (bt < 5 ? "weak" : bt < 10 ? "moderate" : bt < 20 ? "strong" : "very strong");
+const BZ_WORD = { south: "south", neutral: "near zero", north: "north" };
+const BZ_TONE = { south: "go", neutral: "ink", north: "muted" };
+// What is arriving now, from the server's Newell coupling (core Live.Drive): the strip word.
+const DRIVE = {
+  STRONG: ["Strong", "go", "Strong solar wind is arriving. Aurora can be bright."],
+  HELPING: ["Helping", "go", "What is arriving now helps. Aurora can switch on."],
+  NEUTRAL: ["Neutral", "ink", "What is arriving now is neutral. Not much is getting in."],
+  BLOCKING: ["Blocking", "muted", "What is arriving now blocks most aurora."],
+};
+const speedWord = (v) => (v < 400 ? "slow" : v < 500 ? "normal" : v < 700 ? "fast" : "very fast");
+const densityWord = (n) => (n < 3 ? "low" : n < 10 ? "normal" : n < 20 ? "high" : "very high");
+const cap = (t) => t.charAt(0).toUpperCase() + t.slice(1);
+
+function readingsLine(c) {
+  if (c.bz == null || !c.bzFresh) return null;
+  return `Bz ${signed(c.bz)} ${BZ_WORD[bzLevel(c.bz)]}` + (c.bt != null ? ` · Bt ${c.bt.toFixed(1)} ${btLevel(c.bt)}` : "");
+}
 
 function renderNow() {
   const c = data.current;
   const strip = $("now-strip");
   if (TV) { strip.hidden = true; return; }
   const [word, tone] = c.lookUp ? ["Look up now", "go"]
-    : c.bz == null || !c.bzFresh ? ["No live data", "faint"]
-    : c.bz <= -3 ? ["Helping", "go"]
-    : c.bz >= 3 ? ["Quiet", "muted"]
-    : ["Neutral", "ink"];
+    : DRIVE[c.drive] ? DRIVE[c.drive] : ["No live data", "faint"];
   $("ns-word").textContent = word;
   $("ns-word").dataset.tone = tone;
   $("ns-score").textContent = c.score;
   $("ns-score").style.color = scoreColor(c.score);
   strip.classList.toggle("look", !!c.lookUp);
-  strip.setAttribute("aria-label", `Right now: ${word}, live score ${c.score}. ${nowOpen ? "Hide" : "Show"} details`);
-
-  const rows = [];
-  if (c.bz != null) rows.push(["Bz now", `${signed(c.bz)} nT${c.bzFresh ? "" : " (old)"}`]);
-  if (c.bzSustained != null) rows.push(["Arriving now, 20 min average", `${signed(c.bzSustained)} nT`]);
-  rows.push(["Clouds here", cloudText(c.cloud)]);
-  if (c.clearer) rows.push(["Clearer at", `${c.clearer.name} (${cloudText(c.clearer.cloud)})`]);
-  $("ns-rows").replaceChildren(...rows.flatMap(([k, v]) => [el("dt", {}, k), el("dd", {}, v)]));
+  strip.setAttribute("aria-label", `Right now: ${word}, live score ${c.score}. Open solar wind details`);
+  $("ns-shock").hidden = !c.shock;
+  const line = readingsLine(c);
+  $("ns-read").textContent = line || "";
+  $("ns-read").hidden = !line;
   $("ns-eta").textContent = c.etaMinutes != null ? `reaches us in ~${c.etaMinutes} min` : "";
-  const has = renderSpark();
+  const has = renderSpark($("spark"), 34);
+  $("ns-chart").hidden = !has;
   $("ns-cap").hidden = !has;
-  $("ns-explain").hidden = !has;
-  strip.classList.toggle("open", nowOpen);
-  strip.setAttribute("aria-expanded", String(nowOpen));
+  if ($("wind-sheet").open) renderWind();
   if (!strip.dataset.wired) {
     strip.dataset.wired = "1";
-    const flip = () => {
-      nowOpen = !nowOpen;
-      try { localStorage.setItem("ljos-now-open", nowOpen ? "1" : "0"); } catch { /* ignore */ }
-      renderNow();
-    };
-    strip.addEventListener("click", flip);
-    strip.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); flip(); } });
+    strip.addEventListener("click", openWind);
+    strip.addEventListener("keydown", (e) => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); openWind(); } });
+    wireSheet($("wind-sheet"), $("ws-done"));
   }
 }
 
-/** The last two hours of Bz at L1 as a slim line; minutes pointing south are shaded green. */
-function renderSpark() {
-  const box = $("spark");
+/** What the two readings mean together, tonight. */
+function windTogether(bz, bt) {
+  const b = signed(bz), t = bt != null ? bt.toFixed(1) : null;
+  const lvl = bzLevel(bz);
+  if (lvl === "north") return `Bz ${b} is north, so the door is shut.` + (t ? ` Bt ${t} does not matter much until Bz turns minus.` : "");
+  if (lvl === "neutral") return `Bz ${b} is near zero, so the door is only a little open. Watch for it to drop below −3.`;
+  const first = `Bz ${b} is south, so the door is open.`;
+  if (t == null) return first;
+  const bl = btLevel(bt);
+  return first + (bl === "weak" ? ` Bt ${t} is weak, so expect a soft show.`
+    : bl === "moderate" ? ` Bt ${t} is moderate. If Bt goes above 10, expect more.`
+    : ` Bt ${t} is strong, so a lot can come through.`);
+}
+
+/** One reading: name, what it is, value in nT, a verdict, a scale with its marks, and one sentence. */
+function readingTile(box, o) {
+  const pct = Math.max(0, Math.min(1, o.pos)) * 100;
+  const knob = el("span", { class: "ws-knob" });
+  knob.style.left = `${pct}%`;
+  const ticks = o.ticks.map((t) => { const n = el("span", { class: "ws-tick" }); n.style.left = `${t * 100}%`; return n; });
+  box.dataset.tone = o.tone;
+  box.replaceChildren(
+    el("p", { class: "ws-tile-head" }, el("b", {}, o.name), el("span", { class: "ws-what" }, o.what), el("span", { class: "ws-val" }, o.value, el("small", {}, ` ${o.unit || "nT"}`))),
+    el("p", { class: "ws-verdict" }, o.verdict),
+    el("div", { class: `ws-scale ${o.kind}`, role: "img", "aria-label": `${o.name} ${o.value} ${o.unit || "nT"}: ${o.verdict}` }, ...ticks, knob),
+    el("p", { class: "ws-axis" }, ...o.labels.map((l) => el("span", {}, l))),
+    el("p", { class: "ws-note" }, o.note));
+}
+
+function smallTile(box, name, value, unit, verdict, note) {
+  box.hidden = false;
+  box.replaceChildren(
+    el("p", { class: "ws-what" }, name),
+    el("p", { class: "ws-tile-head" }, el("span", { class: "ws-val left" }, value, el("small", {}, ` ${unit}`))),
+    el("p", { class: "ws-verdict" }, cap(verdict)),
+    el("p", { class: "ws-note" }, note));
+}
+
+function renderWind() {
+  const c = data.current;
+  const fresh = c.bz != null && c.bzFresh;
+  const lvl = fresh ? bzLevel(c.bz) : null;
+  const bt = fresh ? c.bt : null;
+  const tone = lvl ? BZ_TONE[lvl] : "faint";
+  const d = DRIVE[c.drive];
+  $("ws-head").textContent = d ? d[2] : "No live solar wind data right now.";
+  $("ws-head").dataset.tone = d ? d[1] : "faint";
+  $("ws-shock").hidden = !c.shock;
+  $("ws-shock").textContent = "A shock just passed the satellite: density and speed jumped." +
+    (c.etaMinutes != null ? ` It reaches us in about ${c.etaMinutes} min.` : "") + " Bz can swing fast after a shock, so keep an eye on it.";
+  $("ws-chart-box").hidden = !renderSpark($("ws-spark"), 58);
+  $("ws-eta").textContent = "A satellite 1.5 million km away feels the solar wind first." +
+    (c.etaMinutes != null ? ` What it sees now reaches Iceland in about ${c.etaMinutes} min.` : "");
+  const rows = [];
+  if (c.bzSustained != null) {
+    const l = bzLevel(c.bzSustained);
+    rows.push(["Bz, 20 min average", `${l === "south" ? "Mostly south" : l === "north" ? "Mostly north" : "Near zero"} (${signed(c.bzSustained)})`, BZ_TONE[l]]);
+  }
+  if (c.btSustained != null) rows.push(["Bt, 20 min average", `${cap(btLevel(c.btSustained))} (${c.btSustained.toFixed(1)})`]);
+  rows.push(["Clouds here", cloudText(c.cloud)]);
+  if (c.clearer) rows.push(["Clearer at", `${c.clearer.name} (${cloudText(c.clearer.cloud)})`, "go"]);
+  $("ns-rows").replaceChildren(...rows.flatMap(([k, v, t]) => [el("dt", {}, k), el("dd", t ? { "data-tone": t } : {}, v)]));
+
+  if (fresh) {
+    // +10 … −10, zero in the middle; marks at +3, 0, −3 (the limits) and −5 (the rule of thumb).
+    readingTile($("ws-bz"), {
+      name: "Bz", what: "direction", value: signed(c.bz), kind: "bz", tone,
+      verdict: lvl === "south" ? "South · helping" : lvl === "north" ? "North · blocking" : "Near zero · neutral",
+      pos: (10 - c.bz) / 20, ticks: [0.35, 0.5, 0.65, 0.75], labels: ["+10 north", "0", "−10 south"],
+      note: "Which way the field points. Minus (south) opens the door for aurora. Plus (north) keeps it shut.",
+    });
+  } else {
+    delete $("ws-bz").dataset.tone;
+    $("ws-bz").replaceChildren(el("p", { class: "ws-note" }, "No live Bz reading."));
+  }
+  $("ws-bt").hidden = bt == null;
+  if (bt != null) {
+    // 0 … 20, labels evenly spaced so each sits on its value.
+    readingTile($("ws-bt"), {
+      name: "Bt", what: "strength", value: bt.toFixed(1), kind: "bt", tone: "violet",
+      verdict: cap(btLevel(bt)), pos: bt / 20, ticks: [0.25, 0.5, 0.75], labels: ["0", "5", "10", "15", "20+"],
+      note: "How strong the field is in total. Higher Bt makes a minus Bz count for more.",
+    });
+  }
+  $("ws-speed").hidden = c.speed == null;
+  $("ws-dens").hidden = c.density == null;
+  $("ws-pair").hidden = c.speed == null && c.density == null;
+  if (c.speed != null) smallTile($("ws-speed"), "Speed", String(c.speed), "km/s", speedWord(c.speed), "Faster wind brings more energy.");
+  if (c.density != null) smallTile($("ws-dens"), "Density", c.density.toFixed(1), "/cm³", densityWord(c.density), "Denser wind pushes harder.");
+  const tog = $("ws-together");
+  tog.hidden = !fresh;
+  if (fresh) { tog.textContent = windTogether(c.bz, bt); tog.dataset.tone = tone; }
+}
+
+function openWind() {
+  const d = $("wind-sheet");
+  if (d.open) return;
+  renderWind();
+  d.showModal();
+  d.querySelector(".sheet-body").scrollTop = 0;
+}
+
+/** A bottom sheet on native <dialog>: Done, Escape, a tap outside, or a drag down on the grip closes it. */
+function wireSheet(d, done) {
+  const close = () => {
+    if (!d.open || d.classList.contains("closing")) return;
+    d.classList.add("closing");
+    const end = () => { d.classList.remove("closing"); d.close(); };
+    matchMedia("(prefers-reduced-motion: reduce)").matches ? end() : setTimeout(end, 220);
+  };
+  done.addEventListener("click", close);
+  d.addEventListener("cancel", (e) => { e.preventDefault(); close(); });
+  d.addEventListener("click", (e) => { if (e.target === d) close(); });
+  const card = d.querySelector(".sheet-card");
+  const top = d.querySelector(".sheet-top"), grip = d.querySelector(".sheet-grip");
+  let y0 = null;
+  for (const h of [top, grip]) {
+    h.addEventListener("pointerdown", (e) => { if (e.target.closest("button")) return; y0 = e.clientY; h.setPointerCapture(e.pointerId); card.style.transition = "none"; });
+    h.addEventListener("pointermove", (e) => { if (y0 != null) card.style.transform = `translateY(${Math.max(0, e.clientY - y0)}px)`; });
+    h.addEventListener("pointerup", (e) => {
+      if (y0 == null) return;
+      const dy = e.clientY - y0; y0 = null;
+      card.style.transition = ""; card.style.transform = "";
+      if (dy > 90) close();
+    });
+  }
+}
+
+/** The last two hours of Bz at L1, flipped so south (good) goes up; south minutes shaded green. */
+function renderSpark(box, hgt) {
   const now = data.now;
   const pts = (data.solarWind || []).filter((p) => now - p[0] <= 2 * HOUR && p[1] != null);
-  if (pts.length < 6) { box.hidden = true; return false; }
-  box.hidden = false;
-  const w = 320, hgt = 34;
+  if (pts.length < 6) { box.replaceChildren(); return false; }
+  const w = 320;
   const t0 = now - 2 * HOUR;
   const max = Math.max(8, ...pts.map((p) => Math.abs(p[1])));
   const mid = hgt / 2;
   const x = (t) => Math.min(1, Math.max(0, (t - t0) / (2 * HOUR))) * w;
-  const y = (v) => mid - (v / max) * (mid - 2);
+  const y = (v) => mid + (v / max) * (mid - 2); // minus Bz (south) goes up
   const line = pts.map((p, i) => `${i ? "L" : "M"}${x(p[0]).toFixed(1)} ${y(p[1]).toFixed(1)}`).join("");
   const south = `M${x(pts[0][0]).toFixed(1)} ${mid}` + pts.map((p) => `L${x(p[0]).toFixed(1)} ${(p[1] < 0 ? y(p[1]) : mid).toFixed(1)}`).join("") + `L${x(pts[pts.length - 1][0]).toFixed(1)} ${mid}Z`;
   const ns = "http://www.w3.org/2000/svg";
   const mk = (tag, attrs) => { const n = document.createElementNS(ns, tag); for (const [k, v] of Object.entries(attrs)) n.setAttribute(k, String(v)); return n; };
-  const svg = mk("svg", { viewBox: `0 0 ${w} ${hgt}`, preserveAspectRatio: "none", role: "img", "aria-label": "Solar wind Bz over the last two hours; below the line is south, which is good" });
-  const grad = mk("linearGradient", { id: "sparkSouth", gradientUnits: "userSpaceOnUse", x1: 0, y1: mid, x2: 0, y2: hgt });
-  grad.append(mk("stop", { offset: "0%", "stop-color": "#3dffa0", "stop-opacity": 0 }), mk("stop", { offset: "100%", "stop-color": "#3dffa0", "stop-opacity": 0.45 }));
+  const gid = `sparkSouth-${box.id}`;
+  const svg = mk("svg", { viewBox: `0 0 ${w} ${hgt}`, preserveAspectRatio: "none", role: "img", "aria-label": "Solar wind Bz over the last two hours. Higher is better for aurora." });
+  const grad = mk("linearGradient", { id: gid, gradientUnits: "userSpaceOnUse", x1: 0, y1: mid, x2: 0, y2: 0 });
+  grad.append(mk("stop", { offset: "0%", "stop-color": "#3dffa0", "stop-opacity": 0 }), mk("stop", { offset: "100%", "stop-color": "#3dffa0", "stop-opacity": 0.5 }));
   const defs = mk("defs", {}); defs.append(grad);
   const last = pts[pts.length - 1];
   svg.append(defs,
-    mk("path", { d: south, fill: "url(#sparkSouth)" }),
+    mk("path", { d: south, fill: `url(#${gid})` }),
     mk("line", { x1: 0, x2: w, y1: mid, y2: mid, class: "spark-zero" }),
     mk("path", { d: line, class: "spark-line" }));
   box.replaceChildren(svg, el("span", { class: "spark-dot" + (last[1] < 0 ? " south" : "") }));

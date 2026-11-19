@@ -377,16 +377,20 @@ internal fun PhotoTipsCard(score: Int, moonBright: Boolean, collapsed: Boolean, 
     }
 }
 
-/** The last two hours of Bz at L1 as a slim line; minutes pointing south are shaded green. */
+/**
+ * The last two hours of Bz at L1 as a slim line; minutes pointing south are shaded green.
+ * With [goodUp] the chart is flipped so south (good for aurora) goes up, like the score.
+ */
 @Composable
-internal fun BzSparkline(points: List<SwPoint>, now: Long, modifier: Modifier) {
+internal fun BzSparkline(points: List<SwPoint>, now: Long, modifier: Modifier, goodUp: Boolean = false) {
     Canvas(modifier) {
         val t0 = now - 2 * HOUR_MS
         val span = (2 * HOUR_MS).toFloat()
         val maxAbs = max(8.0, points.maxOf { abs(it.bz) }).toFloat()
         val mid = size.height / 2f
+        val sign = if (goodUp) -1f else 1f
         fun x(t: Long) = ((t - t0) / span).coerceIn(0f, 1f) * size.width
-        fun y(bz: Double) = mid - (bz.toFloat() / maxAbs) * (size.height / 2f - 2.dp.toPx())
+        fun y(bz: Double) = mid - sign * (bz.toFloat() / maxAbs) * (size.height / 2f - 2.dp.toPx())
 
         // Southward area
         val fill = Path().apply {
@@ -395,7 +399,9 @@ internal fun BzSparkline(points: List<SwPoint>, now: Long, modifier: Modifier) {
             lineTo(x(points.last().time), mid)
             close()
         }
-        drawPath(fill, Brush.verticalGradient(listOf(Color.Transparent, Green.copy(alpha = 0.45f)), startY = mid, endY = size.height))
+        val brush = if (goodUp) Brush.verticalGradient(listOf(Green.copy(alpha = 0.5f), Color.Transparent), startY = 0f, endY = mid)
+        else Brush.verticalGradient(listOf(Color.Transparent, Green.copy(alpha = 0.45f)), startY = mid, endY = size.height)
+        drawPath(fill, brush)
         drawLine(Color(0x26FFFFFF), Offset(0f, mid), Offset(size.width, mid), 1.dp.toPx())
         val line = Path().apply {
             points.forEachIndexed { i, p -> if (i == 0) moveTo(x(p.time), y(p.bz)) else lineTo(x(p.time), y(p.bz)) }

@@ -64,19 +64,20 @@
         <p class="updated" id="updated"></p>
       </section>
       <section class="hero-extras" id="hero-extras">
-        <div class="now-strip lg" id="now-strip" role="button" tabindex="0" aria-expanded="false" aria-controls="now-more">
+        <div class="now-strip lg" id="now-strip" role="button" tabindex="0" aria-haspopup="dialog" aria-controls="wind-sheet">
           <div class="ns-head">
             <span class="ns-title">Right now</span>
             <span class="ns-word" id="ns-word">–</span>
             <span class="ns-score" id="ns-score"></span>
-            <svg class="ns-chev" viewBox="0 0 18 18" aria-hidden="true"><path d="M5.4 7.6l3.6 3.4 3.6-3.4" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg class="ns-chev" viewBox="0 0 18 18" aria-hidden="true"><path d="M7.6 5.4l3.4 3.6-3.4 3.6" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </div>
-          <div class="ns-spark" id="spark" hidden></div>
-          <p class="ns-cap" id="ns-cap" hidden><span>Solar wind, last 2 h</span><span id="ns-eta"></span></p>
-          <div class="ns-more" id="now-more"><div class="ns-more-in">
-            <p class="ns-explain" id="ns-explain">Last 2 hours at the satellite, 1.5 million km out. Dips below the line (field pointing south) are what switch aurora on.</p>
-            <dl class="ns-rows" id="ns-rows"></dl>
-          </div></div>
+          <p class="ns-shock" id="ns-shock" hidden>Shock just passed the satellite</p>
+          <p class="ns-read" id="ns-read" hidden></p>
+          <div class="ns-chart" id="ns-chart" hidden>
+            <div class="ns-spark" id="spark"></div>
+            <div class="ns-side" aria-hidden="true"><span class="good">Helps</span><span>Blocks</span></div>
+          </div>
+          <p class="ns-cap" id="ns-cap" hidden><span>Bz, last 2 h</span><span id="ns-eta"></span></p>
         </div>
         <button type="button" class="nudge" id="nudge" hidden><span>Tomorrow looks better</span><span class="nudge-score" id="nudge-score"></span></button>
         <div class="chips" id="chips" hidden>
@@ -164,5 +165,34 @@
     <p class="takeover-sub">The aurora is likely overhead</p>
     <p class="takeover-detail" id="lookup-detail"></p>
   </div>
+  <dialog class="sheet" id="wind-sheet" aria-labelledby="ws-title">
+    <div class="sheet-card">
+      <div class="sheet-grip" aria-hidden="true"></div>
+      <div class="sheet-top"><h2 id="ws-title">Solar wind</h2><button type="button" class="sheet-done" id="ws-done">Done</button></div>
+      <div class="sheet-body">
+        <p class="ws-head" id="ws-head"></p>
+        <p class="ws-box sun" id="ws-shock" hidden></p>
+        <div id="ws-chart-box" hidden>
+          <p class="ws-small">Bz at the satellite, last 2 hours</p>
+          <div class="ns-chart big"><div class="ns-spark" id="ws-spark"></div><div class="ns-side" aria-hidden="true"><span class="good">Helps</span><span>Blocks</span></div></div>
+          <p class="ws-axis"><span>2 h ago</span><span>now</span></p>
+        </div>
+        <p class="ws-sec">ARRIVING HERE NOW</p>
+        <div class="ws-tile ws-journey">
+          <svg viewBox="0 0 300 22" role="img" aria-label="Sun, satellite, you"><line x1="18" x2="132" y1="11" y2="11" stroke="rgba(255,255,255,0.25)" stroke-dasharray="4 4"/><line x1="168" x2="280" y1="11" y2="11" stroke="#3dffa0" stroke-dasharray="4 4"/><circle cx="8" cy="11" r="5" fill="#ffd27a"/><rect x="146" y="7" width="8" height="8" fill="none" stroke="#b79cff" stroke-width="1.4"/><path d="M136 11h10M154 11h10" stroke="#b79cff" stroke-width="2.5"/><circle cx="290" cy="11" r="7.5" fill="none" stroke="#3dffa0" stroke-width="1.4"/></svg>
+          <p class="ws-axis three"><span>Sun</span><span>Satellite</span><span>You</span></p>
+          <p class="ws-note" id="ws-eta">A satellite 1.5 million km away feels the solar wind first.</p>
+        </div>
+        <dl class="ns-rows" id="ns-rows"></dl>
+        <p class="ws-sec">AT THE SATELLITE NOW</p>
+        <div class="ws-tile" id="ws-bz"></div>
+        <div class="ws-tile" id="ws-bt" hidden></div>
+        <div class="ws-pair" id="ws-pair" hidden><div class="ws-tile" id="ws-speed" hidden></div><div class="ws-tile" id="ws-dens" hidden></div></div>
+        <p class="ws-box" id="ws-together" hidden></p>
+        <p class="ws-box violet">Best night: <b>Bz below −5</b> and <b>Bt above 10</b> in <b>fast wind (500+ km/s)</b>, for 20 minutes or more.</p>
+        <p class="ws-foot">nT (nanotesla) is the unit for magnetic field strength. The readings come from a satellite between the Sun and Earth. The word at the top uses all four readings together.</p>
+      </div>
+    </div>
+  </dialog>
 </body>
 </html>

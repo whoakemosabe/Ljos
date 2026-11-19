@@ -85,6 +85,38 @@ class LiveModelTest {
         assertFalse(Model.nowState(now, quiet).lookUp)
     }
 
+    @Test fun weakSlowSouthDoesNotTriggerLookUpButStrongFastDoes() {
+        val now = ms("2024-01-11T23:10:00Z")
+        val kp = listOf(KpPoint(now - 24 * HOUR_MS, 3.0, true))
+        // Bz −5 in a weak (Bt 5), slow (330 km/s) wind: coupling ~6,700, below the look-up limit.
+        val weak = Inputs(kp, clearSky(now - 24 * HOUR_MS), null, null, now, solarWind = wind(now, bz = -5.0, bt = 5.0, v = 330.0))
+        assertFalse(Model.nowState(now, weak).lookUp)
+        assertEquals(Live.Drive.HELPING, Model.nowState(now, weak).drive)
+        // The same Bz in a strong, fast wind: well above it.
+        val strong = Inputs(kp, clearSky(now - 24 * HOUR_MS), null, null, now, solarWind = wind(now, bz = -5.0, bt = 12.0, v = 600.0))
+        assertTrue(Model.nowState(now, strong).lookUp)
+        assertEquals(Live.Drive.STRONG, Model.nowState(now, strong).drive)
+    }
+
+    @Test fun northFieldIsBlocking() {
+        val now = ms("2024-01-11T23:10:00Z")
+        val inp = Inputs(emptyList(), clearSky(now - 24 * HOUR_MS), null, null, now, solarWind = wind(now, bz = 4.0, by = 2.0, bt = 5.0, v = 400.0))
+        assertEquals(Live.Drive.BLOCKING, Model.nowState(now, inp).drive)
+    }
+
+    @Test fun parsesDensityAndSpotsAShock() {
+        val mag = """[{"time_tag":"2026-10-06T11:10:00","active":true,"bt":6.0,"by_gsm":2.0,"bz_gsm":-5.0}]"""
+        val wind = """[{"time_tag":"2026-10-06T11:10:00","active":true,"proton_speed":520.0,"proton_density":7.5}]"""
+        assertEquals(7.5, Feeds.parseSolarWind(mag, wind)[0].density, 1e-9)
+
+        val now = ms("2024-01-11T23:10:00Z")
+        val calm = wind(now, bz = -2.0).map { it.copy(density = 4.0, speed = 400.0) }
+        val hit = calm.mapIndexed { i, p -> if (i >= 110) p.copy(density = 12.0, speed = 480.0) else p }
+        assertFalse(Live.shock(Inputs(emptyList(), emptyMap(), null, null, now, solarWind = calm), now))
+        assertTrue(Live.shock(Inputs(emptyList(), emptyMap(), null, null, now, solarWind = hit), now))
+        assertEquals(1.6726e-6 * 4.0 * 400.0 * 400.0, Live.pressure(4.0, 400.0), 1e-9)
+    }
+
     @Test fun liveKpReplacesForecastForTheCurrentHourOnly() {
         val now = ms("2024-01-11T22:10:00Z")
         val t = now - now % HOUR_MS

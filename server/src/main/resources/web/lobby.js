@@ -269,7 +269,7 @@ function renderNow() {
   const setState = (ic, text, tint) => { state.replaceChildren(icon(ic), text); if (tint) applyTint(state, tint); };
   if (c.lookUp) setState("bolt", "Look up now", 85);
   else if (!c.isDark) setState("sun", n.darkFrom && data.now < n.darkFrom ? `Dark from ${hhmm(n.darkFrom)}` : "Too light right now");
-  else if (c.bz == null || !c.bzFresh) setState("pulse", "No live solar wind");
+  else if (!c.drive) setState("pulse", "No live solar wind");
   else setState("eye", "Watching the sky", 50);
 
   const kp = c.hour?.kp;
@@ -285,14 +285,17 @@ function renderNow() {
   }
 
   const facts = [];
-  facts.push([icon("bolt"), "Next wave", c.etaMinutes != null ? `In about ${c.etaMinutes} min` : "Waiting for the next reading"]);
+  facts.push([icon("bolt"), "Next wave", c.shock && c.etaMinutes != null ? `Shock arriving in about ${c.etaMinutes} min`
+    : c.etaMinutes != null ? `In about ${c.etaMinutes} min` : "Waiting for the next reading"]);
   const cloud = c.cloud < 0 ? "Unknown" : `${c.cloud}%`;
   facts.push([icon("cloud"), "Clouds here", c.clearer ? `${cloud}, clearer at ${c.clearer.name}` : cloud]);
-  if (c.bz != null && c.bzFresh) {
-    // The arrow shows which way the field points: south (down) is what drives aurora.
+  if (c.drive && c.bz != null && c.bzFresh) {
+    // Same word as the app's strip (the server's coupling of Bz, By, Bt and speed), then the two
+    // readings. The arrow shows which way the field points: south (down) is what drives aurora.
     const south = c.bz <= -3, north = c.bz >= 3;
-    const dir = south ? "pointing south, good" : north ? "pointing north, quiet" : "neutral";
-    facts.push([icon("arrow", south ? 180 : north ? 0 : 90), "Solar wind", `Bz ${signed(c.bz)} nT, ${dir}`]);
+    const word = { STRONG: "Strong", HELPING: "Helping", NEUTRAL: "Neutral", BLOCKING: "Blocking" }[c.drive];
+    const bt = c.bt != null ? `, Bt ${c.bt.toFixed(1)}` : "";
+    facts.push([icon("arrow", south ? 180 : north ? 0 : 90), "Solar wind", `${word} · Bz ${signed(c.bz)}${bt} nT`]);
   } else facts.push([icon("wind"), "Solar wind", "No live reading"]);
   $("facts").replaceChildren(...facts.flatMap(([ic, k, v]) => [el("dt", {}, ic, k), el("dd", {}, v)]));
 
@@ -414,7 +417,7 @@ let takeoverTimer = 0;
 function renderLookUp() {
   const c = data.current;
   const bits = [];
-  if (c.bz != null && c.bzFresh) bits.push(`Bz ${signed(c.bz)} nT`);
+  if (c.bz != null && c.bzFresh) bits.push(`Bz ${signed(c.bz)}` + (c.bt != null ? `, Bt ${c.bt.toFixed(1)}` : "") + " nT");
   if (c.cloud >= 0) bits.push(`${c.cloud}% cloud`);
   let detail = bits.length ? cap(bits.join(", ")) + "." : "";
   if (c.clearer) detail += ` Clearer at ${c.clearer.name}.`;

@@ -69,6 +69,21 @@ data class NowState(
     val etaMinutes: Int? = null,
     /** Mean Bz arriving over the last ~20 minutes (sustained, not a blip). */
     val bzSustained: Double? = null,
+    /** Total field strength now (Bt, nT). Same source and freshness as [bz]. */
+    val bt: Double? = null,
+    /** Mean Bt arriving over the last ~20 minutes. */
+    val btSustained: Double? = null,
+    /** How hard what is arriving now drives aurora; null without fresh data. Shown as the strip word. */
+    val drive: Live.Drive? = null,
+    /** Newell coupling arriving over the last ~20 minutes, or null without minute data. */
+    val coupling: Double? = null,
+    /** Solar wind speed (km/s) and density (cm⁻³) at L1, typical of the last 30 minutes. */
+    val speed: Double? = null,
+    val density: Double? = null,
+    /** Pressure arriving now, nPa. */
+    val pressure: Double? = null,
+    /** A shock passed the satellite in the last 15 minutes. */
+    val shock: Boolean = false,
 )
 
 object Model {
@@ -87,7 +102,9 @@ object Model {
     /** Southward Bz and fast wind push activity up over the next hour or so. Null if data is stale. */
     fun liveBoost(mag: MagReading?, wind: WindReading?, now: Long): Double? {
         if (mag == null || now - mag.time > 60 * MIN_MS) return null
-        var b = (-mag.bz / 20.0).coerceIn(-0.2, 0.35)
+        // A strong field (Bt) makes a southward Bz count for more; the summary carries Bt.
+        val scale = if (mag.bz < 0 && mag.bt.isFinite()) (mag.bt / 8.0).coerceIn(0.6, 1.5) else 1.0
+        var b = (-mag.bz / 20.0 * scale).coerceIn(-0.2, 0.35)
         val speed = wind?.takeIf { now - it.time < 90 * MIN_MS }?.speed
         if (speed != null) {
             b += when {
@@ -235,6 +252,7 @@ object Model {
         val latest = Live.latest(inp, now)
         val mag = inp.mag
         val bz = latest?.bz ?: mag?.bz
+        val bt = (latest?.bt ?: mag?.bt)?.takeIf { it.isFinite() && it >= 0 }
         val bzFresh = latest != null || (mag != null && now - mag.time <= 60 * MIN_MS)
 
         val bestDark = spotsAt(hourStart, inp, now).firstOrNull { it.spot.dark }
@@ -244,17 +262,28 @@ object Model {
 
         // Sustained southward field arriving *now* (the last ~20 min of L1 data, shifted by travel time).
         val arriving = Live.arriving(inp, now, now - 20 * MIN_MS, now)
+        // Look up: strong enough coupling (Bz, By, Bt and speed together), mostly southward. A weak,
+        // slow −5 no longer counts the same as a strong, fast −5.
         val driven = if (arriving != null) {
-            arriving.meanBz <= -5.0 && arriving.southFraction >= 0.75
+            arriving.coupling >= Live.COUPLING_LOOK_UP && arriving.southFraction >= 0.7
         } else {
-            bzFresh && bz != null && bz <= -6.0 // fallback: single summary reading
+            // Fallback: single summary reading, a bit stricter without Bt.
+            bzFresh && bz != null && bz <= -6.0 && (bt == null || bt >= 6.0)
+        }
+        val drive = when {
+            arriving != null -> Live.drive(arriving.coupling)
+            bzFresh && bz != null -> Live.driveFromBz(bz)
+            else -> null
         }
         val lookUp = skyOk && driven
 
         val speed = Live.speed(inp, now)
         val eta = if (latest != null && speed != null) (Live.delayMs(speed) / MIN_MS).toInt() else null
         val clearer = if (!homeClear && elsewhereClear) bestDark else null
-        return NowState(h.score, sunNow < -6.0, h.cloud, bz, bzFresh, lookUp, clearer, eta, arriving?.meanBz)
+        return NowState(h.score, sunNow < -6.0, h.cloud, bz, bzFresh, lookUp, clearer, eta, arriving?.meanBz,
+            bt = bt, btSustained = arriving?.meanBt?.takeIf { it.isFinite() },
+            drive = drive, coupling = arriving?.coupling, speed = speed, density = Live.density(inp, now),
+            pressure = arriving?.pressure?.takeIf { it.isFinite() }, shock = Live.shock(inp, now))
     }
 
     /** Only worth fetching the minute-level feeds when it's getting dark and somewhere is clear-ish. */
